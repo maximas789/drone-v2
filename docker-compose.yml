@@ -1,0 +1,33 @@
+# Local development database. Production is Neon — same connection string,
+# different host.
+#
+# No version tag on the image, so a fresh checkout gets current stable. Worth
+# knowing before this project has real data in it: a Postgres data directory
+# belongs to the major version that created it, and an image that later jumps a
+# major will refuse to start against the old `pgdata` volume. The fix at that
+# point is dump-and-restore, not a flag — so pin the major *then*, not now.
+services:
+  db:
+    image: postgres:alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      # Postgres 18+ wants the mount one level UP from the old
+      # /var/lib/postgresql/data. The image then keeps its data in a
+      # major-version-named subdirectory, which is what makes `pg_upgrade
+      # --link` possible later without crossing a mount boundary. Mounting the
+      # old path makes the container restart-loop on startup.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

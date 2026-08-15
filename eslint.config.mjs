@@ -87,6 +87,27 @@ const eslintConfig = defineConfig([
   ...nextTs,
 
   {
+    /**
+     * `src/lib/data/*.ts` takes the session as its first argument **without
+     * exception**, including in the handful of functions that read genuinely
+     * public data. The uniformity is the point: an exception is a thing to
+     * remember, and ownership checks get missed at exactly the places someone
+     * decided the rule didn't apply. Such a parameter is named `_session`.
+     */
+    name: "ajniha/unused-underscore-args",
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+
+  {
     name: "ajniha/rtl-and-locale",
     rules: {
       "no-restricted-syntax": [

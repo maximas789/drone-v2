@@ -27,7 +27,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 |---|---|---|
 | 0 — Groundwork | F01 | ⚠️ Done with deviations (Session 1) |
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
-| 2 — Database | F03, F04 | ⬜ Not started |
+| 2 — Database | F03, F04 | 🟨 F03 done with deviations (Session 3) · F04 not started |
 | 3 — Auth | F05 | ⬜ Not started |
 | 4 — Platform services | F06, F07, F08, F09 | ⬜ Not started |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
@@ -56,8 +56,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | eslint-config-next | 16.3.1 | registry · installed | Exports `eslint-config-next/core-web-vitals` and `/typescript` as flat-config arrays. |
 | shadcn | 4.18.0 | registry · via `dlx` | CLI only, not a dependency. Detected Next.js + Tailwind v4 unaided. |
 | vitest | 4.1.10 | registry · installed | |
-| drizzle-orm | 0.45.2 | registry · latest only | F03 |
-| drizzle-kit | 0.31.10 | registry · latest only | F03 |
+| drizzle-orm | 0.45.2 | registry · installed | F03 |
+| drizzle-kit | 0.31.10 | registry · installed | F03 |
 | better-auth | 1.6.29 | registry · latest only | F05 |
 | next-intl | 4.13.6 | registry · installed | F02. `createNavigation` (not the old `createSharedPathnamesNavigation`); `requestLocale` is deprecated in favour of `next/root-params`. |
 | @base-ui/react | 1.7.0 | registry · installed | Pulled in by shadcn. Composition prop is **`render`**, not Radix's `asChild`. |
@@ -68,7 +68,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | @vercel/blob | 2.8.0 | registry · latest only | F07 |
 | inngest | 4.18.1 | registry · latest only | F08 |
 | zod | 4.4.3 | registry · latest only | Action input parsing |
-| pg / postgres | 8.23.0 / 3.4.9 | registry · latest only | F03 picks the driver |
+| postgres (postgres.js) | 3.4.9 | registry · installed | **The chosen driver.** Works unchanged against Docker locally and Neon over TCP, so one code path covers both. `pg` was not installed. |
+| server-only | 0.0.1 | registry · installed | Runtime dependency, not dev — `src/lib/db/index.ts` imports it. |
 | qrcode | 1.5.4 | registry · latest only | F19 |
 
 ### Deprecations & API changes found
@@ -82,6 +83,8 @@ Anything a skill reference file got wrong, so it can be corrected and so no late
 | `features/F01-project-shell.md` | `"dev": "next dev --turbopack"` | Turbopack is default; scaffold writes plain `next dev` | Left as the scaffold wrote it. Feature file updated. |
 | `features/F01-project-shell.md` | `"typecheck": "tsc --noEmit"` | Next 16 generates `LayoutProps`/`PageProps` into `.next/types`; bare `tsc` fails on a clean tree | Script is `next typegen && tsc --noEmit`. Feature file updated. |
 | `features/F02-i18n-rtl-foundation.md` | `src/middleware.ts` | Next 16 **deprecates** the `middleware` filename and the `middleware` named export; it is `proxy.ts` exporting `proxy`, nodejs runtime only, no edge | Built as `src/proxy.ts`. Feature file, plan and `CLAUDE.md` updated. |
+| `features/F03-database-schema.md` | volume at `/var/lib/postgresql/data` | Postgres 18+ wants the mount one level **up**, at `/var/lib/postgresql`, and restart-loops on the old path | `docker-compose.yml` mounts `/var/lib/postgresql`. Feature file updated. |
+| Drizzle setup | (implicit) enums live in `enums.ts` | drizzle-kit reads **only** the file named in `drizzle.config.ts`, so the enums produced no `CREATE TYPE` at all | `schema.ts` now does `export * from "./enums"`. Caught by reading the SQL — see the session entry. |
 | `features/F02-i18n-rtl-foundation.md` | next-intl's `requestLocale` in `i18n/request.ts` | Deprecated by next-intl in favour of `next/root-params` (introduced in Next **16.3.0** — the exact version installed) | Used `next/root-params`. Carries a Server-Action caveat, see Decisions. |
 | shadcn `Button` usage | Radix-style `asChild` | shadcn is on Base UI now; the composition prop is `render={<Link />}` | Feature file updated; noted here for every later wave that wants a link-styled button. |
 
@@ -97,6 +100,9 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` is currently **empty** — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
+| 6 | **No user-referencing column has a foreign key yet** — Better Auth's `user` table doesn't exist until F05. `pilot_profile.user_id`, `drone.owner_user_id`, `booking.pilot_user_id`, every `*_by_user_id`, `audit_event.actor_user_id`, `notification.user_id`. F05 must add them in its own migration, including `audit_event.actor_user_id ON DELETE SET NULL` (the log outlives the account). Until then there is no referential integrity on those columns. | F03 | F05 |
+| 7 | `jobs`, `remote_id_scan` and `rate_limit_bucket` are **not** in the schema — F03 defers them to the features that own their columns. | F03 | F08, F11, F09 |
+| 8 | `src/lib/session.ts` holds a **provisional** `Session` type so the data layer could take a session from its first query. F05 replaces it with Better Auth's inferred type and adds the real guards. | F03 | F05 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -110,6 +116,12 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 | 2026-08-15 | Version research done inline against the npm registry, not by parallel sub-agents as F01 §"Version research" describes. | The session's operating rules forbid dispatching agents unless the user asks. The registry is the primary source the research was meant to reach, so the output is the same; only the mechanism differs. What was *not* done is the per-branch API/deprecation sweep — later waves must check current docs for their own package before writing against it. | Feature file updated |
 | 2026-08-15 | Rule 1 also lints class strings inside `cva()`/`cn()`/`clsx()`/`twMerge()`, not only `className` attributes. | shadcn keeps its class strings in `cva()`. Restricting the rule to the attribute meant `button.tsx` and `badge.tsx` shipped `pr-`/`pl-` on day one, unflagged — in the components every future page reuses. | Feature file updated |
 | 2026-08-15 | Kept the scaffold's generated `AGENTS.md`; our `CLAUDE.md` now ends with `@AGENTS.md`. | `next dev` rewrites `AGENTS.md` on every run — deleting it only produces a recurring uncommitted diff. The scaffold's own `CLAUDE.md` (a one-line `@AGENTS.md`) was deleted so the project's real one survived the move. | `CLAUDE.md` updated |
+| 2026-08-15 | Driver is **postgres.js**, not `pg`. | One driver reaches both Docker locally and Neon over TCP, so there is no second code path to keep working and no build-time/runtime split. Drizzle's `postgres-js` adapter is first-class. | Feature file updated |
+| 2026-08-15 | `casing: "snake_case"` set in **both** `drizzle.config.ts` and `drizzle()`. | camelCase in TypeScript, snake_case in Postgres, without an explicit name on 200-odd columns. It must be set in both places or generated SQL and runtime queries disagree about column names — a failure that only shows up at query time. | n/a |
+| 2026-08-15 | `mobileE164` carries an explicit column name `mobile_e164`. | The snake_case converter produced `mobile_e_164`, splitting the name of the E.164 standard in half. | n/a |
+| 2026-08-15 | Geometry types live in `src/lib/geo.ts`, not under `src/lib/airspace/`. | The schema needs `Polygon`/`MultiPolygon` too, and `src/lib/airspace/` is under the purity rule — the map imports from it. A shared leaf module keeps `Position` in one place for both. | Feature file updated |
+| 2026-08-15 | Two enums added beyond the spec's list: `notification_category` and `drone_photo_kind`. | The spec gave their values in prose (`booking_reminder | registration_expiry | zone_closure`, `overall | serial_plate | …`) but did not list them as `pgEnum`s. Storing them as free text would have lost the constraint the prose describes. | Feature file updated |
+| 2026-08-15 | ESLint `no-unused-vars` now ignores a leading underscore. | `src/lib/data/*.ts` takes the session first **without exception**, including for genuinely public reads. Uniformity is the point — an exception is a thing to remember, and ownership checks get missed exactly where someone decided the rule didn't apply. | n/a |
 | 2026-08-15 | `i18n/request.ts` reads the locale from `next/root-params`, not `requestLocale`. | next-intl marks `requestLocale` deprecated and points at `next/root-params`, which Next introduced in 16.3.0 — the version installed. Rule 3 of the plan says use the replacement. **Cost:** root-params throws in Server Actions and Route Handlers, so the config honours an explicit `locale` first and Open Thread 4 records what every later wave must do. | Feature file updated |
 | 2026-08-15 | `src/middleware.ts` → `src/proxy.ts`, exporting `proxy`. | Next 16 deprecates both the `middleware` filename and the named export. `proxy` is nodejs-runtime only, which suits us — F05 will want database access in the optimistic redirect, and the edge runtime would have blocked it. | Feature file, plan §5 and `CLAUDE.md` updated |
 | 2026-08-15 | The locale switcher reads the query string from `window.location.search` on click, not `useSearchParams()`. | `useSearchParams` triggers a CSR bailout: it broke `pnpm build` outright, and the fix Next suggests is a Suspense boundary on **every page** that renders the switcher — which is every page. The query is only needed at click time, and by then `window.location` is authoritative. | Feature file updated |
@@ -125,11 +137,12 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-15 (F02) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
-| `pnpm lint` | 2026-08-15 (F02) | ✅ clean, and all five rules proven to **fail** on deliberate probes (see entries) |
-| `pnpm build` | 2026-08-15 (F02) | ✅ `/ar` and `/en` prerendered (SSG), proxy registered |
-| `pnpm test` | 2026-08-15 (F02) | ✅ 13 passed, 1 file (`src/lib/format.test.ts`) |
-| `pnpm i18n:check` | 2026-08-15 (F02) | ✅ 303 keys, ar/en in sync; proven to fail on a deleted key |
+| `pnpm exec tsc --noEmit` | 2026-08-15 (F03) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
+| `pnpm lint` | 2026-08-15 (F03) | ✅ clean, and all five rules proven to **fail** on deliberate probes (see entries) |
+| `pnpm build` | 2026-08-15 (F03) | ✅ runs `db:migrate` first, then `/ar` and `/en` prerendered (SSG), proxy registered |
+| `pnpm test` | 2026-08-15 (F03) | ✅ 13 passed, 1 file (`src/lib/format.test.ts`) |
+| `pnpm i18n:check` | 2026-08-15 (F03) | ✅ 303 keys, ar/en in sync; proven to fail on a deleted key |
+| `pnpm db:up` + `db:migrate` | 2026-08-15 (F03) | ✅ container healthy; migration `0000_fair_human_torch` applied clean to an empty database; 15 tables present |
 | Two-account ownership | — | — |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -150,6 +163,64 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 3 — Wave 2 · F03 Database Schema
+
+**Date:** 2026-08-15
+**Status:** ⚠️ done with deviations · **F04 not started**
+
+**Built:**
+- `docker-compose.yml` (`postgres:alpine`, no tag, healthcheck), `drizzle.config.ts`, `POSTGRES_URL` in `.env`.
+- Scripts: `db:up`, `db:down`, `db:generate`, `db:migrate`, `db:studio`. **No `db:push`.** `build` is now `pnpm db:migrate && next build`.
+- `src/lib/db/enums.ts` — 13 `pgEnum`s. `src/lib/db/schema.ts` — 15 tables. `src/lib/db/index.ts` — postgres.js pool, `server-only`, dev-global so Next's module reloading doesn't leak connections.
+- `src/lib/geo.ts` — `Position` (`[lng, lat]`), `Polygon`, `MultiPolygon`, `BoundingBox`.
+- `src/lib/session.ts` — provisional `Session`/`Role` (Open Thread 8).
+- `src/lib/data/{drone,zone,booking,pilot,remote-id,audit,notification}.ts`. Every exported function takes the session first. `audit.ts` has **no** update or delete function and must never grow one.
+- Migration `drizzle/0000_fair_human_torch.sql`, committed.
+
+**Deviated from spec:**
+- **The generated SQL contained no `CREATE TYPE` at all.** drizzle-kit reads only the file named in `drizzle.config.ts`, and the enums lived in `enums.ts` without being re-exported. Every table using an enum would have failed on apply. Fixed with `export * from "./enums"` in `schema.ts` — which is also how F05's `auth-schema.ts` must be wired in. **This is the read-the-SQL rule paying for itself on its first use; `db:push` would have surfaced it as a runtime error later.**
+- **Docker volume mounts `/var/lib/postgresql`, not `/var/lib/postgresql/data`.** Postgres 18+ restart-loops on the old path. The container was in `Restarting (1)` until this was changed.
+- **`mobileE164` → explicit `mobile_e164`.** The snake_case converter had produced `mobile_e_164`.
+- **Driver is postgres.js**, chosen over `pg`. See Decisions.
+- **`casing: "snake_case"`** in both the drizzle-kit config and the runtime client.
+- **Two enums beyond the spec's list**: `notification_category`, `drone_photo_kind` — the spec gave their values in prose but not as enums.
+- **No foreign keys on user-referencing columns** (Open Thread 6). Better Auth's `user` table doesn't exist yet, so they are plain `text` with no constraint. F05 must add them, including `audit_event.actor_user_id ON DELETE SET NULL`.
+- `jobs`, `remote_id_scan`, `rate_limit_bucket` **not** created — deferred to F08/F11/F09, which own their columns (Open Thread 7).
+- `email_log` **was** created here, since F03 lists its columns.
+- ESLint `no-unused-vars` now ignores `_`-prefixed args, so the session-first convention holds even where the session is unused.
+
+**Verified:**
+- `pnpm db:up` → container `Up (healthy)`.
+- `pnpm db:generate` → migration written; **SQL read in full before applying**, which is how the missing enums and `mobile_e_164` were caught. Regenerated from scratch after fixing both.
+- `pnpm db:migrate` → applied clean to an empty database. `\dt` lists all 15 tables.
+- Round-trip through Drizzle against the live database (temporary probe, since deleted):
+  - inserting a `city` with **no `id`** returns a filled-in v4 uuid — the default works;
+  - a `self_built` drone with **`serialNumber` omitted** inserts successfully — the product's central case, proven at the database;
+  - read-back through `db.query` returns the Arabic nickname intact;
+  - `geometry` round-trips as an object with `[46.6, 24.7]` — `[lng, lat]` order preserved;
+  - `typeof zone.minLat === "number"`, **not `string`** — the `doublePrecision`-not-`numeric` decision, proven rather than assumed.
+- `pg_indexes` confirms all three partial uniques on `booking` carry `WHERE (status = ANY (ARRAY['pending','approved']))`.
+- `information_schema` confirms `drone.serial_number` is nullable and `zone.min_lat`/`max_lng` are `double precision`.
+- `package.json` has no `db:push`.
+- `pnpm db:studio` starts and binds (its local server answers on 4983).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (13), `pnpm build` — all green, with `build` running migrations first.
+
+**Not verified:**
+- **"A deliberate `uuid` user column fails at migrate time."** Not testable yet — there is no `user` table to point a foreign key at, so a `uuid` column would simply be created. This check moves to **F05**, when the FKs are added; it is the moment the type mismatch would actually bite.
+- **`db:studio` "lists every table" in the UI.** The CLI serves a local API that a hosted page renders, and no browser was used. The equivalent evidence — all 15 tables present — came from `psql \dt` directly, which is stronger about the database but says nothing about Studio's UI.
+- Nothing has been run against Neon. The connection string is the only thing that changes, but that is an assumption until it is done.
+
+**Next session should know (F04 — Riyadh seed data, then F05):**
+- **Docker must be running** (`pnpm db:up`) before anything touches the database, including `pnpm build`.
+- `pnpm db:seed` **does not exist yet** — F04 adds it.
+- The `city` table is empty. F04 seeds Riyadh with `isModelled: true`; it is the only modelled city in this build.
+- Zone geometry is `[lng, lat]`. Riyadh is roughly `[46.7, 24.7]` — if a seeded polygon lands in the Indian Ocean, the pair is reversed.
+- `zone.minLat/maxLat/minLng/maxLng` and `vertexCount` are **denormalised**: whatever writes geometry must compute them. F04's seed and F23's editor both.
+- `zone_hour.weekday` is **0 = Sunday**.
+- When adding tables: enums go in `enums.ts` **and** get re-exported from `schema.ts`, or they silently never reach the migration.
 
 ---
 

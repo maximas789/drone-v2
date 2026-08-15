@@ -12,6 +12,8 @@ Postgres in Docker, Drizzle wired up, and the entire domain schema landed in one
 
 `docker-compose.yml` at the project root, image `postgres:alpine` — **no version tag**, so a fresh project gets current stable. Volume `pgdata`. Port 5432.
 
+**Correction from the build (F03):** mount the volume at **`/var/lib/postgresql`**, not `/var/lib/postgresql/data`. Postgres 18+ keeps its data in a major-version-named subdirectory of that path — which is what makes a later `pg_upgrade --link` possible without crossing a mount boundary — and restart-loops if you mount the old path.
+
 > Worth knowing: a Postgres data directory belongs to the major version that created it. Once there's real data, an image that jumps a major refuses to start against the old volume — the fix is dump-and-restore, not a flag. That's the moment to pin the major, not before.
 
 `.env`: `POSTGRES_URL=postgresql://app:app@localhost:5432/app`
@@ -34,6 +36,12 @@ Postgres in Docker, Drizzle wired up, and the entire domain schema landed in one
 Every table below gets `uuid("id").primaryKey().defaultRandom()`. **Every column referencing a user is `text`**, matching Better Auth's `user.id` — declaring it `uuid` fails the foreign key at migrate time. Tables referencing *our* tables use `uuid`.
 
 `src/lib/db/auth-schema.ts` is CLI-generated in [F05](./F05-auth-roles-access.md) and never edited. `schema.ts` re-exports it.
+
+**drizzle-kit reads only the one file named in `drizzle.config.ts`.** Anything not reachable from `schema.ts` — the enums, and later `auth-schema.ts` — produces no DDL at all and the migration fails on first use. `schema.ts` therefore does `export * from "./enums"`.
+
+**No user-referencing column carries a foreign key until F05**, because Better Auth's `user` table does not exist before then. F05 adds them, including `audit_event.actor_user_id ON DELETE SET NULL`.
+
+Set `casing: "snake_case"` in **both** `drizzle.config.ts` and `drizzle()`, or the generated SQL and the runtime queries disagree about column names. Give `mobileE164` an explicit `mobile_e164` — the converter otherwise emits `mobile_e_164`.
 
 ### Enums (`pgEnum`)
 
@@ -98,7 +106,7 @@ Three partial unique indexes, all `where status in ('pending','approved')`:
 
 **`notification_preference`** — only categories that exist: `booking_reminder`, `registration_expiry`, `zone_closure`.
 
-**`jobs`**, **`remote_id_scan`**, **`rate_limit_bucket`** — per [F08](./F08-background-jobs.md), [F11](./F11-remote-id-redaction.md), [F09](./F09-rate-limiting.md).
+**`jobs`**, **`remote_id_scan`**, **`rate_limit_bucket`** — per [F08](./F08-background-jobs.md), [F11](./F11-remote-id-redaction.md), [F09](./F09-rate-limiting.md). **Deliberately not created in F03**: each feature owns its own columns. `email_log` *is* created here, since F03 lists its columns.
 
 ### Data access layer
 
@@ -118,15 +126,15 @@ src/lib/data/{drone,zone,booking,pilot,remote-id,audit,notification}.ts
 
 ## Acceptance criteria
 
-- [ ] `pnpm db:up` starts Postgres; `docker compose ps` shows it healthy.
-- [ ] `pnpm db:generate` produces a migration in `drizzle/`; the SQL was **read** before applying.
-- [ ] `pnpm db:migrate` applies cleanly against an empty database.
-- [ ] `package.json` has **no** `db:push` script.
-- [ ] Every non-auth table has a UUID primary key that fills itself in — inserting without an `id` works.
-- [ ] Every user-referencing column is `text`; a deliberate `uuid` attempt fails at migrate time with a type mismatch (verified once, then reverted).
-- [ ] `drone.serial_number` is nullable in the generated SQL.
-- [ ] The three partial unique indexes on `booking` exist and carry the `where status in ('pending','approved')` clause.
-- [ ] `zone.min_lat` etc. are `double precision`, not `numeric`.
-- [ ] `pnpm db:studio` opens and lists every table.
-- [ ] Inserting and reading one row through `db` works.
-- [ ] `pnpm build` completes, running migrations first.
+- [x] `pnpm db:up` starts Postgres; `docker compose ps` shows it healthy.
+- [x] `pnpm db:generate` produces a migration in `drizzle/`; the SQL was **read** before applying — and the read caught two real defects, see `BUILD-LOG.md`.
+- [x] `pnpm db:migrate` applies cleanly against an empty database.
+- [x] `package.json` has **no** `db:push` script.
+- [x] Every non-auth table has a UUID primary key that fills itself in — verified by inserting a `city` with no `id`.
+- [ ] **A deliberate `uuid` user column fails at migrate time.** Not testable in F03 — there is no `user` table to reference, so a `uuid` column would simply be created. **Moves to [F05](./F05-auth-roles-access.md)**, where the foreign keys are added.
+- [x] `drone.serial_number` is nullable in the generated SQL, and a self-built drone inserts with it omitted.
+- [x] The three partial unique indexes on `booking` exist and carry the `where status in ('pending','approved')` clause — confirmed in `pg_indexes`.
+- [x] `zone.min_lat` etc. are `double precision`, not `numeric` — and read back as `number`, not `string`.
+- [~] `pnpm db:studio` opens. The CLI starts and binds; the UI is a hosted page and no browser was used. All 15 tables were confirmed present with `psql \dt` instead.
+- [x] Inserting and reading one row through `db` works — including a `jsonb` geometry round-tripping with `[lng, lat]` intact.
+- [x] `pnpm build` completes, running migrations first.

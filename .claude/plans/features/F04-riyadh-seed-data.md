@@ -95,17 +95,25 @@ src/lib/geo/bbox.ts             computeBbox + countVertices (shared with F23)
 
 Script: `"db:seed": "tsx src/lib/seed/index.ts"`
 
+**Corrections from the build (F04):**
+
+- `src/lib/geo/bbox.ts` sits alongside `src/lib/geo/index.ts` (the `Position`/`Polygon` types). F03 had created `src/lib/geo.ts`; it became the directory's `index.ts`.
+- The entry point must **not** use top-level `await` — tsx transpiles to CJS and throws `ERR_REQUIRE_ASYNC_MODULE`. End with `main().catch(…)` + `process.exit(1)`, so a failed seed exits non-zero.
+- The seed loads `.env` itself with `process.loadEnvFile` and builds its **own** postgres client. `@/lib/db` is `server-only`.
+- Idempotency is `onConflictDoNothing`, **not** upsert — an upsert bumps `updated_at` on every run, which the criteria forbid. `zone_closure` has no natural key and is guarded by a read on `(zoneId, startsAt)`.
+- Only **permitted** zones get `zone_hour` rows: 7 zones x 14 windows = 98. A restricted or no-fly zone is never open.
+
 ## Acceptance criteria
 
-- [ ] `pnpm db:seed` inserts 1 restricted + 7 permitted + 4 no-fly zones, 6 cities, and the `zone_hour` rows.
-- [ ] Running `pnpm db:seed` a second time changes no row counts and no `updatedAt` values.
-- [ ] Every zone has a bilingual name and district; no field contains placeholder text such as "Zone 1" or lorem ipsum.
-- [ ] `computeBbox` output matches the geometry for every seeded zone (asserted in the seed itself).
-- [ ] All coordinates are `[lng, lat]` order and land inside Saudi Arabia — a sanity assertion rejects any point outside 16–33 °N / 34–56 °E.
-- [ ] At least one no-fly polygon overlaps a permitted zone's bbox.
-- [ ] `RUH-NF-KKIA` has an interior ring, and a point inside that ring is **not** contained by the polygon.
-- [ ] `RUH-P-07` has two Friday `zone_hour` rows.
-- [ ] Two `zone_closure` rows exist on `RUH-P-07`, one past and one future.
-- [ ] Exactly two permitted zones have `autoApprove: true`.
-- [ ] Rendering the seeded zones on a map shows them over Riyadh, correctly positioned, with no self-intersecting polygons.
-- [ ] The disclaimer string exists in both `messages/ar.json` and `messages/en.json` and renders on every map surface.
+- [x] `pnpm db:seed` inserts 1 restricted + 7 permitted + 4 no-fly zones, 6 cities, and the `zone_hour` rows (98 — permitted zones only).
+- [x] Running `pnpm db:seed` a second time changes no row counts and no `updatedAt` values — md5 of every zone's `code || updated_at` compared before and after, byte-identical.
+- [x] Every zone has a bilingual name and district; no placeholder text. Asserted in the suite against `/lorem|placeholder|TODO|Zone \d/i`, and confirmed with a SQL query.
+- [x] `computeBbox` output matches the geometry for every seeded zone — the bbox is *derived* by it, never hand-written, and the seed refuses to run on a degenerate one.
+- [x] All coordinates are `[lng, lat]` and land inside Saudi Arabia. The 16-33 N / 34-56 E assertion runs in preflight and in the suite, and was tested against a deliberately reversed polygon.
+- [x] At least one no-fly polygon overlaps a permitted zone's bbox — `RUH-NF-KKIA` x `RUH-P-01`, asserted by name so it cannot be edited away silently.
+- [~] `RUH-NF-KKIA` has an interior ring. **Structure asserted** (2 rings; the hole strictly inside the outer ring's box). The second half — *a point inside that ring is not contained by the polygon* — needs `pointInPolygon`, which belongs to [F12](./F12-airspace-engine.md). Writing a second ray-cast here is exactly the decay the plan warns about, so **F12 must add that assertion.**
+- [x] `RUH-P-07` has two Friday `zone_hour` rows (every zone does; Friday splits 06:00-10:00 and 15:30-20:00 around Jumu'ah).
+- [x] Two `zone_closure` rows exist on `RUH-P-07`, one past and one future — confirmed against `now()` in SQL.
+- [x] Exactly two permitted zones have `autoApprove: true` (`RUH-P-01`, `RUH-P-03`), so both booking paths are demonstrable. The seed refuses to run if this stops being true.
+- [ ] **Rendering the seeded zones on a map shows them correctly positioned with no self-intersecting polygons.** Not done — no map exists until [F20](./F20-airspace-map.md) and no browser was used. Rings are closed and inside Saudi Arabia, but **self-intersection has not been checked** and a bbox cannot check it.
+- [~] The disclaimer string exists in both `messages/ar.json` and `messages/en.json` (`zones.disclaimer`, `map.disclaimer`). **Nothing renders it yet** — F16 and F20 must, on every map surface.

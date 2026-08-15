@@ -27,7 +27,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 |---|---|---|
 | 0 — Groundwork | F01 | ⚠️ Done with deviations (Session 1) |
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
-| 2 — Database | F03, F04 | 🟨 F03 done with deviations (Session 3) · F04 not started |
+| 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⬜ Not started |
 | 4 — Platform services | F06, F07, F08, F09 | ⬜ Not started |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
@@ -70,6 +70,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | zod | 4.4.3 | registry · latest only | Action input parsing |
 | postgres (postgres.js) | 3.4.9 | registry · installed | **The chosen driver.** Works unchanged against Docker locally and Neon over TCP, so one code path covers both. `pg` was not installed. |
 | server-only | 0.0.1 | registry · installed | Runtime dependency, not dev — `src/lib/db/index.ts` imports it. |
+| tsx | 4.23.12 | registry · installed (dev) | Runs `db:seed`. Resolves the `@/*` alias from tsconfig, which plain `node` does not. |
 | qrcode | 1.5.4 | registry · latest only | F19 |
 
 ### Deprecations & API changes found
@@ -97,12 +98,14 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | # | Thread | Raised in | Blocks |
 |---|---|---|---|
 | 1 | `.env` values the user must supply: `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN`, Inngest keys. All optional — the app must work without them. | Planning | Nothing; degraded paths are specified |
-| 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` is currently **empty** — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
+| 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` currently holds only `POSTGRES_URL` — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
 | 6 | **No user-referencing column has a foreign key yet** — Better Auth's `user` table doesn't exist until F05. `pilot_profile.user_id`, `drone.owner_user_id`, `booking.pilot_user_id`, every `*_by_user_id`, `audit_event.actor_user_id`, `notification.user_id`. F05 must add them in its own migration, including `audit_event.actor_user_id ON DELETE SET NULL` (the log outlives the account). Until then there is no referential integrity on those columns. | F03 | F05 |
 | 7 | `jobs`, `remote_id_scan` and `rate_limit_bucket` are **not** in the schema — F03 defers them to the features that own their columns. | F03 | F08, F11, F09 |
 | 8 | `src/lib/session.ts` holds a **provisional** `Session` type so the data layer could take a session from its first query. F05 replaces it with Better Auth's inferred type and adds the real guards. | F03 | F05 |
+| 9 | **F12 owes the KKIA annulus its containment assertion** — a point inside the hole must not be contained by the polygon. F04 asserted only the structure, because writing a second `pointInPolygon` outside `src/lib/airspace/` is the decay the plan warns about. | F04 | F12 |
+| 10 | **Nothing has checked the seeded polygons for self-intersection**, and no one has seen them on a map. F20 is the first render. | F04 | F20 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -116,6 +119,9 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 | 2026-08-15 | Version research done inline against the npm registry, not by parallel sub-agents as F01 §"Version research" describes. | The session's operating rules forbid dispatching agents unless the user asks. The registry is the primary source the research was meant to reach, so the output is the same; only the mechanism differs. What was *not* done is the per-branch API/deprecation sweep — later waves must check current docs for their own package before writing against it. | Feature file updated |
 | 2026-08-15 | Rule 1 also lints class strings inside `cva()`/`cn()`/`clsx()`/`twMerge()`, not only `className` attributes. | shadcn keeps its class strings in `cva()`. Restricting the rule to the attribute meant `button.tsx` and `badge.tsx` shipped `pr-`/`pl-` on day one, unflagged — in the components every future page reuses. | Feature file updated |
 | 2026-08-15 | Kept the scaffold's generated `AGENTS.md`; our `CLAUDE.md` now ends with `@AGENTS.md`. | `next dev` rewrites `AGENTS.md` on every run — deleting it only produces a recurring uncommitted diff. The scaffold's own `CLAUDE.md` (a one-line `@AGENTS.md`) was deleted so the project's real one survived the move. | `CLAUDE.md` updated |
+| 2026-08-15 | The seed's preflight checks are duplicated in the test suite. | Two different jobs. The seed must **refuse to write** a reversed coordinate; the suite must fail `pnpm test` so the mistake is caught without anyone re-seeding. Neither substitutes for the other. | Feature file updated |
+| 2026-08-15 | Only permitted zones get `zone_hour` rows. | A restricted or no-fly zone is never "open". Giving it opening hours would state, in data, that there is a time when you may fly there. | Feature file updated |
+| 2026-08-15 | `src/lib/geo.ts` → `src/lib/geo/index.ts`. | F04's spec puts `bbox.ts` under `src/lib/geo/`, and a path cannot be both a file and a directory. `@/lib/geo` resolves unchanged. | n/a |
 | 2026-08-15 | Driver is **postgres.js**, not `pg`. | One driver reaches both Docker locally and Neon over TCP, so there is no second code path to keep working and no build-time/runtime split. Drizzle's `postgres-js` adapter is first-class. | Feature file updated |
 | 2026-08-15 | `casing: "snake_case"` set in **both** `drizzle.config.ts` and `drizzle()`. | camelCase in TypeScript, snake_case in Postgres, without an explicit name on 200-odd columns. It must be set in both places or generated SQL and runtime queries disagree about column names — a failure that only shows up at query time. | n/a |
 | 2026-08-15 | `mobileE164` carries an explicit column name `mobile_e164`. | The snake_case converter produced `mobile_e_164`, splitting the name of the E.164 standard in half. | n/a |
@@ -140,9 +146,10 @@ What has actually been **run**, not what was written. F31 reads this.
 | `pnpm exec tsc --noEmit` | 2026-08-15 (F03) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
 | `pnpm lint` | 2026-08-15 (F03) | ✅ clean, and all five rules proven to **fail** on deliberate probes (see entries) |
 | `pnpm build` | 2026-08-15 (F03) | ✅ runs `db:migrate` first, then `/ar` and `/en` prerendered (SSG), proxy registered |
-| `pnpm test` | 2026-08-15 (F03) | ✅ 13 passed, 1 file (`src/lib/format.test.ts`) |
+| `pnpm test` | 2026-08-15 (F04) | ✅ 60 passed, 3 files (format, geo/bbox, seed zones) |
 | `pnpm i18n:check` | 2026-08-15 (F03) | ✅ 303 keys, ar/en in sync; proven to fail on a deleted key |
 | `pnpm db:up` + `db:migrate` | 2026-08-15 (F03) | ✅ container healthy; migration `0000_fair_human_torch` applied clean to an empty database; 15 tables present |
+| `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Two-account ownership | — | — |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -163,6 +170,53 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 4 — Wave 2 · F04 Riyadh Airspace Seed Data
+
+**Date:** 2026-08-15
+**Status:** ⚠️ done with deviations · **Wave 2 complete**
+
+**Built:**
+- `src/lib/geo/bbox.ts` — `computeBbox`, `countVertices`, `bboxOverlaps`, `assertWithinSaudiArabia`, `assertRingsClosed`. **The one implementation**; F23's editor must use it rather than growing its own.
+- `src/lib/seed/{cities,zones-riyadh,zone-hours,closures,index}.ts`, script `db:seed`.
+- 6 cities (Riyadh `isModelled: true`, five others false), 12 zones (1 restricted base + 7 permitted + 4 no-fly), 98 `zone_hour` rows, 2 closures.
+- `src/lib/geo/bbox.test.ts` and `src/lib/seed/zones-riyadh.test.ts` — 47 new tests.
+
+**Deviated from spec:**
+- **`src/lib/geo.ts` became `src/lib/geo/index.ts`.** F03 had created it as a file; F04's spec wants `src/lib/geo/bbox.ts`, and a path cannot be both. `@/lib/geo` still resolves.
+- **The seed builds its own postgres client** instead of importing `@/lib/db`, which is `server-only` and belongs to the request path. A seed is a script.
+- **`tsx` needed, and the entry point cannot use top-level `await`** — tsx transpiles to CJS and throws `ERR_REQUIRE_ASYNC_MODULE`. It ends with `main().catch(…)` and `process.exit(1)`, which is better anyway: a failed seed now exits non-zero.
+- **The seed loads `.env` itself** via `process.loadEnvFile`, as `drizzle.config.ts` does. Nothing loads it for a script.
+- **Only permitted zones get `zone_hour` rows.** A restricted or no-fly zone is never "open", and giving it opening hours would imply it could be. This is why there are 98 rows (7 × 14), not 168.
+- **Idempotency is `onConflictDoNothing`, not upsert.** An upsert would bump `updated_at` on every re-run, which the acceptance criteria forbid. `zone_closure` has no natural key, so it is guarded by a read on `(zoneId, startsAt)`.
+- **Preflight assertions live in the seed *and* in the test suite.** Not duplication for its own sake: the seed must **refuse to write**, and the suite must fail on `pnpm test` without anyone re-seeding.
+
+**On the honesty constraint:** every zone's `authorityRef` is an explicit `AJNIHA-PROPOSAL/…` string, and the two closures are `AJNIHA-PROPOSAL/NOTAM-…`. Nothing in the seed carries a GACA reference number, real or invented. The geographic anchors are public fact; the permissions are the proposal, and the file says so at the top.
+
+**Verified:**
+- `pnpm db:seed` → 6 cities, 12 zones, 98 hour rows, 2 closures.
+- **Idempotency proved, not assumed:** md5 of every zone's `code || updated_at` captured before and after a second run — byte-identical, and the second run reported 0 inserts across all four categories.
+- In the database: 7 permitted / 1 restricted / 4 no-fly; 2 auto-approving permitted zones; `RUH-NF-KKIA` has **2 rings** and `vertex_count` 34; `RUH-P-07` has exactly **2 Friday windows**; closures split 1 past / 1 future against `now()`; zero rows matching placeholder text patterns.
+- Every seeded bbox was derived by `computeBbox`, never typed by hand, and all 12 sit inside 24–26 °N / 46–48 °E.
+- `RUH-NF-KKIA` (24.886–25.029 °N) overlaps `RUH-P-01` Thumamah (24.98–25.14 °N) — the fixture F12's `no_fly > permitted` precedence needs. Asserted by name in the test, so it cannot be silently edited away.
+- The `[lng, lat]` reversal detector was tested against a deliberately reversed polygon and throws.
+- `pnpm test` → **60 passed** across 3 files. `pnpm lint`, `pnpm typecheck`, `pnpm build` green.
+
+**Not verified:**
+- **"Rendering the seeded zones on a map shows them correctly positioned, with no self-intersecting polygons."** Not done — there is no map until F20, and no browser was used. The polygons are simple convex-ish rings authored vertex by vertex and every ring is closed and inside Saudi Arabia, but **nothing has checked for self-intersection**, and a bbox test cannot. F20 is the first time anyone sees them.
+- **"A point inside the KKIA hole is not contained by the polygon."** Deliberately deferred: that needs `pointInPolygon`, which is F12's, and writing a second ray-cast here is precisely the decay the plan warns about. The annulus's *structure* is asserted now (2 rings, inner strictly inside the outer's box); **F12 must add the containment assertion.**
+- The disclaimer strings exist in both catalogues (`zones.disclaimer`, `map.disclaimer`) but nothing renders them yet — F16/F20 must, on every map surface.
+- Arabic zone names and notes are unreviewed by a native speaker.
+
+**Next session should know (F05 — auth, roles, access):**
+- **F05 is the biggest single risk to what already exists.** It must: run the Better Auth CLI, **re-export `auth-schema` from `schema.ts`** (or the tables silently never reach a migration — see F03's entry), then `db:generate` → read the SQL → `db:migrate`.
+- **F05 owns Open Thread 6:** adding foreign keys to every user-referencing column, including `audit_event.actor_user_id ON DELETE SET NULL`. That is also when F03's untested acceptance criterion — a `uuid` user column failing at migrate time — finally becomes testable.
+- **F05 replaces `src/lib/session.ts`** (Open Thread 8) with Better Auth's inferred type, and adds the real guards. `isReviewer`/`isAdmin` are used throughout `src/lib/data/*.ts`; keep the names or update all seven files.
+- **Do not create a probe account.** The first account created becomes admin; making a test account before the user signs up locks them out of their own system page.
+- Editing `src/lib/auth.ts` later means re-running the CLI → `db:generate` → `db:migrate`. F06 and F09 both touch that file.
+- The database currently holds seed data only — no users, no drones, no bookings.
 
 ---
 

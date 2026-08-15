@@ -32,7 +32,7 @@ Build order is Waves 0→9 across 31 features. Work one feature (or a named smal
 6. **No bare `toLocaleDateString` / `toLocaleTimeString` / `new Intl.*`** outside `src/lib/format.ts`. That file forces `ar-SA-u-ca-gregory-nu-latn` — **Gregorian calendar and Latin numerals in both locales**. Without it, `ar-SA` emits Hijri dates and Arabic-Indic digits.
 7. **`src/lib/airspace/evaluate.ts` stays pure.** No `@/lib/db`, no `server-only`, no `next-intl`, no `react`. It runs identically server-side (authoritative) and in the map (instant feedback). This is why the map can never promise what the server refuses.
 8. **Ownership lives in `src/lib/data/*.ts`.** No page or server action calls `db` directly; every exported function takes the session as its first argument.
-9. **Middleware is never the security boundary.** It's an optimistic redirect. The boundary is a guard called in the layout **and again inside every server action** — actions are ordinary POSTs, reachable directly.
+9. **`src/proxy.ts` is never the security boundary.** (Next 16 renamed `middleware` → `proxy`; the old filename and export are deprecated.) It's an optimistic redirect. The boundary is a guard called in the layout **and again inside every server action** — actions are ordinary POSTs, reachable directly.
 10. **Refusals are never exceptions.** Server actions return `{ ok: false, reasons: Reason[] }` with machine-readable codes, translated at render.
 11. **No status change outside `src/lib/workflow/`.** One `applyTransition()` writes the row, the audit event, and the notification in a single transaction.
 12. **A check you didn't run is named, never claimed.** Writing the code is the reason to run the test, not a reason to skip it.
@@ -99,6 +99,8 @@ pnpm build          # runs db:migrate first
 - **Editing `src/lib/auth.ts`** means re-running the Better Auth CLI → `db:generate` → `db:migrate`. Both the email and rate-limiting features touch that file.
 - **The Remote ID code survives renewal.** A QR sticker already on an airframe must keep resolving.
 - **`create-next-app` will refuse a non-empty directory.** Scaffold into `.scaffold-tmp` and move up, keeping `CLAUDE.md`, `.claude/`, and `skills-lock.json`. *(Done in F01. It also refuses a name starting with a dot — the temp dir was `scaffold-tmp`.)*
+- **`next/root-params` throws in Server Actions and Route Handlers.** The locale reaches `i18n/request.ts` that way, so an action needing translated text must call `getTranslations({ locale, … })` with the locale passed in — bare `getTranslations()` fails at runtime, not at build.
+- **A link that looks like a button is `<Button render={<Link href="…" />}>`.** shadcn is on Base UI now; there is no `asChild`.
 - **This Next.js is not the one in your training data.** `next dev` writes and re-adds `AGENTS.md`; deleting it just recreates an uncommitted change. Read `node_modules/next/dist/docs/` before writing framework code.
 
 @AGENTS.md

@@ -13,6 +13,20 @@ import nextTs from "eslint-config-next/typescript";
 const PHYSICAL_DIRECTION_CLASS =
   /(?:^|\s|:)-?(?:m[lr]|p[lr]|left|right)-|(?:^|\s|:)text-(?:left|right)(?=\s|$)|(?:^|\s|:)(?:border|rounded)-[lr](?=-|\s|$)/;
 
+/**
+ * Rule 4 — `tracking-*` must be `ltr:`-prefixed.
+ *
+ * Letter-spacing severs Arabic letter joins: the cursive connections come
+ * apart and a word renders as loose disconnected glyphs. It is not a subtle
+ * degradation, and it is invisible to anyone reviewing in English.
+ */
+// `ltr:` must appear somewhere in the variant chain, in any position —
+// `ltr:tracking-tight` and `md:ltr:tracking-wide` are both fine.
+const UNPREFIXED_TRACKING_CLASS = /(?:^|\s)(?:(?!ltr:)[a-z0-9-]+:)*tracking-/;
+
+const TRACKING_MESSAGE =
+  "Unprefixed tracking-* utility. Letter-spacing breaks Arabic letter joins — write it as ltr:tracking-* so it only applies in the English layout.";
+
 const LOGICAL_PROPERTY_MESSAGE =
   "Physical direction utility. Use the logical equivalent: ms-/me- (ml-/mr-), ps-/pe- (pl-/pr-), start-/end- (left-/right-), text-start/text-end, border-s/border-e, rounded-s/rounded-e.";
 
@@ -35,6 +49,14 @@ const classNameSelectors = CLASS_STRING_HOSTS.flatMap((host) => [
   {
     selector: `${host} TemplateElement[value.raw=${PHYSICAL_DIRECTION_CLASS}]`,
     message: LOGICAL_PROPERTY_MESSAGE,
+  },
+  {
+    selector: `${host} Literal[value=${UNPREFIXED_TRACKING_CLASS}]`,
+    message: TRACKING_MESSAGE,
+  },
+  {
+    selector: `${host} TemplateElement[value.raw=${UNPREFIXED_TRACKING_CLASS}]`,
+    message: TRACKING_MESSAGE,
   },
 ]);
 
@@ -76,11 +98,57 @@ const eslintConfig = defineConfig([
   },
 
   {
-    // The single sanctioned home for Intl.
+    /**
+     * The single sanctioned home for Intl — plus its own test, which has to
+     * reach raw `Intl` to check the wrapper against it. A test that used the
+     * wrapper to verify the wrapper would assert nothing.
+     */
     name: "ajniha/format-exemption",
-    files: ["src/lib/format.ts"],
+    files: ["src/lib/format.ts", "src/lib/format.test.ts"],
     rules: {
       "no-restricted-syntax": "off",
+    },
+  },
+
+  {
+    /**
+     * Rule 5 — locale-aware navigation only.
+     *
+     * A bare `next/link` drops the locale prefix, so an Arabic reader who
+     * clicks it silently lands in English. The same goes for `redirect`,
+     * `useRouter` and `usePathname` from `next/navigation`. `src/i18n/` is
+     * where the locale-aware versions are built, so it is exempt.
+     *
+     * `useSearchParams`, `useParams` and `notFound` have no locale-aware
+     * counterpart and stay allowed — banning them would only teach people to
+     * write eslint-disable comments next to the ones that matter.
+     */
+    name: "ajniha/locale-aware-navigation",
+    ignores: ["src/i18n/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/link",
+              message:
+                "Import { Link } from '@/i18n/navigation' — next/link drops the locale prefix.",
+            },
+            {
+              name: "next/navigation",
+              importNames: [
+                "redirect",
+                "permanentRedirect",
+                "useRouter",
+                "usePathname",
+              ],
+              message:
+                "Import these from '@/i18n/navigation' — the next/navigation versions are not locale-aware. useSearchParams, useParams and notFound are fine from here.",
+            },
+          ],
+        },
+      ],
     },
   },
 

@@ -49,7 +49,7 @@ These are inherited from the `start-an-app` skill and from the domain. Every fea
 5. **Nothing deprecated.** If the current release supersedes an approach, use the replacement — "still works" is what deprecated means.
 6. **A check that wasn't run is named, never claimed.**
 7. **Ownership is enforced in one place.** No page or server action calls `db` directly; all reads go through `src/lib/data/*.ts` functions whose first argument is the session.
-8. **Middleware is never the security boundary.** It's an optimistic redirect. The boundary is a guard called in the layout *and again inside every server action*.
+8. **`src/proxy.ts` is never the security boundary.** (Next 16 renamed the `middleware` convention to `proxy`.) It's an optimistic redirect. The boundary is a guard called in the layout *and again inside every server action*.
 9. **Logical properties only** — `ms-`/`me-`/`ps-`/`pe-`/`start-`/`end-`. An ESLint rule bans `ml-`/`mr-`/`pl-`/`pr-`/`left-`/`right-`.
 10. **No bare `toLocaleDateString`/`toLocaleTimeString`.** Everything goes through `src/lib/format.ts`, which forces `ar-SA-u-ca-gregory-nu-latn` — Gregorian calendar, Latin numerals, both locales.
 11. **`src/lib/airspace/evaluate.ts` stays pure.** No `db`, no `server-only`, no `next-intl`, no React. It runs identically on the server (authoritative) and in the map (instant feedback).

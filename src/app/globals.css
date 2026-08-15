@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--app-font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--app-font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -127,4 +127,57 @@
   html {
     @apply font-sans;
   }
+
+  /*
+   * The font stack switches on the language attribute alone — no conditional
+   * class names in components, so a component author cannot forget.
+   */
+  :root {
+    --app-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui,
+      sans-serif;
+  }
+
+  html[lang="ar"] {
+    --app-font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui,
+      sans-serif;
+
+    /*
+     * Arabic ascenders and descenders reach further than Latin ones, and the
+     * default 1.5 makes stacked Arabic lines collide.
+     */
+    line-height: 1.75;
+  }
+
+  /*
+   * Latin runs inside Arabic text — a Remote ID like AJN-4F2K-91XZ, an
+   * altitude, a date — keep the Latin face. Arabic digits stay Latin by
+   * `src/lib/format.ts`, so numbers are readable in either direction.
+   */
+  html[lang="ar"] :is(code, kbd, samp, pre, .font-mono) {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+  }
+}
+
+/*
+ * Directional icons only — arrows, chevrons, "back". A plus, a drone, or a
+ * clock must NOT carry this: mirroring them makes them look broken rather
+ * than translated.
+ */
+.rtl-flip {
+  transform: none;
+}
+
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/*
+ * Letter-spacing breaks Arabic letter joins outright — the cursive connections
+ * come apart and words render as loose disconnected glyphs. Any `tracking-*`
+ * utility in this codebase must be written `ltr:tracking-*`; an ESLint rule
+ * enforces it. This is the belt to that rule's braces, for tracking that
+ * arrives from a third-party stylesheet rather than from our own markup.
+ */
+[dir="rtl"] *:not([dir="ltr"], [dir="ltr"] *) {
+  letter-spacing: normal;
 }

@@ -66,6 +66,14 @@ Extend `src/lib/auth.ts` with `emailVerification.sendVerificationEmail` and `ema
 > 1. **`emailVerification` changes no schema.** The CLI was re-run and produced `src/lib/db/auth-schema.ts` byte-identical to before — `verification` and `user.emailVerified` already existed from F05. `db:generate` said "No schema changes"; there is no F06 migration. The three steps were still run, because "it probably doesn't change the schema" is not evidence.
 > 2. **`sendEmail` is imported dynamically inside the callbacks**, not at the top of `auth.ts`. It reaches `@/lib/db`, which carries `server-only`, and the CLI refuses any config that reaches it — the same trap F05 hit with `src/lib/db/index.ts`. A dynamic `import()` inside a callback body is never evaluated at config-load time, so the CLI loads the file and the request path still gets the guarded module.
 >
+> 3. **The send must be deferred with Next's `after()`.** Better Auth `await`s
+>    these callbacks *inside* the sign-up transaction, so `sendEmail`'s
+>    `email_log` insert — whose `user_id` is a foreign key onto `user` — fails
+>    against a row that is written but not yet committed, over a different
+>    pooled connection. The account is created, the response is 200, and the
+>    email vanishes. Found only when a real person signed up; no check we run
+>    would have caught it.
+>
 > `requireEmailVerification` stays **`false`**. With no API key the verification message only reaches the terminal, so requiring it would lock every new account out of the app it just created.
 
 ### Preview route
@@ -107,6 +115,7 @@ messages/{ar,en}.json               the `email` namespace
 
 - [x] With **no** `RESEND_API_KEY`, triggering an approval prints the rendered email to the terminal and writes an `email_log` row with `status: 'skipped'` — and the approval itself still succeeds. *(There is no approval workflow until F14, so this was run against `sendEmail` directly: both sends printed in full, both rows landed as `skipped`, and the caller reached the line after them. Rows deleted afterwards.)*
 - [ ] With a key set, a send to the account owner's address arrives and `email_log` records the Resend `providerId`. **Not run — needs a Resend account.**
+- [x] *(added)* **Signing up actually sends the verification email.** Not originally listed, and it was broken — see the `after()` note above. Now proven against a real sign-up: a `verify-email` row, in the recipient's locale, linked to the user.
 - [x] A forced provider failure writes `status: 'failed'` with the real error message, and **does not roll back** the approval that triggered it. *(Run with a deliberately invalid key: `status: 'failed'`, `error: 'API key is invalid'` — Resend's own words — and the caller continued.)*
 - [x] An Arabic-locale pilot approved by an English-locale reviewer receives an **Arabic** email; `email_log.locale = 'ar'`. *(The same event was sent for an `ar` and an `en` recipient; the two rows differ in `locale` and in `subject`.)*
 - [x] Every template renders in both locales at `/dev/emails`; the Arabic versions are right-aligned with `dir="rtl"`. *(22 iframes, all 11 × 2 present over HTTP. **No browser was used** — see Open Thread 11.)*

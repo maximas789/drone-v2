@@ -123,6 +123,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 21 | **Better Auth's own `rate_limit` table stores raw IP addresses** in its key (`0000:0000:…:0000\|/sign-up/email`). Ours does not — `rate_limit_bucket` keys on `sha256(pepper + ip)` — but the framework's key format is not ours to choose and there is no hook to hash it. F27's privacy page must therefore **not** claim the app never stores an IP address. Rows are short-lived but not swept by us. | F09 | F27, F29 |
 | 22 | **Any bare numeric argument in an ICU message renders Arabic-Indic digits.** next-intl formats `{count}` itself using the page locale, so `ar` gives `٣`. `messages/ar.json` already carries two such messages — `booking.slotsRemaining` (`#` in the plural branches) and `admin.pendingCount` — neither of which is rendered yet. The rule is: **numbers reaching a message go through `src/lib/format.ts` first** and arrive as strings. ESLint cannot see this route. | F09 | F21, F22, F25 |
 | 23 | **`scripts/i18n-check.mts` cannot tell a plural branch body from a placeholder.** `one {second}` is reported as a placeholder named `second` and fails the check as drift. Worked around in F09 by formatting the unit in `format.ts` instead — which was the better answer anyway — but the next person to write an English plural whose branch body is a single word will hit it. | F09 | any wave writing plurals |
+| 24 | **Anything Better Auth calls back into runs *inside* its transaction.** F06's email send did, and the `email_log` insert failed on a foreign key onto a `user` row that was written but not yet committed — over a different pooled connection, which could not see it. Fixed with Next's `after()`. **Every later callback into Better Auth has the same hazard**, and so does anything F14 does in a `databaseHooks` hook. | F09 session | F14, F17, F28 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -187,7 +188,9 @@ What has actually been **run**, not what was written. F31 reads this.
 | Email — real delivery | — | ❌ **not run.** Needs a Resend account; `providerMessageId` has never held a real value. |
 | Rate limiting — layer 2 | 2026-08-16 (F09) | ✅ against the live database: burst, daily, two-scope isolation, IP independence, no raw IPs, the generous map limit, and the sweep. Every probe row deleted after. |
 | Rate limiting — layer 1 | 2026-08-16 (F09) | ✅ 5 sign-up attempts through, **6th and 7th HTTP 429**. Run with a 1-char password so no account was created (`user` still 0), counters deleted afterwards. |
-| Rate limiting — direct action POST | — | ❌ **not run.** Needs a signed-in admin, and the owner has not signed up yet. |
+| Rate limiting — direct action POST | — | ❌ **still not run.** The owner has an account now, but the test needs their session cookie and that is not something to lift out of their browser. |
+| Sign-up sends its verification email | 2026-08-16 (F09 session) | ✅ **after a fix.** It did not, until the owner's real sign-up exposed it — see the Session 7 addendum. |
+| Owner account | 2026-08-16 | ✅ one user, `admin`, `preferred_locale = ar`. Three probe accounts were created and deleted while chasing the bug above; `user` is back to that one row, `email_log` and `rate_limit` emptied, the 12 seeded zones untouched. |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
@@ -271,6 +274,17 @@ Newest at the top.
 - **"No booking row is created"** — `createBooking` is F21's; there is nothing to create.
 - **Concurrency.** The single-statement upsert is what makes the counter race-free, and it was never exercised by two simultaneous requests. The argument is structural: there is no read-then-write to interleave.
 - **Better Auth's `rate_limit` table is never swept by us.** Whether it grows unbounded is the framework's business and has not been checked.
+
+**Addendum, same session — a real F06 bug, found by the owner signing up.**
+
+The owner created their account. It came out `admin` with `preferred_locale = ar`, as designed — and **`email_log` was empty**. The verification email F06 claimed to send on sign-up had never been sent.
+
+- **Symptom:** sign-up returns 200, account created, nothing logged, nothing printed. `sendResetPassword` and the manual `/send-verification-email` endpoint both worked fine, which is what made it look like the wiring was correct.
+- **Cause:** Better Auth `await`s `sendVerificationEmail` **inside the sign-up transaction**. `sendEmail` writes `email_log`, whose `user_id` is a foreign key onto `user`, over a **different pooled connection** — which cannot see a row that is written but not yet committed. The insert failed with a foreign-key violation, `sendEmail` caught it (it is built never to throw), and the email vanished silently.
+- **Diagnosis:** Next 16 permits only one dev server per project, so the running one had to be stopped and restarted with its output captured. The failing query was in its stderr. Three throwaway accounts were created and deleted in the process — safe now that the owner holds the admin row, and `user` is back to that one row.
+- **Fix:** `deliverAfterResponse`, which wraps the send in Next's `after()`. It runs once the response is finished and therefore after the commit, and it takes the send off the critical path — which is what the fire-and-forget was reaching for anyway. Re-tested: a fresh sign-up now writes a `verify-email` row, in the **recipient's** locale, linked to the user.
+- **Nothing in `test`, `lint`, `typecheck` or `build` would ever have caught this.** It needs a real account to be created. That is the same shape as Open Thread 11, and it is now Open Thread 24 — every later callback into Better Auth, and anything F14 does in a `databaseHooks` hook, has the identical hazard.
+- The Better Auth CLI was re-run after the edit (it loads `next/server` fine) and produced no schema change.
 
 **Next session should know (F07 uploads, F08 jobs):**
 - **`src/lib/auth.ts` is now finished.** F06 and F09 were its two remaining edits; nothing in Waves 5–9 should touch it. That also ends the CLI → `db:generate` → read SQL → `db:migrate` loop.

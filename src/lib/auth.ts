@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { after } from "next/server";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { sql } from "drizzle-orm";
@@ -33,6 +34,21 @@ const RESET_TOKEN_MINUTES = 60;
  * however transitively. A dynamic import inside a callback body is never
  * evaluated at config-load time, so the CLI stays happy and the request path
  * gets the guarded module.
+ *
+ * **Deferred with `after()`, and that is load-bearing too.** Better Auth
+ * `await`s these callbacks *inside* the sign-up transaction — the user row is
+ * written but not yet committed. `sendEmail` writes `email_log`, whose
+ * `user_id` is a foreign key onto `user`, over a **different pooled
+ * connection**, which cannot see an uncommitted row. So the insert failed with
+ * a foreign-key violation and the verification email was silently lost: the
+ * account was created, the response was 200, and nothing was sent.
+ *
+ * `after()` runs the callback once the response is finished, by which point
+ * the transaction has committed. It also takes the send off the critical path,
+ * which is what the fire-and-forget was for in the first place.
+ *
+ * Found by signing up for real. Nothing in the test suite or the build would
+ * have caught it, because it needs a genuine account creation to happen.
  */
 async function deliver(
   send: (mod: typeof import("@/lib/email/send")) => Promise<unknown>,
@@ -43,6 +59,20 @@ async function deliver(
     // `sendEmail` already swallows its own failures; this catches the import
     // itself. An auth flow must not break because mail did.
     console.error("[auth] email delivery failed:", caught);
+  }
+}
+
+/** `deliver`, but after the response — and therefore after the commit. */
+function deliverAfterResponse(
+  send: (mod: typeof import("@/lib/email/send")) => Promise<unknown>,
+) {
+  try {
+    after(() => deliver(send));
+  } catch (caught) {
+    // `after()` needs a request scope. If this is ever called outside one,
+    // sending late is better than not sending at all.
+    console.error("[auth] after() unavailable, sending inline:", caught);
+    void deliver(send);
   }
 }
 
@@ -112,15 +142,15 @@ export const auth = betterAuth({
     resetPasswordTokenExpiresIn: RESET_TOKEN_MINUTES * 60,
 
     /**
-     * `async` but **not awaited** — Better Auth's own instruction, and a
-     * security rule rather than a style preference: awaiting the send makes the
-     * response measurably slower when the account exists than when it does not,
-     * which tells an attacker which addresses are registered. The sibling
-     * defence is in `authErrorKey`, where `USER_NOT_FOUND` and a wrong password
-     * map to the same message.
+     * The send is **deferred, never awaited here** — Better Auth's own
+     * instruction, and a security rule rather than a style preference: awaiting
+     * it makes the response measurably slower when the account exists than when
+     * it does not, which tells an attacker which addresses are registered. The
+     * sibling defence is in `authErrorKey`, where `USER_NOT_FOUND` and a wrong
+     * password map to the same message.
      */
     sendResetPassword: async ({ user, url }) => {
-      void deliver(({ sendEmail }) =>
+      deliverAfterResponse(({ sendEmail }) =>
         sendEmail({
           to: user.email,
           template: "reset-password",
@@ -141,7 +171,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
 
     sendVerificationEmail: async ({ user, url }) => {
-      void deliver(({ sendEmail }) =>
+      deliverAfterResponse(({ sendEmail }) =>
         sendEmail({
           to: user.email,
           template: "verify-email",

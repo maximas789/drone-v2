@@ -638,3 +638,44 @@ export const emailLog = pgTable(
     index("email_log_status_idx").on(t.status, t.createdAt),
   ],
 );
+
+// --- Rate limiting --------------------------------------------------------
+
+/**
+ * Fixed-window counters for the app's own rate limiting (F09). Better Auth
+ * keeps its own separate table for `/api/auth/*`; this one covers server
+ * actions, which are ordinary POSTs and completely invisible to it.
+ *
+ * **No Redis**, deliberately: this works on serverless Neon with no second
+ * service to run, pay for or forget to provision.
+ *
+ * `key` already encodes the window length (`booking.create:user:abc#60`), so
+ * two rules on the same action cannot collide on the same `window_start` —
+ * which they otherwise would at every midnight, where a 60-second window and a
+ * 24-hour window begin on the same instant.
+ *
+ * **No raw IP address ever lands here.** Anonymous limits key on
+ * `sha256(RATE_LIMIT_PEPPER + ip)`; see `src/lib/ip-hash.ts`.
+ */
+export const rateLimitBucket = pgTable(
+  "rate_limit_bucket",
+  {
+    id: id(),
+    key: text().notNull(),
+    windowStart: timestamp({ withTimezone: true }).notNull(),
+    /**
+     * `windowStart + window`. Stored rather than derived so the nightly sweep
+     * is one indexed delete and does not have to know what window produced
+     * each row — and so `retryAfterSeconds` is a subtraction, not a lookup.
+     */
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    count: integer().notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // The conflict target of the atomic increment. Without it the
+    // `on conflict` has nothing to match and every hit inserts a new row.
+    uniqueIndex("rate_limit_bucket_uniq").on(t.key, t.windowStart),
+    index("rate_limit_bucket_expiry_idx").on(t.expiresAt),
+  ],
+);

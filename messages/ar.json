@@ -106,7 +106,8 @@
     "errorPasswordTooShort": "كلمة المرور قصيرة جداً.",
     "errorGeneric": "تعذّر إتمام الطلب. حاول مرة أخرى.",
     "errorPasswordMismatch": "كلمتا المرور غير متطابقتين.",
-    "verifyEmailCheckInbox": "أرسلنا رابط تأكيد إلى بريدك الإلكتروني."
+    "verifyEmailCheckInbox": "أرسلنا رابط تأكيد إلى بريدك الإلكتروني.",
+    "errorTooManyAttempts": "محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم أعد المحاولة."
   },
   "profile": {
     "title": "الملف الشخصي",
@@ -378,7 +379,8 @@
     "validation": "تحقق من الحقول المعلّمة.",
     "networkError": "تعذّر الاتصال. تحقق من الشبكة.",
     "backHome": "العودة للرئيسية",
-    "tryAgain": "إعادة المحاولة"
+    "tryAgain": "إعادة المحاولة",
+    "rateLimited": "حاولت مرات كثيرة. أعد المحاولة بعد {duration}."
   },
   "meta": {
     "defaultTitle": "أجنحة — تسجيل الطائرات بدون طيار",

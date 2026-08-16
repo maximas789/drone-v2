@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { setUserRoleAction } from "@/lib/actions/user";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatSeconds } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import { ROLES, type Role } from "@/lib/session";
 
@@ -35,10 +35,11 @@ export function UserRoleTable({
   locale: Locale;
 }) {
   const t = useTranslations("admin");
+  const tErrors = useTranslations("errors");
   const tRoles = useTranslations("roles");
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<{
-    key: string;
+    text: string;
     tone: "ok" | "error";
   } | null>(null);
 
@@ -46,13 +47,35 @@ export function UserRoleTable({
     startTransition(async () => {
       const result = await setUserRoleAction(userId, role);
       if (result.ok) {
-        setNotice({ key: "roleUpdated", tone: "ok" });
+        setNotice({ text: t("roleUpdated"), tone: "ok" });
         return;
       }
+
       // Refusals come back as codes and get translated here — the same refusal
       // reads correctly in whichever language the reader picked.
-      const code = result.reasons[0]?.code ?? "";
-      setNotice({ key: REASON_KEY[code] ?? "reasonNotAdmin", tone: "error" });
+      const reason = result.reasons[0];
+      const code = reason?.code ?? "";
+
+      // Being rate limited is a refusal like any other: an ordinary message in
+      // the reader's own language, never a 429 page and never a stack trace.
+      // The countdown goes through `format.ts`, so it is a Latin numeral in
+      // Arabic too — ICU would otherwise format the bare number itself and
+      // emit `٤٥`.
+      if (code === "rate_limited") {
+        const seconds = Number(reason?.params?.retryAfterSeconds ?? 0);
+        setNotice({
+          text: tErrors("rateLimited", {
+            duration: formatSeconds(seconds, locale),
+          }),
+          tone: "error",
+        });
+        return;
+      }
+
+      setNotice({
+        text: t(REASON_KEY[code] ?? "reasonNotAdmin"),
+        tone: "error",
+      });
     });
   }
 
@@ -71,7 +94,7 @@ export function UserRoleTable({
               : "text-destructive text-sm"
           }
         >
-          {t(notice.key)}
+          {notice.text}
         </p>
       ) : null}
 

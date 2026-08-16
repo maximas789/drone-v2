@@ -188,6 +188,24 @@ export function formatDistance(metres: number, locale: Locale): string {
       }).format(metres / 1000);
 }
 
+/**
+ * `45 ثانية` / `45 seconds` — a countdown, unit included.
+ *
+ * The unit is formatted **here** rather than as an ICU plural in the message
+ * catalogue, for two reasons. CLDR already knows Arabic's six plural
+ * categories and English's two, so nobody has to write them out; and
+ * `scripts/i18n-check.mts` cannot tell a plural branch body (`one {second}`)
+ * from a placeholder (`{second}`) and reports the first as drift.
+ */
+export function formatSeconds(seconds: number, locale: Locale): string {
+  return numberFormat(locale, {
+    style: "unit",
+    unit: "second",
+    unitDisplay: "long",
+    maximumFractionDigits: 0,
+  }).format(seconds);
+}
+
 /** Altitude is always metres AGL in this app — never feet. */
 export function formatAltitude(metres: number, locale: Locale): string {
   return numberFormat(locale, {

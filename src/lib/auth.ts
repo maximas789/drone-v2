@@ -69,6 +69,35 @@ export const auth = betterAuth({
     transaction: true,
   }),
 
+  /**
+   * **Layer 1 of two, and it is not sufficient on its own.** This covers
+   * `/api/auth/*` and nothing else. Server actions are ordinary POSTs to a
+   * page route and are completely invisible to it — `src/lib/rate-limit.ts` is
+   * what stands in front of those.
+   *
+   * `storage: "database"` rather than the default in-memory map: memory is
+   * per-instance, so on any host that runs more than one the limit is
+   * multiplied by the instance count, and it resets on every deploy. The cost
+   * is a table, which the Better Auth CLI generates.
+   *
+   * The custom rules are the endpoints where a flood costs something real —
+   * an account, an email, or a password guess.
+   */
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    customRules: {
+      "/sign-up/email": { window: 3600, max: 5 },
+      "/sign-in/email": { window: 60, max: 10 },
+      // Two a minute: each one is an email we send and, once a domain is
+      // verified, an email somebody else receives.
+      "/send-verification-email": { window: 60, max: 2 },
+      "/forget-password": { window: 60, max: 3 },
+      "/change-password": { window: 60, max: 5 },
+      "/delete-user": { window: 60, max: 3 },
+    },
+  },
+
   emailAndPassword: {
     enabled: true,
     /**

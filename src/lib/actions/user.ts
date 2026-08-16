@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { refuse, type ActionResult } from "@/lib/actions/result";
+import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import { getSession } from "@/lib/auth-guards";
 import { setUserRole } from "@/lib/data/user";
+import { enforceLimit } from "@/lib/rate-limit";
 import { isAdmin, isRole, type Role } from "@/lib/session";
 
 /**
@@ -16,9 +17,9 @@ import { isAdmin, isRole, type Role } from "@/lib/session";
  * be invoked with `fetch` by anyone who knows the action id, and the layout
  * never runs. A layout guard protects a page, never an action.
  *
- * Missing from the standard chain: `rateLimit()`, which F09 owns, and a zod
- * schema — the whole input is one identifier and one enum, and `isRole` is
- * already the narrowing function the rest of the app uses.
+ * Still missing from the standard chain: a zod schema — the whole input is one
+ * identifier and one enum, and `isRole` is already the narrowing function the
+ * rest of the app uses.
  */
 export async function setUserRoleAction(
   targetUserId: string,
@@ -27,6 +28,17 @@ export async function setUserRoleAction(
   const session = await getSession();
   if (!session) return refuse("not_authenticated");
   if (!isAdmin(session)) return refuse("not_admin");
+
+  // After the guard, before parsing: an authenticated flood is still a flood,
+  // and a caller who is not allowed here should not get to spend our database
+  // on counting them.
+  const limit = await enforceLimit("user.role_set", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
   if (!isRole(role)) return refuse("invalid_role");
 
   // An admin who demotes themselves by mistake locks the system's only

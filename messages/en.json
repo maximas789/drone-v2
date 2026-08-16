@@ -106,7 +106,8 @@
     "errorPasswordTooShort": "That password is too short.",
     "errorGeneric": "That didn't go through. Please try again.",
     "errorPasswordMismatch": "Those two passwords don't match.",
-    "verifyEmailCheckInbox": "We've sent a confirmation link to your email address."
+    "verifyEmailCheckInbox": "We've sent a confirmation link to your email address.",
+    "errorTooManyAttempts": "Too many attempts in a short time. Wait a little, then try again."
   },
   "profile": {
     "title": "Profile",
@@ -378,7 +379,8 @@
     "validation": "Check the highlighted fields.",
     "networkError": "Couldn't connect. Check your network.",
     "backHome": "Back to home",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "rateLimited": "Too many attempts. Try again in {duration}."
   },
   "meta": {
     "defaultTitle": "Ajniha — drone registration",

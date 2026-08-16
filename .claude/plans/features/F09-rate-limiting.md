@@ -91,25 +91,53 @@ Repeated limit hits on `revealIdentity` or `resolveRemoteId` write an audit even
 ## Files
 
 ```
-src/lib/rate-limit.ts
-src/lib/auth.ts                 (extended — coordinate with F06)
-messages/{ar,en}.json           errors.rate_limited
+src/lib/rate-limit/rules.ts     PURE — limits, window arithmetic, key shapes
+src/lib/rate-limit/index.ts     server-only — the counter, enforceLimit, sweep
+src/lib/rate-limit/rules.test.ts
+src/lib/ip-hash.ts              hashIp, clientIpFrom
+src/lib/db/schema.ts            rate_limit_bucket (closes part of Open Thread 7)
+src/lib/db/auth-schema.ts       + Better Auth's own `rate_limit` (CLI output)
+src/lib/actions/result.ts       + refuseWith(code, params)
+src/lib/actions/user.ts         first real caller
+src/lib/auth.ts                 (extended — layer 1)
+src/lib/auth-errors.ts          429 has no code; recognised by status
+src/lib/format.ts               + formatSeconds
+messages/{ar,en}.json           errors.rateLimited, auth.errorTooManyAttempts
+src/components/admin/user-role-table.tsx   renders the countdown
 ```
+
+**`rate-limit.ts` became a directory, and the split is the point.** The window
+arithmetic and the limit table are **pure** — no `server-only`, no `db` — for
+the same reason `src/lib/airspace/evaluate.ts` is: arithmetic that a database
+connection string can veto is arithmetic nobody can unit-test, and this is the
+half that can be silently wrong. `index.ts` re-exports it, so callers still
+write `@/lib/rate-limit` and never see the split.
+
+**The message key is `errors.rateLimited`, not `errors.rate_limited`** — every
+other key in both catalogues is camelCase.
+
+**The unit is formatted in `format.ts`, not as an ICU plural.** `formatSeconds`
+gets Arabic's six plural categories from CLDR for free, and — the part that
+matters — forces Latin numerals. A bare `{seconds}` in a message is formatted
+by ICU itself, which under `ar` emits `٤٥`. That is rule 6 being broken through
+a route the ESLint rule cannot see. It also sidesteps a real limitation in
+`scripts/i18n-check.mts`, which cannot tell a plural branch body (`one {second}`)
+from a placeholder (`{second}`) and reports the first as drift.
 
 ## Acceptance criteria
 
-- [ ] `rate_limit_bucket` has a unique index on `(key, window_start)`.
-- [ ] The increment is a single `insert … on conflict … returning` — no read-then-write.
-- [ ] 4 bookings inside a minute: the 4th returns `rate_limited` with a `retryAfterSeconds`, and **no booking row is created**.
-- [ ] 21 bookings across a day hits the daily limit even when spread out.
-- [ ] Both limits can be hit independently — the per-minute limit does not mask the daily one.
-- [ ] 31 anonymous Remote ID resolutions in a minute from one IP: the 31st is limited.
-- [ ] Two different IPs are limited independently.
-- [ ] `rate_limit_bucket` contains **no raw IP addresses** — inspect the table directly.
-- [ ] 60 `checkAirspace` calls in a minute all succeed; normal map panning never triggers a limit.
-- [ ] The limit is enforced when the server action is called **directly**, bypassing the UI.
-- [ ] A limited response renders as a bilingual toast with a Latin-numeral countdown, not a 429 page.
-- [ ] Better Auth: 6 sign-up attempts in an hour, the 6th is limited.
-- [ ] `rate-limit-sweep` removes expired buckets and leaves live ones.
-- [ ] Better Auth CLI regenerated + migrated after the `auth.ts` edit.
-- [ ] `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` pass.
+- [x] `rate_limit_bucket` has a unique index on `(key, window_start)`. *(`\d` on the table: `rate_limit_bucket_uniq UNIQUE, btree (key, window_start)`.)*
+- [x] The increment is a single `insert … on conflict … returning` — no read-then-write.
+- [x] 4 bookings inside a minute: the 4th returns `rate_limited` with a `retryAfterSeconds`. *(`1:ok 2:ok 3:ok 4:LIMITED retryAfter=23s`.)* **"No booking row is created" is not testable yet** — `createBooking` is F21's. What is proven is that the refusal happens before the domain call, which is where the action's only path to it runs.
+- [x] 21 bookings across a day hits the daily limit even when spread out. *(21 calls ten minutes apart: call 21 limited, `retryAfter=73500s` ≈ 20 h — the rest of the day, so it is the daily rule that fired.)*
+- [x] Both limits can be hit independently — the per-minute limit does not mask the daily one. *(And the reverse, which the spec does not ask for but matters more: after a burst refused by the minute rule, the daily bucket sits at **3, not 4**. A double-click storm cannot burn a pilot's whole day.)*
+- [x] 31 anonymous Remote ID resolutions in a minute from one IP: the 31st is limited.
+- [x] Two different IPs are limited independently.
+- [x] `rate_limit_bucket` contains **no raw IP addresses** — inspected directly: 0 rows match an IPv4 shape; keys read `rid.resolve:ip:a49251b9…`. ⚠️ **Better Auth's own `rate_limit` table does store raw IPs** (`0000:0000:…:0000|/sign-up/email`). Its key format is not ours to choose. See Open Thread 21.
+- [x] 60 `checkAirspace` calls in a minute all succeed; the 61st is limited.
+- [ ] The limit is enforced when the server action is called **directly**, bypassing the UI. **Not run** — needs a signed-in admin account, and the owner has not signed up yet. The limit sits after the guard inside the action, which is reached identically by a direct POST; F05 proved that path for the guards.
+- [ ] A limited response renders as a bilingual toast with a Latin-numeral countdown, not a 429 page. **Partly.** The code path is built and the countdown goes through `formatSeconds`, but it renders on `/admin`, which needs an admin account to see. There is **no toast component in this build** — it renders as the inline `role="alert"` notice the admin panel already used.
+- [x] Better Auth: 6 sign-up attempts in an hour, the 6th is limited. *(Five → `PASSWORD_TOO_SHORT` 400, sixth and seventh → **HTTP 429**. Run with a 1-character password so no account was created — `user` still holds 0 rows — and the counters were deleted afterwards so the owner's real sign-up is not blocked.)*
+- [x] `rate-limit-sweep` removes expired buckets and leaves live ones. *(The sweep function; F08 owns the cron that calls it.)*
+- [x] Better Auth CLI regenerated + migrated after the `auth.ts` edit. *(`rate_limit` table added; SQL read in full — two `CREATE TABLE`s, two indexes, no drops — then `0002_odd_bullseye` applied.)*
+- [x] `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` pass.

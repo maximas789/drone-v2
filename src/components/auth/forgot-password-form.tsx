@@ -31,7 +31,7 @@ export function ForgotPasswordForm() {
 
     setPending(false);
     if (error) {
-      setErrorKey(authErrorKey(error.code));
+      setErrorKey(authErrorKey(error.code, error.status));
       return;
     }
     setSent(true);

@@ -70,7 +70,7 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
 
     setPending(false);
     if (error) {
-      setErrorKey(authErrorKey(error.code));
+      setErrorKey(authErrorKey(error.code, error.status));
       return;
     }
     setDone(true);

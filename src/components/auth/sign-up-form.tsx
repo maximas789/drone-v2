@@ -48,7 +48,7 @@ export function SignUpForm() {
     });
 
     if (error) {
-      setErrorKey(authErrorKey(error.code));
+      setErrorKey(authErrorKey(error.code, error.status));
       setPending(false);
       return;
     }

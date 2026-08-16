@@ -22,7 +22,18 @@ const MESSAGE_KEY_BY_CODE: Record<string, string> = {
   TOKEN_EXPIRED: "resetTokenMissing",
 };
 
-export function authErrorKey(code: string | undefined): string {
+/**
+ * `status` matters as much as `code` for exactly one case. Better Auth's rate
+ * limiter answers **429 with no `code` at all** — just a message — so without
+ * this the reader falls through to the generic "that didn't go through, please
+ * try again", which is the single worst thing to tell someone who has just
+ * been rate limited: trying again is precisely what will keep failing.
+ */
+export function authErrorKey(
+  code: string | undefined,
+  status?: number,
+): string {
+  if (status === 429) return "errorTooManyAttempts";
   if (!code) return "errorGeneric";
   return MESSAGE_KEY_BY_CODE[code] ?? "errorGeneric";
 }

@@ -29,7 +29,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
-| 4 — Platform services | F06, F07, F08, F09 | 🟨 **F06 done with deviations (Session 6)**; F07–F09 not started |
+| 4 — Platform services | F06, F07, F08, F09 | 🟨 **F06 and F09 done with deviations (Sessions 6–7)**; F07, F08 not started |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
@@ -120,6 +120,9 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 17 | **`emailConfigured` is baked in at build time on the SSG auth pages.** `/[locale]/forgot-password` and `/verify-email` are prerendered, so the "no provider configured" notice reflects `RESEND_API_KEY` as it was during `next build`, not as it is at runtime. Setting the key on the host without rebuilding leaves the wrong sentence on the page. Same class as the `APP_URL` QR trap. | F06 | F29 (should check it), deployment |
 | 18 | **Nothing consumes `email_log` in the UI yet.** The rows are written and are the answer to "why didn't that email arrive?", but there is no screen that shows them. F29's system/ops page owes that. No Resend **webhook** was built either, so `delivered`/`bounced`/`complained` never arrive — deliberate: the endpoint needs a public URL and a signing secret. | F06 | F29 |
 | 19 | **`/dev/emails` sample links always carry the `ar` prefix.** Each template's `sample` is a static object built at module load with `localeUrl(path)`, whose default locale is Arabic, so the *English* preview shows `/en`-less URLs. A preview-data artefact only — real sends get the recipient's locale from the caller. | F06 | Nothing; cosmetic |
+| 21 | **Better Auth's own `rate_limit` table stores raw IP addresses** in its key (`0000:0000:…:0000\|/sign-up/email`). Ours does not — `rate_limit_bucket` keys on `sha256(pepper + ip)` — but the framework's key format is not ours to choose and there is no hook to hash it. F27's privacy page must therefore **not** claim the app never stores an IP address. Rows are short-lived but not swept by us. | F09 | F27, F29 |
+| 22 | **Any bare numeric argument in an ICU message renders Arabic-Indic digits.** next-intl formats `{count}` itself using the page locale, so `ar` gives `٣`. `messages/ar.json` already carries two such messages — `booking.slotsRemaining` (`#` in the plural branches) and `admin.pendingCount` — neither of which is rendered yet. The rule is: **numbers reaching a message go through `src/lib/format.ts` first** and arrive as strings. ESLint cannot see this route. | F09 | F21, F22, F25 |
+| 23 | **`scripts/i18n-check.mts` cannot tell a plural branch body from a placeholder.** `one {second}` is reported as a placeholder named `second` and fails the check as drift. Worked around in F09 by formatting the unit in `format.ts` instead — which was the better answer anyway — but the next person to write an English plural whose branch body is a single word will hit it. | F09 | any wave writing plurals |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -130,6 +133,12 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-16 | `src/lib/rate-limit.ts` became a **directory**: `rules.ts` pure, `index.ts` server-only, index re-exporting rules. | The first attempt put the window arithmetic behind `server-only`, and the test suite could not import it — first the `server-only` throw, then a missing `POSTGRES_URL`. Arithmetic that a connection string can veto is arithmetic nobody can unit-test. Same shape as `airspace/evaluate.ts` vs `airspace/query.ts`, and as `geo/`. `@/lib/rate-limit` still resolves. | Feature file updated |
+| 2026-08-16 | Rules are evaluated **shortest window first, stopping at the first refusal** — a burst refused by the per-minute rule does not increment the daily bucket. | Evaluating every rule would let one accidental double-click storm burn a pilot's entire 20-per-day booking allowance, locking them out until midnight. F09's stated purpose is to stop abuse *without punishing normal use*; the spec does not say which way to resolve this, and this is the only reading consistent with that sentence. Proven: after a 4-in-a-minute burst the daily bucket sits at 3. | Feature file updated |
+| 2026-08-16 | The counter **fails open** if the database errors. | The action behind the limit needs the same database, so a failure here means it is about to fail anyway; refusing would replace a real error with a misleading "too many attempts". Logged loudly — a limiter that is quietly off is worse than one that is off. | Feature file updated |
+| 2026-08-16 | The retry countdown is built by `formatSeconds` in `format.ts`, not by an ICU plural in the catalogue. | A bare `{seconds}` is formatted by ICU itself and emits `٤٥` under `ar` — rule 6 broken through a route ESLint cannot see. CLDR also supplies Arabic's six plural categories for free. Opened Threads 22 and 23. | Feature file updated |
+| 2026-08-16 | `authErrorKey` gained a `status` parameter and a `429` branch. | Better Auth's rate limiter answers **429 with no `code`**, so every auth form fell through to the generic "that didn't go through, please try again" — the single worst thing to tell someone who has just been rate limited. | Feature file updated |
+| 2026-08-16 | A `user.role_set` limit was added beyond F09's table. | It is the only server action that exists today. Without it the whole of layer 2 would have shipped with no caller, and an unenforced limiter is an untested one. | Feature file updated |
 | 2026-08-16 | Email copy lives in `messages/{ar,en}.json` under an `email` namespace, read through **`createTranslator`** rather than `getTranslations`. | One catalogue, so `i18n:check` covers email copy too and Arabic is still authored first. `getTranslations` was not an option: mail is sent from a Route Handler (root-params throws), from Inngest (F08, no request), and from the preview page. `createTranslator` is next-intl's own request-free core and takes full ICU, including the six Arabic plural categories. | Feature file updated |
 | 2026-08-16 | The email translator is given **`ar-SA-u-ca-gregory-nu-latn`**, not `ar`, via a new `intlLocaleTag` export from `format.ts`. | ICU formats its own numbers for `{days, plural, … #}`. A bare `ar` puts `٣` in an email — the exact defect rule 6 exists to prevent, arriving through a route the ESLint rule cannot see. The forced tag still selects the Arabic plural category. | Feature file updated |
 | 2026-08-16 | `sendEmail` is **dynamically imported** inside the Better Auth callbacks. | It reaches `@/lib/db` → `server-only`, and the CLI refuses any config that reaches it. A dynamic import inside a callback body is never evaluated at config-load time. Proven: the CLI ran and emitted a byte-identical `auth-schema.ts`. | Feature file updated |
@@ -167,15 +176,18 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-16 (F06) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
-| `pnpm lint` | 2026-08-16 (F06) | ✅ clean |
-| `pnpm build` | 2026-08-16 (F06) | ✅ migrates first; `/[locale]/dev/emails` prerenders as a **404** in a production build, which is the gate working |
-| `pnpm test` | 2026-08-16 (F06) | ✅ **265 passed, 6 files** — 160 new for the email templates, proven to fail on three deliberate mutations |
-| `pnpm i18n:check` | 2026-08-16 (F06) | ✅ 447 keys, ar/en in sync |
-| `pnpm db:up` + `db:migrate` | 2026-08-16 (F06) | ✅ still `0001_cute_sprite`; **F06 added no migration** — the regenerated `auth-schema.ts` was byte-identical |
+| `pnpm exec tsc --noEmit` | 2026-08-16 (F09) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
+| `pnpm lint` | 2026-08-16 (F09) | ✅ clean |
+| `pnpm build` | 2026-08-16 (F09) | ✅ migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
+| `pnpm test` | 2026-08-16 (F09) | ✅ **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm i18n:check` | 2026-08-16 (F09) | ✅ 449 keys, ar/en in sync |
+| `pnpm db:up` + `db:migrate` | 2026-08-16 (F09) | ✅ `0002_odd_bullseye` applied — `rate_limit_bucket` (ours) and `rate_limit` (Better Auth's). **SQL read in full first**: two creates, two indexes, no drops. **21 tables.** |
 | Email — no key | 2026-08-16 (F06) | ✅ printed in full to the terminal, `email_log` row `skipped`, caller continued. Rows deleted after. |
 | Email — forced failure | 2026-08-16 (F06) | ✅ invalid key → `status: 'failed'`, `error: 'API key is invalid'` (Resend's own words), caller continued |
 | Email — real delivery | — | ❌ **not run.** Needs a Resend account; `providerMessageId` has never held a real value. |
+| Rate limiting — layer 2 | 2026-08-16 (F09) | ✅ against the live database: burst, daily, two-scope isolation, IP independence, no raw IPs, the generous map limit, and the sweep. Every probe row deleted after. |
+| Rate limiting — layer 1 | 2026-08-16 (F09) | ✅ 5 sign-up attempts through, **6th and 7th HTTP 429**. Run with a 1-char password so no account was created (`user` still 0), counters deleted afterwards. |
+| Rate limiting — direct action POST | — | ❌ **not run.** Needs a signed-in admin, and the owner has not signed up yet. |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
@@ -203,6 +215,70 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 7 — Wave 4 · F09 Rate Limiting
+
+**Date:** 2026-08-16
+**Status:** ⚠️ done with deviations · **Wave 4 is now F06 + F09; F07 and F08 remain.** Ran in the same context as Session 6, no `/clear` between.
+
+**Built:**
+- `src/lib/rate-limit/rules.ts` — **pure**: `LIMITS`, `windowBounds`, `retryAfterSeconds`, `rateLimitKey`, `bucketKey`, `rulesFor`.
+- `src/lib/rate-limit/index.ts` — `server-only`: the atomic counter, `enforceLimit`, `sweepRateLimitBuckets`. Re-exports `rules`, so `@/lib/rate-limit` is still the one import path.
+- `src/lib/ip-hash.ts` — `hashIp` (sha256 + `RATE_LIMIT_PEPPER`) and `clientIpFrom`. **F14 must import this, not grow its own** — two hashers with two peppers stop matching.
+- `rate_limit_bucket` in the schema (part of Open Thread 7 closed), migration `0002_odd_bullseye`.
+- Layer 1 in `src/lib/auth.ts`: `rateLimit` with `storage: "database"` and the six custom rules. The CLI generated Better Auth's own `rate_limit` table.
+- `refuseWith(code, params)` in `src/lib/actions/result.ts` — the first refusal that carries data.
+- `setUserRoleAction` now calls `enforceLimit` after the guard, before parsing.
+- `formatSeconds` in `format.ts`; `errors.rateLimited` and `auth.errorTooManyAttempts`; the admin panel renders the countdown.
+- `authErrorKey(code, status?)` — a 429 branch, wired into all four auth forms.
+- `src/lib/rate-limit/rules.test.ts` — 20 tests; suite now **288 across 7 files**.
+- `.env` gained `RATE_LIMIT_PEPPER`, generated once (Open Thread 2 half closed — `ID_HASH_PEPPER` is still F17's).
+
+**Deviated from spec:**
+- **`rate-limit.ts` became a directory.** Forced by a real failure, not taste: with the arithmetic behind `server-only` the test suite could not import it at all. See Decisions.
+- **Rules stop at the first refusal, shortest window first.** The spec does not say how two windows interact. Evaluating both would let a double-click storm burn a pilot's whole daily allowance — the opposite of the feature's stated purpose.
+- **The counter fails open on a database error**, loudly.
+- **`errors.rateLimited`, not `errors.rate_limited`** — every other key in both catalogues is camelCase.
+- **The countdown is built by `formatSeconds`, not an ICU plural.** Opened Threads 22 and 23; the second is a genuine bug in our own `i18n:check`.
+- **`authErrorKey` gained a `status` parameter.** Not in the spec, but without it every auth form told a rate-limited user to "try again", which is the one thing that cannot work.
+- **A `user.role_set` limit beyond F09's table** — the only server action that exists, so otherwise layer 2 would have shipped with no caller.
+- **There is no toast component in this build.** The refusal renders as the inline `role="alert"` notice the admin panel already had. Nothing in Waves 0–9 owns a toast system; F21/F22 should decide.
+
+**Verified:**
+- **The SQL was read in full before applying** — two `CREATE TABLE`s, the unique index on `(key, window_start)`, the expiry index, no drops and no alters to existing tables. `\d rate_limit_bucket` confirms the unique index by name.
+- **Against the live database**, with a fixed `now` so windows could be crossed without waiting:
+  - 4 bookings in a minute → `1:ok 2:ok 3:ok 4:LIMITED retryAfter=23s`.
+  - **The daily bucket sat at 3, not 4** — the burst refused by the minute rule did not burn the daily allowance. This is the design decision above, proven rather than asserted.
+  - 21 bookings ten minutes apart → the 21st limited with `retryAfter=73500s` (≈20 h), which is the *rest of the day* and therefore unambiguously the daily rule firing, not the per-minute one.
+  - 31 Remote ID resolutions from one hashed IP → the 31st limited; a second IP in the same minute → still `ok`.
+  - **Zero rows matching an IPv4 shape.** A key reads `rid.resolve:ip:a49251b9425c…#60`.
+  - 60 airspace checks in a minute → **0 refused**; the 61st limited.
+  - Sweep at 12:00:30 removed the 11:01 bucket and left the 12:01 one.
+  - Every probe row deleted; `rate_limit_bucket` back to 0.
+- **Layer 1, over HTTP:** five sign-up attempts → `PASSWORD_TOO_SHORT` 400, **sixth and seventh → HTTP 429**. A 1-character password was used deliberately so no account could be created — `user` still holds **0 rows** — and `rate_limit` was emptied afterwards so the owner's real sign-up is not blocked for an hour.
+- **Four mutations run. Two of them initially passed, and that is the useful part:**
+  - dropping the `Math.max(1, …)` floor → 1 failure. ✅
+  - dropping the `#window` suffix from the bucket key → **0 failures.** The subtlest bug in the feature — two rules sharing a bucket at midnight — had no test. Added one; it now fails.
+  - dropping the 429 branch → 2 failures. ✅
+  - sorting `LIMITS` in place → **0 failures.** The test named "does not hand out the array the table is built from" did not test that: it reordered and re-read, and a second `rulesFor` call sorted it back. Rewritten to assert identity; it now fails.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (449 keys), `pnpm test` (288), `pnpm build` — all green.
+
+**Not verified:**
+- **The direct server-action POST.** Needs a signed-in admin and the owner has not signed up yet. The limit sits after the guard inside the action, on the only path to the domain call, and F05 proved that path is reachable directly — but this specific criterion has not been run.
+- **The refusal has never been seen rendered.** It renders on `/admin`, which needs an admin account. The countdown's Latin numerals are proven by `formatSeconds`'s own tests, not by looking at the page.
+- **"No booking row is created"** — `createBooking` is F21's; there is nothing to create.
+- **Concurrency.** The single-statement upsert is what makes the counter race-free, and it was never exercised by two simultaneous requests. The argument is structural: there is no read-then-write to interleave.
+- **Better Auth's `rate_limit` table is never swept by us.** Whether it grows unbounded is the framework's business and has not been checked.
+
+**Next session should know (F07 uploads, F08 jobs):**
+- **`src/lib/auth.ts` is now finished.** F06 and F09 were its two remaining edits; nothing in Waves 5–9 should touch it. That also ends the CLI → `db:generate` → read SQL → `db:migrate` loop.
+- **F08 owns two things F09 handed it:** the nightly `rate-limit-sweep` cron, which just calls `sweepRateLimitBuckets()`, and the `jobs` table (Open Thread 7's last third).
+- **F07's `/api/upload` limit already exists** as `upload.request` in `LIMITS`. Import it; do not invent a number.
+- **Every later action uses the same three lines:** `enforceLimit(action, "user", session.user.id)` after the guard, then `refuseWith("rate_limited", { retryAfterSeconds })`. Anonymous limits use `hashIp(clientIpFrom(headers))` and must decide what to do when it is `null` — `clientIpFrom` deliberately does not guess.
+- **Do not put a bare number in an ICU message** (Open Thread 22). Format it through `src/lib/format.ts` and pass a string.
+- Still **no user accounts** — `user` is 0 rows and whoever signs up first becomes admin.
 
 ---
 

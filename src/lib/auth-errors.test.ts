@@ -40,6 +40,30 @@ describe("authErrorKey", () => {
   });
 
   /**
+   * Better Auth's rate limiter answers 429 with a message and **no code**, so
+   * this can only be recognised by status. Falling through to the generic
+   * "please try again" would tell someone who has just been rate limited to do
+   * the exact thing that will keep failing.
+   */
+  it("recognises a rate-limited response, which carries no code at all", () => {
+    expect(authErrorKey(undefined, 429)).toBe("errorTooManyAttempts");
+    expect(authErrorKey("", 429)).toBe("errorTooManyAttempts");
+  });
+
+  it("lets 429 win over whatever code came with it", () => {
+    expect(authErrorKey("INVALID_EMAIL_OR_PASSWORD", 429)).toBe(
+      "errorTooManyAttempts",
+    );
+  });
+
+  it("leaves every other status alone", () => {
+    expect(authErrorKey("PASSWORD_TOO_SHORT", 400)).toBe(
+      "errorPasswordTooShort",
+    );
+    expect(authErrorKey(undefined, 500)).toBe("errorGeneric");
+  });
+
+  /**
    * A code mapped to a key that doesn't exist renders as a raw key — or throws
    * — in whichever locale nobody on the team reads. `i18n:check` compares the
    * two catalogues against each other and cannot catch this.
@@ -67,6 +91,11 @@ describe("authErrorKey", () => {
       expect(ar, `ar is missing auth.${key}`).toHaveProperty(key);
       expect(en, `en is missing auth.${key}`).toHaveProperty(key);
     }
+
+    // The status-driven branch reaches a key no code can produce.
+    const limited = authErrorKey(undefined, 429);
+    expect(ar, `ar is missing auth.${limited}`).toHaveProperty(limited);
+    expect(en, `en is missing auth.${limited}`).toHaveProperty(limited);
   });
 
   // Keys the forms use directly, without going through authErrorKey.

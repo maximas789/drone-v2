@@ -33,7 +33,7 @@ export function SignInForm({ next }: { next: string | null }) {
     });
 
     if (error) {
-      setErrorKey(authErrorKey(error.code));
+      setErrorKey(authErrorKey(error.code, error.status));
       setPending(false);
       return;
     }

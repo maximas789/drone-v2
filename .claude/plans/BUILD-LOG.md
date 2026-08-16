@@ -158,7 +158,7 @@ What has actually been **run**, not what was written. F31 reads this.
 | `pnpm exec tsc --noEmit` | 2026-08-16 (F05) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
 | `pnpm lint` | 2026-08-16 (F05) | ✅ clean; rules 5 and 6 re-proven on probes after the flat-config restructure |
 | `pnpm build` | 2026-08-16 (F05) | ✅ migrates first; 19 routes, auth pages SSG, `(app)`/`(admin)` dynamic, `/api/auth/[...all]` registered |
-| `pnpm test` | 2026-08-16 (F05) | ✅ 60 passed, 3 files — **unchanged; F05 added no tests** (see entry) |
+| `pnpm test` | 2026-08-16 (F05) | ✅ **105 passed, 5 files** — 45 new for `session.ts` and `auth-errors.ts`, each proven to fail on a deliberate mutation |
 | `pnpm i18n:check` | 2026-08-16 (F05) | ✅ 347 keys, ar/en in sync |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F05) | ✅ `0001_cute_sprite` applied clean; **19 tables**, 18 FKs onto `user` |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
@@ -238,8 +238,13 @@ The user first chose to skip these, then asked for them to be run. Two throwaway
 - **`restrict` FK proven:** deleting the owner while their drone existed was refused by Postgres.
 - **The audit trail wrote itself correctly** — two `user.role_changed` rows with the right `before`/`after` and `actor_role`, from the transaction in `setUserRole`.
 
+**Tests added (same session, after the probes):**
+- `src/lib/session.test.ts` and `src/lib/auth-errors.test.ts` — **45 tests**, suite now 105 across 5 files. They cover `roleOf` failing closed, the reviewer/admin split, `safeNextPath`'s open-redirect refusals (including the protocol-relative `//host` that starts with a slash and still leaves the site), and `authErrorKey`.
+- Two carry intent a future session could otherwise "tidy" away: `USER_NOT_FOUND` **must** map to the same message as a wrong password, or the sign-in form becomes an account-enumeration oracle; and every key `authErrorKey` can return must exist in **both** catalogues — `i18n:check` compares the two against each other and cannot catch a code pointing at a key neither has.
+- **Each proven to fail on a deliberate mutation, then reverted:** `roleOf` falling open to `admin` → 9 failures; dropping the `//` check → 2; giving `USER_NOT_FOUND` its own message → 1; mapping a code to a nonexistent key → 2.
+
 **Not verified:**
-- **No test file was added.** `roleOf`'s fail-closed narrowing and `safeNextPath`'s open-redirect check are pure and need no database; `setUserRole`'s transaction needs one. None is tested. The probes above proved the behaviour **once, by hand, then deleted themselves** — nothing will catch a regression. This is the cheapest gap left in F05.
+- **`setUserRole`'s transaction is still untested** — it needs a database, so it is not in the suite. Its audit-write was confirmed by hand during the probes (2 correct `user.role_changed` rows) and that evidence is now deleted.
 - **`pnpm db:studio` showing the user row** — no browser was used.
 - **Auth pages at 375 px, light and dark, Arabic RTL** — not checked; no browser. Given Open Thread 11, that is exactly where the next defect will be.
 - The new Arabic copy is unreviewed by a native speaker.

@@ -61,7 +61,7 @@ All dates and times go through `src/lib/format.ts` — no email may format a dat
 
 Extend `src/lib/auth.ts` with `emailVerification.sendVerificationEmail` and `emailAndPassword.sendResetPassword`, both calling `sendEmail`. Then **re-run the Better Auth CLI → `db:generate` → `db:migrate`**.
 
-> **Built, and two things turned out differently.**
+> **Built, and three things turned out differently.**
 >
 > 1. **`emailVerification` changes no schema.** The CLI was re-run and produced `src/lib/db/auth-schema.ts` byte-identical to before — `verification` and `user.emailVerified` already existed from F05. `db:generate` said "No schema changes"; there is no F06 migration. The three steps were still run, because "it probably doesn't change the schema" is not evidence.
 > 2. **`sendEmail` is imported dynamically inside the callbacks**, not at the top of `auth.ts`. It reaches `@/lib/db`, which carries `server-only`, and the CLI refuses any config that reaches it — the same trap F05 hit with `src/lib/db/index.ts`. A dynamic `import()` inside a callback body is never evaluated at config-load time, so the CLI loads the file and the request path still gets the guarded module.

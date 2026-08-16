@@ -173,6 +173,24 @@ export function formatNumber(value: number, locale: Locale): string {
   return numberFormat(locale, { maximumFractionDigits: 2 }).format(value);
 }
 
+/**
+ * `٨ ميغابايت` / `8 MB` — a file-size ceiling, unit included.
+ *
+ * Binary megabytes, because that is what the limit is expressed in, and CLDR's
+ * `megabyte` unit is the closest thing it has a translation for. Same reasoning
+ * as `formatSeconds`: the unit is formatted here rather than as an ICU plural,
+ * so Arabic's six plural categories come from CLDR and `i18n:check` never sees
+ * a plural branch it would report as drift.
+ */
+export function formatBytes(bytes: number, locale: Locale): string {
+  const megabytes = bytes / (1024 * 1024);
+  return numberFormat(locale, {
+    style: "unit",
+    unit: "megabyte",
+    maximumFractionDigits: megabytes < 10 ? 1 : 0,
+  }).format(megabytes);
+}
+
 /** Metres below 1 km, kilometres above. Distances to a zone boundary. */
 export function formatDistance(metres: number, locale: Locale): string {
   return metres < 1000

@@ -143,6 +143,23 @@
     "statusExpired": "منتهية",
     "statusRevoked": "ملغاة"
   },
+  "upload": {
+    "dropHere": "اسحب الملفات هنا",
+    "or": "أو",
+    "browse": "اختر من جهازك",
+    "hint": "JPEG أو PNG أو WebP، بحد أقصى {max} لكل صورة.",
+    "hintDocument": "PDF فقط، بحد أقصى {max}.",
+    "uploading": "جارٍ الرفع…",
+    "empty": "لا توجد صور بعد.",
+    "emptyHelp": "أضف صورة واحدة على الأقل للطائرة كاملة.",
+    "remove": "حذف",
+    "removing": "جارٍ الحذف…",
+    "moveEarlier": "نقل للأمام",
+    "moveLater": "نقل للخلف",
+    "photoAlt": "صورة الطائرة رقم {index}",
+    "reordered": "تم حفظ الترتيب.",
+    "removed": "تم حذف الصورة."
+  },
   "remoteId": {
     "title": "الهوية عن بُعد",
     "code": "رمز الهوية",
@@ -381,7 +398,11 @@
     "networkError": "تعذّر الاتصال. تحقق من الشبكة.",
     "backHome": "العودة للرئيسية",
     "tryAgain": "إعادة المحاولة",
-    "rateLimited": "حاولت مرات كثيرة. أعد المحاولة بعد {duration}."
+    "rateLimited": "حاولت مرات كثيرة. أعد المحاولة بعد {duration}.",
+    "uploadFailed": "تعذّر رفع الملف.",
+    "uploadTooLarge": "الملف أكبر من الحد المسموح ({max}).",
+    "uploadTypeRejected": "نوع الملف غير مقبول. الصور بصيغة JPEG أو PNG أو WebP، والمستندات بصيغة PDF.",
+    "uploadTargetLocked": "لا يمكن إضافة ملفات بعد إرسال الطلب للمراجعة."
   },
   "meta": {
     "defaultTitle": "أجنحة — تسجيل الطائرات بدون طيار",

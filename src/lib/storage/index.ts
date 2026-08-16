@@ -1,23 +1,21 @@
 import "server-only";
 
-import { put as putLocal } from "./local";
-
 /**
  * Where a stored file goes.
  *
- * **This is F07's module, built early because F08's QR job has to put a PNG
- * somewhere.** Only what F08 needs exists: the local driver and `putFile`.
+ * **One interface, two drivers, chosen by an env var rather than `NODE_ENV`** —
+ * so the production path is exercisable locally by setting one variable, and
+ * nothing has to be remembered at deploy time.
  *
- * F07 still owns everything else it specifies — `blob.ts` (Vercel Blob),
- * `deleteFile`, `validate.ts`'s magic-byte sniffing, `/api/upload`,
- * `/api/files/[...path]` and the dropzone — and must build them **on top of**
- * this seam rather than beside it. The `StoredFile` shape and the
- * `{prefix}/{uuid}.{ext}` key rule are F07's, reproduced here unchanged so
- * there is nothing to reconcile later.
+ * Both drivers hand back `/api/files/{pathname}` as the URL, never a
+ * driver-specific one. That is what keeps the ownership check in a single
+ * place: whichever driver is running, a file is reached the same way.
  */
 
+export * from "./validate";
+
 export type StoredFile = {
-  /** What a browser fetches. Driver-specific; never parse it. */
+  /** What a browser fetches. Always our own route. Never parse it. */
   url: string;
   /** The key `deleteFile` will take. Not derivable from `url` — store both. */
   pathname: string;
@@ -28,43 +26,66 @@ export type StoredFile = {
 export type PutFileInput = {
   buffer: Buffer;
   /**
-   * Used for its **extension only**. An uploaded filename is never a storage
-   * key: it can traverse paths and it can collide.
+   * The **whole** filename, already built by the caller as `{uuid}.{ext}`. An
+   * uploaded filename is never a storage key: it can traverse paths, it can
+   * collide, and it can carry a name the uploader did not mean to publish.
    */
   filename: string;
   contentType: string;
-  /** `drones/{droneId}`, `qr`, … The key is `{prefix}/{filename}`. */
+  /** `drones/{droneId}`, `declarations/{id}`, `qr`. Key is `{prefix}/{filename}`. */
   prefix: string;
 };
 
 /**
- * The driver is chosen by the **env var, not by `NODE_ENV`**, so the production
- * path is exercisable locally and nothing has to be remembered at deploy time.
+ * The bytes of a stored file, for `/api/files/[...path]` to stream back once it
+ * has decided the caller may have them.
  */
+export type StoredBytes = { body: Uint8Array };
+
 export const blobConfigured = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 export async function putFile(input: PutFileInput): Promise<StoredFile> {
-  if (blobConfigured) {
-    /**
-     * Refusing beats falling back. A token is set, which means somebody expects
-     * these bytes to survive a serverless restart; writing them quietly to
-     * `./uploads` instead would look like it worked right up until the QR codes
-     * vanished after a deploy.
-     */
-    throw new Error(
-      "BLOB_READ_WRITE_TOKEN is set but the Vercel Blob driver does not exist yet — F07 owns src/lib/storage/blob.ts. Unset the token to use the local driver.",
-    );
-  }
-  return putLocal(input);
+  const driver = await loadDriver();
+  return driver.put(input);
+}
+
+/**
+ * **Called wherever a row is removed.** An orphaned blob is a privacy leak, not
+ * just waste: the bytes stay reachable to anyone who holds the pathname long
+ * after the app has forgotten the file existed.
+ *
+ * Idempotent in both drivers — deleting something already gone is not an error,
+ * which is what a retried delete needs.
+ */
+export async function deleteFile(pathname: string): Promise<void> {
+  const driver = await loadDriver();
+  await driver.remove(pathname);
+}
+
+/**
+ * The bytes, or `null` if there are none. **Never called before the caller has
+ * decided who may read them** — this function knows nothing about ownership,
+ * and reading it as though it did is how a files route becomes an open one.
+ */
+export async function readFile(pathname: string): Promise<StoredBytes | null> {
+  const driver = await loadDriver();
+  return driver.read(pathname);
+}
+
+/**
+ * Dynamic, so `@vercel/blob` is never loaded on a machine with no token, and
+ * `node:fs` is never pulled in on one that has it.
+ */
+async function loadDriver() {
+  return blobConfigured ? import("./blob") : import("./local");
 }
 
 /**
  * The URL a stored pathname is served at.
  *
- * Both drivers go through `/api/files/…` rather than handing out a blob URL, so
- * the **same** ownership check applies in development and in production. F07
- * builds that route; until it does these URLs 404 — which is the honest
- * outcome, a QR PNG that is stored but not yet servable.
+ * `/api/files/…` in both drivers, so the **same** ownership check applies in
+ * development and in production. Handing out a blob URL directly would make
+ * that check a development-only formality.
  */
 export function fileUrlFor(pathname: string): string {
   return `/api/files/${pathname}`;

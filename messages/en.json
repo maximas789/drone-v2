@@ -143,6 +143,23 @@
     "statusExpired": "Expired",
     "statusRevoked": "Revoked"
   },
+  "upload": {
+    "dropHere": "Drag files here",
+    "or": "or",
+    "browse": "Choose from your device",
+    "hint": "JPEG, PNG or WebP, up to {max} each.",
+    "hintDocument": "PDF only, up to {max}.",
+    "uploading": "Uploading…",
+    "empty": "No photos yet.",
+    "emptyHelp": "Add at least one photo of the whole aircraft.",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "moveEarlier": "Move earlier",
+    "moveLater": "Move later",
+    "photoAlt": "Drone photo {index}",
+    "reordered": "Order saved.",
+    "removed": "Photo removed."
+  },
   "remoteId": {
     "title": "Remote ID",
     "code": "Remote ID code",
@@ -381,7 +398,11 @@
     "networkError": "Couldn't connect. Check your network.",
     "backHome": "Back to home",
     "tryAgain": "Try again",
-    "rateLimited": "Too many attempts. Try again in {duration}."
+    "rateLimited": "Too many attempts. Try again in {duration}.",
+    "uploadFailed": "The file couldn't be uploaded.",
+    "uploadTooLarge": "That file is larger than the limit ({max}).",
+    "uploadTypeRejected": "That file type isn't accepted. Photos must be JPEG, PNG or WebP; documents must be PDF.",
+    "uploadTargetLocked": "Files can't be added once the request is with a reviewer."
   },
   "meta": {
     "defaultTitle": "Ajniha — drone registration",

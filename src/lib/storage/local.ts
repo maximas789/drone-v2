@@ -1,8 +1,8 @@
 import "server-only";
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { PutFileInput, StoredFile } from "./index";
+import type { PutFileInput, StoredBytes, StoredFile } from "./index";
 import { fileUrlFor } from "./index";
 
 /**
@@ -22,7 +22,7 @@ export async function put({
   contentType,
 }: PutFileInput): Promise<StoredFile> {
   const pathname = `${trim(prefix)}/${trim(filename)}`;
-  const target = path.join(ROOT, ...pathname.split("/"));
+  const target = resolveWithin(pathname);
 
   await mkdir(path.dirname(target), { recursive: true });
   // Overwrites deliberately: re-rendering a QR must land on the same pathname,
@@ -35,6 +35,21 @@ export async function put({
     contentType,
     size: buffer.byteLength,
   };
+}
+
+/** Idempotent — `force` means a file already gone is not an error. */
+export async function remove(pathname: string): Promise<void> {
+  await rm(resolveWithin(pathname), { force: true });
+}
+
+export async function read(pathname: string): Promise<StoredBytes | null> {
+  try {
+    return { body: await readFile(resolveWithin(pathname)) };
+  } catch {
+    // Missing, unreadable, or outside the root — all the same answer to a
+    // caller that is about to turn this into a 404.
+    return null;
+  }
 }
 
 /**
@@ -50,4 +65,18 @@ function trim(segment: string): string {
 
   if (!clean) throw new Error(`Refusing an empty storage path segment.`);
   return clean;
+}
+
+/**
+ * Belt and braces on top of `trim`: the resolved absolute path must still be
+ * inside `uploads/`. `trim` already strips `..`, but `read` and `remove` take a
+ * pathname that came back out of the **database**, and a row is not a thing to
+ * trust twice.
+ */
+function resolveWithin(pathname: string): string {
+  const target = path.resolve(ROOT, ...trim(pathname).split("/"));
+  if (target !== ROOT && !target.startsWith(ROOT + path.sep)) {
+    throw new Error(`Refusing a storage path outside uploads/: ${pathname}`);
+  }
+  return target;
 }

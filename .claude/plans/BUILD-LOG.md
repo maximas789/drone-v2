@@ -29,7 +29,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
-| 4 — Platform services | F06, F07, F08, F09 | 🟨 **F06, F08 and F09 done with deviations (Sessions 6–8)**; F07 not started (its storage seam exists — see Session 8) |
+| 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
@@ -65,7 +65,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | terra-draw | 1.32.3 | registry · latest only | F23 |
 | resend | 6.20.0 | registry · installed | F06. `emails.send()` returns `{ data, error }` and does **not** throw on an API error; `idempotencyKey` is the *second* argument, not a payload field. |
 | react-email | 6.9.2 | registry · installed | F06. One package: components **and** `render`/`toPlainText` (it re-exports `@react-email/render`, which resolves to 2.1.0). Not `@react-email/components`, which still installs and still resolves. **`render()` is async.** |
-| @vercel/blob | 2.8.0 | registry · latest only | F07 |
+| @vercel/blob | 2.8.0 | registry · installed | F07. `put(pathname, body, { access, addRandomSuffix, allowOverwrite, contentType })`, plus `head` and `del`. **Never executed** — no token, no store. |
 | inngest | 4.18.1 | registry · installed | F08. **v4, and the v3 API is wrong in every detail that matters**: `createFunction(options, handler)` — two args, `triggers` inside options; middleware is a class extending `Middleware.BaseMiddleware`; typed events via `eventType` + `staticSchema`; `ClientOptions` has no `schemas`. `isDev` is not inferred from `NODE_ENV`. |
 | zod | 4.4.3 | registry · latest only | Action input parsing |
 | postgres (postgres.js) | 3.4.9 | registry · installed | **The chosen driver.** Works unchanged against Docker locally and Neon over TCP, so one code path covers both. `pg` was not installed. |
@@ -103,7 +103,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 
 | # | Thread | Raised in | Blocks |
 |---|---|---|---|
-| 1 | `.env` values the user must supply: `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN`, Inngest keys. All optional — the app must work without them. | Planning | Nothing; degraded paths are specified |
+| 1 | `.env` values the user must supply: `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN`, Inngest keys. All optional — the app must work without them, and as of F07/F08 it demonstrably does: local storage driver, terminal email, `isDev` Inngest. The cost is that the **production** driver of each is unexecuted code. | Planning | Nothing; degraded paths are specified and exercised |
 | 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` currently holds only `POSTGRES_URL` — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
@@ -128,7 +128,10 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 26 | **`export *` from `src/lib/db/schema.ts` does not re-export `user` under plain Node ESM**, because `schema.ts` also imports the name locally. Next's bundler papers over it — the app is fine — but any `tsx` script must import from `@/lib/db/auth-schema`. | F08 | any future script or seed |
 | 27 | **No cron has ever fired on its own schedule.** Every F08 run so far was triggered by hand from the dev dashboard. Whether Inngest honours `TZ=Asia/Riyadh` as intended rests on the server accepting the expression, not on anyone having watched 03:00 Riyadh arrive. | F08 | F31 |
 | 28 | **`job.rerunOfRunId` and the `cancelling` status are never written.** The SDK supplies neither: F29 must write `cancelling` when it sends a cancel, and `rerunOfRunId` on the new run when it initiates a re-run. `cancelled` *is* written, by `run-cancelled.ts`. | F08 | F29 |
-| 29 | **`fileUrlFor()` URLs 404.** Both storage drivers hand out `/api/files/{pathname}`, and F07 has not built that route — so the QR PNG the approval job stores is not servable. F19's card and F24's lookup both need it. | F08 | F07, F19, F24 |
+| 30 | **The Vercel Blob driver has never run.** No token and no store on this machine, so `src/lib/storage/blob.ts` is unexecuted: the `put`/`head`/`del` calls were written from the installed `.d.ts`. The first deploy with a token is the first execution, and `addRandomSuffix: false` + `allowOverwrite: true` are the two options a wrong guess would show up in (a mismatched pathname makes `deleteFile` miss, which is an orphaned blob, which is a privacy leak). | F07 | Deployment, F29 |
+| 31 | **Blob objects are stored `access: 'public'`.** Nothing in the app emits a blob URL — `fileUrlFor` returns `/api/files/…` and that route checks ownership — but a URL that escaped by other means would resolve, for ever, including after the row is deleted. `access: 'private'` is the fix; it was not taken because there is no store to prove it against. **F27's privacy page must not claim otherwise**, and it only matters once a token is set. | F07 | F27, deployment |
+| 32 | **The upload delete/reorder *actions* were never driven over HTTP** — only their data layer was, plus the reviewer refusal path in the browser. The guard-then-rate-limit prologue is the same three lines F09 verified elsewhere, but this specific pair has not been posted at directly. Same gap as F09's own "direct action POST". | F07 | F31 |
+| 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -139,6 +142,10 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-16 | `/api/files/[...path]` **streams** stored bytes rather than redirecting to them, in both drivers. | A redirect hands the caller the blob's own URL, which then resolves for anyone they pass it to and long after the row is deleted — the ownership check would hold for the first request only. Streaming also means the local and blob paths behave identically, so what is tested locally is what runs. | Feature file updated |
+| 2026-08-16 | The response `Content-Type` is **re-sniffed from the bytes on the way out**, with `nosniff`. | Trusting a stored column would mean a file that somehow got past the upload check is served as whatever the row claims. The bytes are the only thing that cannot have drifted. | Feature file updated |
+| 2026-08-16 | Photo reordering is **buttons**, not drag-and-drop. | Drag has no keyboard path and no screen-reader story. And the directions are *earlier*/*later*, which are physically opposite in Arabic — naming by position is the only version that reads correctly in both languages. | Feature file updated |
+| 2026-08-16 | A reviewer may **read** any stored file and **write** none. | Deciding on a registration means looking at the photographs; adding photographs to somebody else's aircraft is not part of that job, and `getDroneForUpload` therefore checks ownership only. | Feature file updated |
 | 2026-08-16 | Job reads live in `src/lib/inngest/queries.ts`, not `src/lib/data/*.ts`. | Rule 8's session-first signature is how ownership stays legible; a cron has no session and must read every user's rows. A fabricated session in `src/lib/data/` would be an unauthenticated door in the exact module the rule exists to protect. Reads only — every write still goes through `src/lib/workflow/`. | Feature file updated |
 | 2026-08-16 | The digest's "already sent" check reads `email_log`, not the `job` table. | A run that found an empty queue sent nothing; suppressing on "the function ran" would silence the run half an hour later that finds three pending items. `email_log` has a row only when a digest actually went out. `audit_event` could not answer it — `entityType` has no `system` member, and adding one for a mail marker would put a non-entity in the regulator's trail. | Feature file updated |
 | 2026-08-16 | `isDev` is derived from `NODE_ENV` on the Inngest client. | v4 does not infer it. Without it the SDK is in cloud mode with no signing key and 500s every request to `/api/inngest`, including the introspection the dev CLI uses — so the symptom is an empty dashboard that names nothing. A fresh clone now works with no env at all, and production still demands a real key. | Feature file updated |
@@ -187,11 +194,11 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-16 (F08) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
-| `pnpm lint` | 2026-08-16 (F08) | ✅ clean — now includes **rule 11**, which did not exist until F08 |
-| `pnpm build` | 2026-08-16 (F08) | ✅ `/api/inngest` builds as a dynamic route; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
-| `pnpm test` | 2026-08-16 (F08) | ✅ **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
-| `pnpm i18n:check` | 2026-08-16 (F08) | ✅ 450 keys, ar/en in sync |
+| `pnpm exec tsc --noEmit` | 2026-08-16 (F07) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
+| `pnpm lint` | 2026-08-16 (F07) | ✅ clean — includes **rule 11**, added in F08 |
+| `pnpm build` | 2026-08-16 (F07) | ✅ `/api/upload` and `/api/files/[...path]` build as dynamic routes; `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
+| `pnpm test` | 2026-08-16 (F07) | ✅ **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm i18n:check` | 2026-08-16 (F07) | ✅ 469 keys, ar/en in sync |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -210,7 +217,9 @@ What has actually been **run**, not what was written. F31 reads this.
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
 | Production serve (`next start`) | 2026-08-16 (F06) | ✅ on port **3210** — `/ar` 200, auth pages 200, `/ar/dev/emails` and `/en/dev/emails` **404** with no stack trace. (F05's guard checks were the earlier run.) |
-| Browser console clean | 2026-08-16 (F06) | ⚠️ **partial.** `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
+| Uploads, end to end | 2026-08-16 (F07) | ✅ over HTTP with three probe accounts: type sniffing, size ceiling, cross-pilot 404, locked target, delete removing row **and** bytes, traversal refused. See the session entry. |
+| Vercel Blob driver | — | ❌ **never executed.** No token, no store. |
+| Browser console clean | 2026-08-16 (F07) | ⚠️ **partial.** The dropzone page joins F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
 | Rendered Arabic, in a browser | 2026-08-16 (F06) | ✅ first time in this build. All 11 email templates × 2 locales seen. Letter joins correct, right-aligned, `AJN-4F2K-91XZ` reads LTR under its Arabic label, `15 مارس 2029` / `30 يوماً` Gregorian and Latin. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -233,6 +242,66 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 9 — Wave 4 · F07 File Uploads & Document Storage
+
+**Date:** 2026-08-16
+**Status:** ⚠️ done with deviations · **Wave 4 is complete.** Ran in the same context as Session 8, no `/clear` between.
+
+**Built:**
+- `src/lib/storage/validate.ts` — **pure**: the kind table (accepts + ceiling), magic-byte sniffing, the key builder, and `acceptsUploads`. Plus `validate.test.ts`, **22 tests**; suite now **341 across 9 files**.
+- `src/lib/storage/blob.ts` and a completed `index.ts`: `putFile`, `deleteFile`, `readFile`, driver chosen by **dynamic import**.
+- `src/lib/data/upload.ts` — ownership, session first. `src/lib/actions/upload.ts` — delete, reorder, and `deleteDroneFiles` for F18.
+- `/api/upload` and `/api/files/[...path]`.
+- `FileDropzone` and `PhotoGrid`, a new `upload` message namespace and four `errors` keys (catalogue **469**), and `formatBytes` in `format.ts`.
+
+**Deviated from spec:**
+- **`readFile` is a third member of the storage interface**, and the blob driver **fetches through the app** rather than redirecting. A redirect hands out the blob's own URL, which then works for anyone the caller passes it to and after the row is gone — the ownership check would hold only for the first request.
+- **Blob access is `public`, stated rather than hidden.** Nothing in the app emits a blob URL (`fileUrlFor` returns our route), but one that leaked would resolve. `access: 'private'` is the stronger answer; it is not taken because there is no Blob store here to prove it against, and an unverifiable privacy claim is worse than a stated limitation.
+- **Two files the spec did not name**: `src/lib/data/upload.ts`, because rule 8 binds a route handler exactly as it binds an action; and `src/lib/actions/upload.ts`, because delete and reorder are mutations from a client component and only the upload itself needs to be a route.
+- **`/api/files` re-sniffs the bytes on the way out** and sets `Content-Type` from what it finds, plus `nosniff` and `private` caching. Whatever got stored, the browser is told what it actually is.
+- **Reordering is buttons, not drag-and-drop.** Drag has no keyboard path and no screen-reader story, and *earlier*/*later* are physically opposite in Arabic — naming them by position is the only version that reads right in both.
+- **A reviewer may read any file but write none.** Deciding on a registration means seeing the photographs; adding to someone's aircraft is not part of the job.
+- **A `declaration_doc` upload deletes the PDF it replaces.** A superseded document nobody deletes stays readable to anyone holding its pathname.
+- **The prop is `targetId`, not `entityId`** — it is a drone for a photo and a declaration for a PDF.
+- **`formatBytes` added to `format.ts`** rather than a bare number in an ICU message: `{max}` would be formatted by next-intl in the page locale and come out in Arabic-Indic digits (Open Thread 22).
+
+**Verified — over HTTP, against the live database.** Three probe accounts (pilot A, pilot B, a reviewer), a draft drone, a pending drone, a drone belonging to B, and a declaration. Every row and file deleted afterwards.
+
+| Criterion | Result |
+|---|---|
+| Upload with no token writes into `./uploads` | OK — and the returned URL **renders in the browser**, the coloured squares coming back through `/api/files` |
+| `.svg` renamed `.png` | OK — **415** `upload_type_rejected` |
+| 20 MB file | OK — **413** `upload_too_large`, `maxBytes: 8388608`, no truncated write |
+| Non-PDF as `declaration_doc` | OK — 415; a real PDF gets 200 |
+| Pilot B uploading to pilot A's drone | OK — **404**, identical to a drone that does not exist |
+| Upload to a `pending` drone | OK — **409** `upload_target_locked` |
+| Deleting a photo | OK — row gone, file gone from disk, URL went **200 → 404** in the same run |
+| Deleting a drone's files | OK — all four pathnames named and swept; `[]` for a non-owner |
+| Declaration PDF: signed out / owner / reviewer / other pilot | OK — **404 / 200 / 200 / 404** |
+| Photo: signed out / owner / reviewer / other pilot | OK — **404 / 200 / 200 / 404** |
+| Path traversal | OK — four attempts including `%2e%2e` and `..%2f`, all 404 |
+| Five photos uploaded and reordered | OK — `sortOrder` 0–4, reversed order persisted, refused for another pilot |
+| `uploads/` gitignored | OK — `git check-ignore` names `.gitignore:38` |
+| Arabic RTL | OK — **seen in Chrome.** Grid flows right-to-left (first photo rightmost), the disabled "move earlier" sits on the correct card, `8 م.ب` in Latin numerals, the Latin `JPEG أو PNG أو WebP` run reads correctly inside the Arabic sentence, declaration dropzone says PDF only. **Console clean** — React DevTools notice and `[HMR] connected`, nothing else. |
+| The same filename uploaded twice | OK — two distinct uuid keys; nothing the uploader typed reaches the storage key |
+
+- **Four mutations run on the validator. One initially survived:** reversing the size/type check order changed nothing, because the 20 MB sample was a valid JPEG and both orders answer identically. The comment claiming the order mattered was **overstated**; it was corrected, and a test now pins the only case the order actually decides — a 20 MB PDF sent as a photograph answers on size. The other three (WebP by `RIFF` alone, `pending` accepting uploads, declarations accepting images) each failed a test immediately.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (469), `pnpm test` (341), `pnpm build` — all green; both routes build as dynamic.
+
+**Not verified:**
+- **Vercel Blob has never run.** No token, no store, so `blob.ts` is unexecuted code — "the same code path writes to Blob with no source change" is structural, not observed. `put`, `head` and `del` were read from the installed `.d.ts`, not exercised.
+- **The delete and reorder *actions* were driven through the data layer, not over HTTP.** The browser was signed in as the owner's admin account, and signing that session out to swap accounts was not worth doing to the user's own browser. The refusal path *was* seen end to end, by accident and worth keeping: as a reviewer the grid renders (reviewers may read) and reordering answers `not_found` (reviewers may not write), which is exactly the design.
+- **375 px, again.** `resize_window` reported success and the rendered viewport stayed 1440. Open Thread 20's fourth wave running.
+- **Nothing has uploaded from a real phone camera** — no large real JPEG, no EXIF orientation, and no HEIC, which iPhones produce by default and which this rejects.
+
+**Next session should know (Wave 5, F10–F15):**
+- **`deleteDroneFiles` in `src/lib/actions/upload.ts` must be called by F18's drone-delete action**, before the row goes. Cascade removes the `drone_photo` rows; the bytes are nobody's job but the caller's.
+- **F10 owns declarations.** `remote_id_declaration.docPath` is already written by `/api/upload`, and the `kind` enum is `faa_broadcast_module | gaca_dri | gaca_nri | other` — there is no `standard`.
+- **The upload limit is `upload.request`, 20/hour, and refused uploads count too.** A run of rejection tests will exhaust it.
+- **`/api/files` is the only way to read a stored file.** Never hand a blob URL to a template or a page.
 
 ---
 

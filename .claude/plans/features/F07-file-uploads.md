@@ -16,7 +16,18 @@ type StoredFile = { url: string; pathname: string; contentType: string; size: nu
 
 putFile(input: { buffer, filename, contentType, prefix }): Promise<StoredFile>
 deleteFile(pathname: string): Promise<void>
+readFile(pathname: string): Promise<{ body: Uint8Array } | null>
 ```
+
+> **Built:** `readFile` is the third member, and it is what `/api/files` streams.
+> The blob driver **fetches through the app** rather than redirecting — a
+> redirect hands the caller the blob's own URL, which then works for anyone they
+> pass it to and long after the row is gone, so the ownership check would hold
+> only for the first request.
+>
+> The driver is loaded by **dynamic import**, so `@vercel/blob` is never
+> evaluated on a machine with no token and `node:fs` is never pulled in on one
+> that has it.
 
 Driver chosen by env, **not by `NODE_ENV`** — so production behaviour is testable locally:
 
@@ -24,6 +35,13 @@ Driver chosen by env, **not by `NODE_ENV`** — so production behaviour is testa
 |---|---|
 | absent | `local.ts` — writes under `./uploads`, served by a route handler |
 | present | `blob.ts` — Vercel Blob |
+
+> **Blob access is `public`, with the consequence stated rather than hidden.** A
+> blob URL is unguessable but resolves for anyone holding it; nothing in the app
+> ever emits one, because `fileUrlFor` returns our own route. `access: 'private'`
+> is the stronger answer and the one to move to — it is not taken now because
+> there is no Blob store on this machine to prove it against, and shipping an
+> unverifiable privacy claim is worse than a stated limitation.
 
 `uploads/` is gitignored. The local driver serves through `/api/files/[...path]` rather than `public/`, so the same ownership check applies in both drivers.
 
@@ -70,18 +88,42 @@ Blob URLs are unguessable but **public if known**. Drone photos are therefore tr
 
 ### Client component
 
+`<FileDropzone kind={...} targetId={...} locale={...} />` — `targetId`, not
+`entityId`: it is a drone for a photograph and a declaration for a PDF, and
+naming it after the *kind*'s target says which without a comment.
+
+**Reordering is buttons, not drag-and-drop.** Drag has no keyboard path and no
+screen-reader story, and the two directions are *earlier* and *later* — which in
+Arabic are physically the opposite way round from English. Naming them by
+position in the sequence is the only version that reads correctly in both.
+
 `<FileDropzone kind={...} entityId={...} />` — shadcn-based, bilingual, RTL-aware, with drag-and-drop, per-file progress, client-side size and type pre-checks (a courtesy, not a control), a preview grid with reorder, and remove. Empty state reads as intentional in both languages.
 
 ## Files
 
 ```
 src/lib/storage/{index,local,blob,validate}.ts
+src/lib/storage/validate.test.ts
+src/lib/data/upload.ts              ownership, session first (rule 8)
+src/lib/actions/upload.ts           delete a photo, reorder, sweep a drone's files
 src/app/api/upload/route.ts
 src/app/api/files/[...path]/route.ts
 src/components/upload/file-dropzone.tsx
 src/components/upload/photo-grid.tsx
 uploads/                     (gitignored)
 ```
+
+Two files the original list did not name:
+
+- **`src/lib/data/upload.ts`** — rule 8 binds the upload route too. A route
+  handler is an ordinary POST, reachable directly with a cookie and any body the
+  caller likes, exactly like a server action.
+- **`src/lib/actions/upload.ts`** — deleting and reordering are mutations from a
+  client component, so they are actions; only the upload itself is a route,
+  because it carries multipart bytes. `deleteDroneFiles` is exported here for
+  **F18's drone-delete action to call before it deletes the row**: the
+  `drone_photo` rows go by cascade, the bytes do not, and called afterwards it
+  would find nothing.
 
 ## Acceptance criteria
 

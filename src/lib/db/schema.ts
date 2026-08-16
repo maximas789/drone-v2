@@ -14,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { Geometry } from "@/lib/geo";
+import { user } from "./auth-schema";
 import {
   auditEntityType,
   bookingStatus,
@@ -35,9 +36,24 @@ import {
  * must be re-exported from here or no `CREATE TYPE` reaches the migration and
  * it fails on the first table that uses one.
  *
- * F05's CLI-generated `auth-schema.ts` gets re-exported here the same way.
+ * The same applies to the CLI-generated `auth-schema.ts` below: without this
+ * re-export, `user`, `session`, `account` and `verification` would never reach
+ * a migration and every foreign key pointing at `user.id` would fail to apply.
  */
 export * from "./enums";
+export * from "./auth-schema";
+
+/**
+ * Better Auth's four tables are **left exactly as its CLI wrote them**, which
+ * is the one sanctioned exception to two conventions in this file:
+ *
+ * - their primary keys are `text`, not `uuid` — which is why every column here
+ *   that references a user is `text`;
+ * - their timestamps are `timestamp` without a zone, not `timestamptz`. Drizzle
+ *   writes them as `toISOString()` and reads them back with an explicit
+ *   `+0000`, so the instants round-trip correctly; the column simply does not
+ *   carry the zone. Re-running the CLI must not be a diff.
+ */
 
 /**
  * The domain schema.
@@ -80,8 +96,11 @@ export const pilotProfile = pgTable(
   "pilot_profile",
   {
     id: id(),
-    /** Better Auth `user.id`. Text, never uuid. FK added in F05. */
-    userId: text().notNull().unique(),
+    /** Better Auth `user.id`. Text, never uuid. */
+    userId: text()
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
 
     fullNameAr: text().notNull(),
     fullNameEn: text().notNull(),
@@ -111,7 +130,9 @@ export const pilotProfile = pgTable(
     completedAt: timestamp({ withTimezone: true }),
     /** Identity is verified by a **human reviewer**, never automatically. */
     verifiedAt: timestamp({ withTimezone: true }),
-    verifiedByUserId: text(),
+    verifiedByUserId: text().references(() => user.id, {
+      onDelete: "set null",
+    }),
     rejectedAt: timestamp({ withTimezone: true }),
     rejectionReason: text(),
 
@@ -127,7 +148,16 @@ export const drone = pgTable(
   "drone",
   {
     id: id(),
-    ownerUserId: text().notNull(),
+    /**
+     * `restrict`, not `cascade`. A registration record is not the pilot's
+     * personal data to take with them — deleting an account that still holds
+     * registered aircraft is refused at the database, and F28 has to offer a
+     * real path (transfer, or revoke first) rather than quietly erasing an
+     * airframe that may be flying with an Ajniha sticker on it.
+     */
+    ownerUserId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
 
     nickname: text().notNull(),
     manufacturer: text(),
@@ -156,7 +186,7 @@ export const drone = pgTable(
     status: droneStatus().notNull().default("draft"),
     submittedAt: timestamp({ withTimezone: true }),
     decidedAt: timestamp({ withTimezone: true }),
-    decidedByUserId: text(),
+    decidedByUserId: text().references(() => user.id, { onDelete: "set null" }),
     rejectionReason: text(),
     rejectionCount: integer().notNull().default(0),
 
@@ -257,7 +287,9 @@ export const remoteIdDeclaration = pgTable(
     validUntil: timestamp({ withTimezone: true }),
 
     verifiedAt: timestamp({ withTimezone: true }),
-    verifiedByUserId: text(),
+    verifiedByUserId: text().references(() => user.id, {
+      onDelete: "set null",
+    }),
     rejectedAt: timestamp({ withTimezone: true }),
     rejectionReason: text(),
     /** Set when a later declaration replaces this one. Never deleted. */
@@ -336,8 +368,8 @@ export const zone = pgTable(
     authorityRef: text(),
     publishedAt: timestamp({ withTimezone: true }),
 
-    createdByUserId: text(),
-    updatedByUserId: text(),
+    createdByUserId: text().references(() => user.id, { onDelete: "set null" }),
+    updatedByUserId: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -388,7 +420,7 @@ export const zoneClosure = pgTable(
     reasonEn: text().notNull(),
     authorityRef: text(),
     publishedAt: timestamp({ withTimezone: true }),
-    createdByUserId: text(),
+    createdByUserId: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -401,7 +433,10 @@ export const booking = pgTable(
   "booking",
   {
     id: id(),
-    pilotUserId: text().notNull(),
+    /** `restrict`, for the same reason as `drone.ownerUserId`. */
+    pilotUserId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
     droneId: uuid()
       .notNull()
       .references(() => drone.id),
@@ -427,10 +462,12 @@ export const booking = pgTable(
     plannedAltitudeM: integer(),
 
     decidedAt: timestamp({ withTimezone: true }),
-    decidedByUserId: text(),
+    decidedByUserId: text().references(() => user.id, { onDelete: "set null" }),
     rejectionReason: text(),
     cancelledAt: timestamp({ withTimezone: true }),
-    cancelledByUserId: text(),
+    cancelledByUserId: text().references(() => user.id, {
+      onDelete: "set null",
+    }),
     cancellationReason: text(),
     checkedInAt: timestamp({ withTimezone: true }),
     completedAt: timestamp({ withTimezone: true }),
@@ -480,7 +517,7 @@ export const bookingCopilot = pgTable(
     /** Masked at every render, as on `pilot_profile`. */
     idDocumentNumber: text(),
     /** Set when the co-pilot is themselves a registered Ajniha pilot. */
-    userId: text(),
+    userId: text().references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
   (t) => [index("booking_copilot_booking_idx").on(t.bookingId)],
@@ -504,7 +541,7 @@ export const auditEvent = pgTable(
      * `on delete set null`: the log outlives the account. A deleted reviewer
      * must not take their approvals with them.
      */
-    actorUserId: text(),
+    actorUserId: text().references(() => user.id, { onDelete: "set null" }),
     /** The actor's role **at the time**, not whatever it is now. */
     actorRole: text(),
     actorIsSystem: boolean().notNull().default(false),
@@ -537,7 +574,9 @@ export const notification = pgTable(
   "notification",
   {
     id: id(),
-    userId: text().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     /**
      * An i18n key plus its params — **never rendered text**. A pilot who
      * switches to English must see their old notifications in English.
@@ -563,7 +602,9 @@ export const notificationPreference = pgTable(
   "notification_preference",
   {
     id: id(),
-    userId: text().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     /** Only categories that actually exist. No aspirational rows. */
     category: notificationCategory().notNull(),
     emailEnabled: boolean().notNull().default(true),
@@ -578,7 +619,8 @@ export const emailLog = pgTable(
   "email_log",
   {
     id: id(),
-    userId: text(),
+    /** The log of what was sent outlives the account it was sent to. */
+    userId: text().references(() => user.id, { onDelete: "set null" }),
     toAddress: text().notNull(),
     subject: text().notNull(),
     template: text().notNull(),

@@ -1,27 +1,39 @@
+import type { auth } from "@/lib/auth";
+
 /**
  * The session shape the data layer is scoped by.
  *
- * **Provisional (F03).** F05 replaces this with Better Auth's inferred session
- * type and adds the `requireUser` / `requireReviewer` / `requireAdmin` guards.
- * It is declared here only so `src/lib/data/*.ts` can take a session as its
- * first argument from the very first query — retrofitting that argument later
- * across a finished data layer is how ownership checks get missed.
+ * `import type` on purpose — this module must stay free of any runtime
+ * dependency on `src/lib/auth.ts`, which reaches the database. Every
+ * `src/lib/data/*.ts` file imports `isReviewer` from here.
  */
-export type Role = "pilot" | "reviewer" | "admin";
+export type Session = typeof auth.$Infer.Session;
 
-export type Session = {
-  user: {
-    /** Better Auth's `user.id`. Text, never uuid. */
-    id: string;
-    role: Role;
-  };
-};
+export const ROLES = ["pilot", "reviewer", "admin"] as const;
+export type Role = (typeof ROLES)[number];
+
+export function isRole(value: unknown): value is Role {
+  return (
+    typeof value === "string" && (ROLES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Better Auth types an `additionalField` declared with a list of literals as a
+ * plain `string`, and it is nullable in the row. Narrowing happens here, in one
+ * place, and **fails closed**: anything unrecognised is treated as a pilot, so a
+ * typo or a hand-edited row can never widen someone's access.
+ */
+export function roleOf(session: Session): Role {
+  return isRole(session.user.role) ? session.user.role : "pilot";
+}
 
 /** Reviewers and admins both staff the queues; only admins manage the system. */
 export function isReviewer(session: Session): boolean {
-  return session.user.role === "reviewer" || session.user.role === "admin";
+  const role = roleOf(session);
+  return role === "reviewer" || role === "admin";
 }
 
 export function isAdmin(session: Session): boolean {
-  return session.user.role === "admin";
+  return roleOf(session) === "admin";
 }

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { locale as localeParam } from "next/root-params";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
 import {
   Card,
   CardContent,
@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link } from "@/i18n/navigation";
 import {
   formatDate,
   formatDateRange,
@@ -58,10 +57,10 @@ export default async function Home() {
             shadcn now builds on Base UI, whose composition prop is `render`,
             not Radix's `asChild`.
           */}
-          <Button render={<Link href="/" />}>{t("landing.ctaRegister")}</Button>
-          <Button variant="outline" render={<Link href="/" />}>
+          <ButtonLink href="/">{t("landing.ctaRegister")}</ButtonLink>
+          <ButtonLink variant="outline" href="/">
             {t("landing.ctaExploreMap")}
-          </Button>
+          </ButtonLink>
         </CardContent>
       </Card>
 

@@ -100,7 +100,7 @@ pnpm build          # runs db:migrate first
 - **The Remote ID code survives renewal.** A QR sticker already on an airframe must keep resolving.
 - **`create-next-app` will refuse a non-empty directory.** Scaffold into `.scaffold-tmp` and move up, keeping `CLAUDE.md`, `.claude/`, and `skills-lock.json`. *(Done in F01. It also refuses a name starting with a dot — the temp dir was `scaffold-tmp`.)*
 - **`next/root-params` throws in Server Actions and Route Handlers.** The locale reaches `i18n/request.ts` that way, so an action needing translated text must call `getTranslations({ locale, … })` with the locale passed in — bare `getTranslations()` fails at runtime, not at build.
-- **A link that looks like a button is `<Button render={<Link href="…" />}>`.** shadcn is on Base UI now; there is no `asChild`.
+- **A link that looks like a button is `<ButtonLink href="…">`**, from `src/components/ui/button-link.tsx`. **Not** `<Button render={<Link/>}>` — Base UI's `Button` expects a real `<button>` and logs a console error otherwise, and its escape hatch `nativeButton={false}` puts `role="button"` on the `<a>`, so a screen reader announces a navigation control as a button. `ButtonLink` styles a genuine anchor from the same `buttonVariants`. (shadcn is on Base UI now; there is no `asChild` either way.)
 - **This Next.js is not the one in your training data.** `next dev` writes and re-adds `AGENTS.md`; deleting it just recreates an uncommitted change. Read `node_modules/next/dist/docs/` before writing framework code.
 
 @AGENTS.md

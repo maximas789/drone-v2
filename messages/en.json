@@ -80,7 +80,32 @@
     "signInAction": "Sign in",
     "signUpAction": "Create account",
     "verifyEmailTitle": "Confirm your email",
-    "verifyEmailBody": "We sent a confirmation link to {email}."
+    "verifyEmailBody": "We sent a confirmation link to {email}.",
+    "signInSubtitle": "Sign in to manage your aircraft and bookings.",
+    "signUpSubtitle": "Create an account to register a drone and book a zone.",
+    "passwordHint": "At least 8 characters.",
+    "signingIn": "Signing in…",
+    "creatingAccount": "Creating account…",
+    "forgotPasswordTitle": "Forgot your password",
+    "forgotPasswordBody": "Enter your email address and we'll send you a link to reset your password.",
+    "sendResetLink": "Send the link",
+    "resetLinkSent": "If that address is registered with us, a reset link is on its way.",
+    "resetPasswordBody": "Choose a new password for your account.",
+    "newPassword": "New password",
+    "resetPasswordAction": "Save password",
+    "resetSuccess": "Password updated. You can sign in now.",
+    "resetTokenMissing": "That link is invalid or has expired. Request a new one.",
+    "verifyEmailPending": "Confirming…",
+    "verifyEmailSuccess": "Your email address is confirmed.",
+    "verifyEmailFailed": "We couldn't confirm that email address. The link may have expired.",
+    "verifyEmailMissingToken": "This link carries no confirmation token.",
+    "emailNotConfigured": "Email delivery isn't switched on in this build, so nothing will arrive yet.",
+    "backToSignIn": "Back to sign in",
+    "errorInvalidCredentials": "That email address or password is wrong.",
+    "errorEmailTaken": "That email address is already registered.",
+    "errorPasswordTooShort": "That password is too short.",
+    "errorGeneric": "That didn't go through. Please try again.",
+    "errorPasswordMismatch": "Those two passwords don't match."
   },
   "profile": {
     "title": "Profile",
@@ -191,7 +216,19 @@
     "analytics": "Analytics",
     "auditLog": "Audit log",
     "users": "Users",
-    "pendingCount": "{count} awaiting review"
+    "pendingCount": "{count} awaiting review",
+    "roleAssignment": "Roles",
+    "roleAssignmentIntro": "Roles are granted here and nowhere else — there is no self-service escalation, and every change is written to the audit trail.",
+    "changeRole": "Change role",
+    "roleUpdated": "Role updated.",
+    "noUsers": "No users yet.",
+    "you": "You",
+    "adminOnlyNotice": "Role management is available to administrators only.",
+    "reasonNotAuthenticated": "Your session has ended. Sign in again.",
+    "reasonNotAdmin": "This action is available to administrators only.",
+    "reasonInvalidRole": "That role isn't one we recognise.",
+    "reasonUserNotFound": "That user could not be found.",
+    "reasonCannotChangeOwnRole": "You can't change your own role."
   },
   "review": {
     "queueDrones": "Drone registrations",
@@ -347,5 +384,16 @@
     "titleTemplate": "{page} · Ajniha",
     "description": "A proposed platform for registering self-built drones using Remote ID, and booking flight slots in designated zones.",
     "keywords": "drones, remote id, registration, airspace"
+  },
+  "roles": {
+    "pilot": "Pilot",
+    "reviewer": "Reviewer",
+    "admin": "Administrator"
+  },
+  "dashboard": {
+    "title": "My dashboard",
+    "welcome": "Welcome, {name}",
+    "signedInAs": "Signed in as {role}",
+    "placeholder": "Your registered aircraft and upcoming bookings will appear here once those screens are built."
   }
 }

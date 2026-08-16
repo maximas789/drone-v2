@@ -8,6 +8,13 @@
       "when": 1786820211497,
       "tag": "0000_fair_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786822034012,
+      "tag": "0001_cute_sprite",
+      "breakpoints": true
     }
   ]
 }

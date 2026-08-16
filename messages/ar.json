@@ -80,7 +80,32 @@
     "signInAction": "دخول",
     "signUpAction": "إنشاء الحساب",
     "verifyEmailTitle": "تأكيد البريد الإلكتروني",
-    "verifyEmailBody": "أرسلنا رابط تأكيد إلى {email}."
+    "verifyEmailBody": "أرسلنا رابط تأكيد إلى {email}.",
+    "signInSubtitle": "ادخل إلى حسابك لإدارة طائراتك وحجوزاتك.",
+    "signUpSubtitle": "أنشئ حساباً لتسجيل طائرتك وحجز نطاق طيران.",
+    "passwordHint": "8 أحرف على الأقل.",
+    "signingIn": "جارٍ تسجيل الدخول…",
+    "creatingAccount": "جارٍ إنشاء الحساب…",
+    "forgotPasswordTitle": "نسيت كلمة المرور",
+    "forgotPasswordBody": "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.",
+    "sendResetLink": "أرسل الرابط",
+    "resetLinkSent": "إن كان هذا البريد مسجّلاً لدينا فسيصلك رابط إعادة التعيين.",
+    "resetPasswordBody": "اختر كلمة مرور جديدة لحسابك.",
+    "newPassword": "كلمة المرور الجديدة",
+    "resetPasswordAction": "حفظ كلمة المرور",
+    "resetSuccess": "تم تحديث كلمة المرور. يمكنك تسجيل الدخول الآن.",
+    "resetTokenMissing": "الرابط غير صالح أو منتهية صلاحيته. اطلب رابطاً جديداً.",
+    "verifyEmailPending": "جارٍ التأكيد…",
+    "verifyEmailSuccess": "تم تأكيد بريدك الإلكتروني.",
+    "verifyEmailFailed": "تعذّر تأكيد البريد الإلكتروني. قد تكون صلاحية الرابط منتهية.",
+    "verifyEmailMissingToken": "لا يوجد رمز تأكيد في هذا الرابط.",
+    "emailNotConfigured": "إرسال البريد غير مفعّل في هذه النسخة، فلن تصل أي رسالة بعد.",
+    "backToSignIn": "العودة إلى تسجيل الدخول",
+    "errorInvalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "errorEmailTaken": "هذا البريد الإلكتروني مسجّل بالفعل.",
+    "errorPasswordTooShort": "كلمة المرور قصيرة جداً.",
+    "errorGeneric": "تعذّر إتمام الطلب. حاول مرة أخرى.",
+    "errorPasswordMismatch": "كلمتا المرور غير متطابقتين."
   },
   "profile": {
     "title": "الملف الشخصي",
@@ -191,7 +216,19 @@
     "analytics": "التقارير",
     "auditLog": "سجل التدقيق",
     "users": "المستخدمون",
-    "pendingCount": "{count} بانتظار المراجعة"
+    "pendingCount": "{count} بانتظار المراجعة",
+    "roleAssignment": "الأدوار",
+    "roleAssignmentIntro": "الأدوار تُمنح من هنا فقط؛ لا يوجد مسار للترقية الذاتية، وكل تغيير يُسجَّل في سجل التدقيق.",
+    "changeRole": "تغيير الدور",
+    "roleUpdated": "تم تحديث الدور.",
+    "noUsers": "لا يوجد مستخدمون.",
+    "you": "أنت",
+    "adminOnlyNotice": "إدارة الأدوار متاحة لمدير النظام فقط.",
+    "reasonNotAuthenticated": "انتهت جلستك. سجّل الدخول من جديد.",
+    "reasonNotAdmin": "هذا الإجراء متاح لمدير النظام فقط.",
+    "reasonInvalidRole": "الدور المطلوب غير معروف.",
+    "reasonUserNotFound": "لم يُعثر على هذا المستخدم.",
+    "reasonCannotChangeOwnRole": "لا يمكنك تغيير دورك بنفسك."
   },
   "review": {
     "queueDrones": "طلبات الطائرات",
@@ -347,5 +384,16 @@
     "titleTemplate": "{page} · أجنحة",
     "description": "منصة مقترحة لتسجيل الطائرات بدون طيار المصنّعة ذاتياً باستخدام الهوية عن بُعد، وحجز فترات الطيران في مناطق محددة.",
     "keywords": "طائرات بدون طيار, الهوية عن بُعد, تسجيل, المجال الجوي"
+  },
+  "roles": {
+    "pilot": "مشغّل",
+    "reviewer": "مراجع",
+    "admin": "مدير النظام"
+  },
+  "dashboard": {
+    "title": "لوحتي",
+    "welcome": "أهلاً، {name}",
+    "signedInAs": "مسجّل الدخول بصفة {role}",
+    "placeholder": "ستظهر هنا طائراتك المسجّلة وحجوزاتك القادمة حين تُبنى تلك الشاشات."
   }
 }

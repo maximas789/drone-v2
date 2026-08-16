@@ -10,8 +10,16 @@ Real accounts with three roles, and one place where "is this person allowed to s
 
 ### Better Auth config — `src/lib/auth.ts`
 
+> **Built note — the `server-only` collision.** The Better Auth CLI loads this
+> file outside React and **refuses outright** to resolve a config that reaches
+> `server-only`, transitively included ("Please remove import 'server-only'
+> from your auth config file"). `src/lib/db/index.ts` carried it, so the pool
+> moved to `src/lib/db/client.ts` (no `server-only`) and `index.ts` became
+> `import "server-only"; export * from "./client"`. `src/lib/auth.ts` is the
+> only module that may import `@/lib/db/client`; ESLint rule 6 enforces it.
+
 ```ts
-database: drizzleAdapter(db, { provider: "pg" }),
+database: drizzleAdapter(db, { provider: "pg", transaction: true }),
 emailAndPassword: { enabled: true },
 user: {
   additionalFields: {
@@ -32,6 +40,13 @@ user: {
 - `pilot_profile` is nullable-by-existence, which is exactly the state the registration wizard needs to represent: an account can exist before the profile is complete, and `pilot_profile_incomplete` is a real refusal reason in [F12](./F12-airspace-engine.md).
 
 **Consequence:** `role` and `preferredLocale` become `text` columns inside the generated `auth-schema.ts`, not `pgEnum`s. That file is left exactly as generated.
+
+> **Built note.** Leaving the file exactly as generated also means Better Auth's
+> four tables use `timestamp` **without** a time zone, against this project's
+> timestamptz-everywhere convention. Drizzle writes them with `toISOString()`
+> and reads them back appending `+0000`, so the instants round-trip correctly —
+> the column simply doesn't carry the zone. Not worth a hand edit that the next
+> CLI run would revert.
 
 ### Schema generation order (easy to get wrong)
 
@@ -74,9 +89,11 @@ requireAdmin()         → Session          | notFound()
 
 Guards are called in each route group's `layout.tsx` **and again inside every server action**. A layout guard does not protect an action — server actions are ordinary POSTs reachable directly.
 
-### Middleware — `src/middleware.ts`
+### Proxy — `src/proxy.ts`
 
-Composes next-intl's middleware with an **optimistic** cookie check (`getSessionCookie` from `better-auth/cookies`) redirecting unauthenticated requests for `(app)` and `(admin)` paths to `/[locale]/sign-in`.
+*(Next 16 renamed the `middleware` convention to `proxy`; F02 already built it under the new name.)*
+
+Composes next-intl's middleware with an **optimistic** cookie check (`getSessionCookie` from `better-auth/cookies`) redirecting unauthenticated requests for `(app)` and `(admin)` paths to `/[locale]/sign-in`, carrying `?next=` (locale prefix stripped, since next-intl's router adds it back).
 
 **This is a UX optimisation, never the boundary.** It never reads the role, never hits the database, and is explicitly documented as bypassable. Matcher excludes `/api`, `/_next`, and static files.
 
@@ -103,14 +120,32 @@ Email verification and password reset are **wired but inert** until [F06](./F06-
 src/lib/auth.ts
 src/lib/auth-client.ts
 src/lib/auth-guards.ts
+src/lib/auth-errors.ts               code → message key; safeNextPath()
 src/lib/db/auth-schema.ts            (CLI-generated, never edited)
-src/middleware.ts                    (composes next-intl + optimistic redirect)
+src/lib/db/client.ts                 the pool, WITHOUT server-only (CLI)
+src/lib/db/index.ts                  server-only re-export — the normal import
+src/proxy.ts                         (composes next-intl + optimistic redirect)
+src/lib/actions/result.ts            ActionResult / Reason / refuse()
+src/lib/actions/user.ts              setUserRoleAction
+src/lib/data/user.ts                 listUsers, getUserById, setUserRole
 src/app/api/auth/[...all]/route.ts
+src/app/[locale]/(public)/(auth)/layout.tsx
 src/app/[locale]/(public)/(auth)/{sign-in,sign-up,forgot-password,reset-password,verify-email}/page.tsx
+src/components/auth/*.tsx            the five forms + sign-out
+src/components/admin/user-role-table.tsx
+src/components/ui/button-link.tsx    a link that looks like a button
 src/app/[locale]/(app)/layout.tsx    requireUser()
+src/app/[locale]/(app)/dashboard/page.tsx    Wave-3 placeholder; F21 replaces
 src/app/[locale]/(admin)/layout.tsx  requireReviewer()
+src/app/[locale]/(admin)/admin/page.tsx      role assignment; F22–F25 fill it
 src/lib/data/*.ts
 ```
+
+**Built note — `ButtonLink`.** `<Button render={<Link/>}>`, which `CLAUDE.md`
+prescribed, makes Base UI log a console error, and its escape hatch
+`nativeButton={false}` puts `role="button"` on the anchor — a navigation
+control announced as a button. `src/components/ui/button-link.tsx` styles a
+real `<a>` from the same `buttonVariants`. `CLAUDE.md` corrected.
 
 ## Acceptance criteria
 

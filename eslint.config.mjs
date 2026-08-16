@@ -82,6 +82,46 @@ const localeFormattingSelectors = [
   },
 ];
 
+/**
+ * Rule 5 — locale-aware navigation only.
+ *
+ * A bare `next/link` drops the locale prefix, so an Arabic reader who clicks it
+ * silently lands in English. The same goes for `redirect`, `useRouter` and
+ * `usePathname` from `next/navigation`.
+ *
+ * `useSearchParams`, `useParams` and `notFound` have no locale-aware
+ * counterpart and stay allowed — banning them would only teach people to write
+ * eslint-disable comments next to the ones that matter.
+ */
+const LOCALE_AWARE_NAVIGATION_PATHS = [
+  {
+    name: "next/link",
+    message:
+      "Import { Link } from '@/i18n/navigation' — next/link drops the locale prefix.",
+  },
+  {
+    name: "next/navigation",
+    importNames: ["redirect", "permanentRedirect", "useRouter", "usePathname"],
+    message:
+      "Import these from '@/i18n/navigation' — the next/navigation versions are not locale-aware. useSearchParams, useParams and notFound are fine from here.",
+  },
+];
+
+/**
+ * Rule 6 — one guarded database entry point.
+ *
+ * `src/lib/db/index.ts` carries `server-only`; `src/lib/db/client.ts` does not,
+ * because the Better Auth CLI has to load `src/lib/auth.ts` outside React and
+ * refuses any config that reaches `server-only`. That exemption is for
+ * `auth.ts` alone — anywhere else, importing the raw client quietly drops the
+ * guard that stops the connection pool being bundled into a client component.
+ */
+const GUARDED_DB_PATH = {
+  name: "@/lib/db/client",
+  message:
+    "Import { db } from '@/lib/db'. The raw client skips the server-only guard and exists solely so the Better Auth CLI can load src/lib/auth.ts.",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -131,44 +171,42 @@ const eslintConfig = defineConfig([
     },
   },
 
+  /**
+   * Rules 5 and 6 share the `no-restricted-imports` rule, and in flat config a
+   * later block that names the same rule **replaces** the earlier one rather
+   * than adding to it. So the paths are declared once above and each block
+   * below re-states the full list it wants, minus its own exemption. Splitting
+   * them into two blocks with one path each would have silently switched the
+   * navigation ban back off everywhere.
+   */
   {
-    /**
-     * Rule 5 — locale-aware navigation only.
-     *
-     * A bare `next/link` drops the locale prefix, so an Arabic reader who
-     * clicks it silently lands in English. The same goes for `redirect`,
-     * `useRouter` and `usePathname` from `next/navigation`. `src/i18n/` is
-     * where the locale-aware versions are built, so it is exempt.
-     *
-     * `useSearchParams`, `useParams` and `notFound` have no locale-aware
-     * counterpart and stay allowed — banning them would only teach people to
-     * write eslint-disable comments next to the ones that matter.
-     */
-    name: "ajniha/locale-aware-navigation",
-    ignores: ["src/i18n/**"],
+    name: "ajniha/restricted-imports",
+    ignores: ["src/i18n/**", "src/lib/auth.ts", "src/lib/db/index.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
-        {
-          paths: [
-            {
-              name: "next/link",
-              message:
-                "Import { Link } from '@/i18n/navigation' — next/link drops the locale prefix.",
-            },
-            {
-              name: "next/navigation",
-              importNames: [
-                "redirect",
-                "permanentRedirect",
-                "useRouter",
-                "usePathname",
-              ],
-              message:
-                "Import these from '@/i18n/navigation' — the next/navigation versions are not locale-aware. useSearchParams, useParams and notFound are fine from here.",
-            },
-          ],
-        },
+        { paths: [...LOCALE_AWARE_NAVIGATION_PATHS, GUARDED_DB_PATH] },
+      ],
+    },
+  },
+
+  {
+    // `src/i18n/` is where the locale-aware navigation primitives are built.
+    name: "ajniha/restricted-imports-i18n",
+    files: ["src/i18n/**"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: [GUARDED_DB_PATH] }],
+    },
+  },
+
+  {
+    // The two files allowed to reach the unguarded pool.
+    name: "ajniha/restricted-imports-db-entry",
+    files: ["src/lib/auth.ts", "src/lib/db/index.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { paths: LOCALE_AWARE_NAVIGATION_PATHS },
       ],
     },
   },

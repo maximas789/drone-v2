@@ -28,7 +28,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 0 — Groundwork | F01 | ⚠️ Done with deviations (Session 1) |
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
-| 3 — Auth | F05 | ⬜ Not started |
+| 3 — Auth | F05 | ⚠️ Done with deviations (Session 5) — **account-level criteria unverified, see entry** |
 | 4 — Platform services | F06, F07, F08, F09 | ⬜ Not started |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
@@ -58,7 +58,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | vitest | 4.1.10 | registry · installed | |
 | drizzle-orm | 0.45.2 | registry · installed | F03 |
 | drizzle-kit | 0.31.10 | registry · installed | F03 |
-| better-auth | 1.6.29 | registry · latest only | F05 |
+| better-auth | 1.6.29 | registry · installed | F05. Pulls `better-call`, which peer-wants zod ^4 and **resolved zod 4.4.3 into its own tree** — the pnpm warning is about the root, where drizzle-kit's zod 3.25.76 sits. Runtime is unaffected. |
 | next-intl | 4.13.6 | registry · installed | F02. `createNavigation` (not the old `createSharedPathnamesNavigation`); `requestLocale` is deprecated in favour of `next/root-params`. |
 | @base-ui/react | 1.7.0 | registry · installed | Pulled in by shadcn. Composition prop is **`render`**, not Radix's `asChild`. |
 | maplibre-gl | 6.3.0 | registry · latest only | F20 |
@@ -87,7 +87,10 @@ Anything a skill reference file got wrong, so it can be corrected and so no late
 | `features/F03-database-schema.md` | volume at `/var/lib/postgresql/data` | Postgres 18+ wants the mount one level **up**, at `/var/lib/postgresql`, and restart-loops on the old path | `docker-compose.yml` mounts `/var/lib/postgresql`. Feature file updated. |
 | Drizzle setup | (implicit) enums live in `enums.ts` | drizzle-kit reads **only** the file named in `drizzle.config.ts`, so the enums produced no `CREATE TYPE` at all | `schema.ts` now does `export * from "./enums"`. Caught by reading the SQL — see the session entry. |
 | `features/F02-i18n-rtl-foundation.md` | next-intl's `requestLocale` in `i18n/request.ts` | Deprecated by next-intl in favour of `next/root-params` (introduced in Next **16.3.0** — the exact version installed) | Used `next/root-params`. Carries a Server-Action caveat, see Decisions. |
-| shadcn `Button` usage | Radix-style `asChild` | shadcn is on Base UI now; the composition prop is `render={<Link />}` | Feature file updated; noted here for every later wave that wants a link-styled button. |
+| shadcn `Button` usage | Radix-style `asChild` | shadcn is on Base UI now; the composition prop is `render` | Corrected again in F05 — see the row below. |
+| `CLAUDE.md` traps + F02's home page | `<Button render={<Link href="…" />}>` for a link-styled button | Base UI's `Button` **logs a console error** when `render` yields a non-`<button>`, and its named escape hatch `nativeButton={false}` sets `role="button"` on the `<a>` — so a screen reader announces a navigation control as a button | Added `src/components/ui/button-link.tsx`, which styles a genuine anchor from the same `buttonVariants`. All 8 call sites converted, including the 2 on F02's home page that had been emitting the error since Wave 1. `CLAUDE.md` and the F05 feature file updated. **Reported by the user, not found by any check we run** — see Open Thread 11. |
+| `features/F05-auth-roles-access.md` | `pnpm dlx @better-auth/cli generate --config src/lib/auth.ts` | The CLI loads the config outside React and **refuses** any config that reaches `server-only`, however transitively: *"Please remove import 'server-only' from your auth config file."* `src/lib/db/index.ts` carried it | Pool moved to `src/lib/db/client.ts` (no `server-only`); `index.ts` is now `import "server-only"; export * from "./client"`. ESLint rule 6 confines `@/lib/db/client` to `src/lib/auth.ts`. Feature file updated. |
+| Better Auth generated schema | (implicit) timestamptz everywhere | The CLI emits `timestamp` **without** time zone on all four tables | Left exactly as generated — the rule to not edit CLI output wins. Drizzle writes `toISOString()` and reads back with `+0000`, so instants round-trip correctly; the column just doesn't carry the zone. Feature file updated. |
 
 ---
 
@@ -101,9 +104,12 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` currently holds only `POSTGRES_URL` — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
-| 6 | **No user-referencing column has a foreign key yet** — Better Auth's `user` table doesn't exist until F05. `pilot_profile.user_id`, `drone.owner_user_id`, `booking.pilot_user_id`, every `*_by_user_id`, `audit_event.actor_user_id`, `notification.user_id`. F05 must add them in its own migration, including `audit_event.actor_user_id ON DELETE SET NULL` (the log outlives the account). Until then there is no referential integrity on those columns. | F03 | F05 |
+| 11 | **Nothing in `pnpm lint` / `typecheck` / `build` / `test` catches a browser console error.** Base UI's `nativeButton` warning had been firing on F02's home page since Wave 1 and every check stayed green; the user found it by opening the page. Every wave from here builds UI, and none of them has a check that would notice. F31's gate needs a real browser pass, and F20/F23 (MapLibre, terra-draw) are the likeliest to hit this again. | F05 | F31, and every UI wave |
+| 12 | **F05's account-level acceptance criteria are unverified** — the user chose to skip them rather than let a probe account take the admin slot. Unproven: first account = admin / second = pilot; `input: false` blocking a self-service `{role:"admin"}` update; a signed-in pilot getting 404 on `/ar/admin`; a pilot's direct call to `setUserRoleAction` being refused; pilot B opening pilot A's drone. Each needs two real accounts and ten minutes. The `user` table is still **empty**, so whoever signs up first still becomes admin. | F05 | F31; ideally re-run as soon as the owner signs up |
+| 13 | **`requirePilotProfile` redirects to `/profile/complete`, which does not exist yet** (F17 builds it). Nothing calls the guard today, so nothing 404s; F17 must build that page or the first caller sends pilots into a dead end. | F05 | F17 |
+| 14 | **`drone.owner_user_id` and `booking.pilot_user_id` are `ON DELETE RESTRICT`**, so deleting an account that holds registered aircraft or bookings is refused by the database — while `deleteUser` is enabled in `src/lib/auth.ts`. Deliberate: a registration record is not personal data to take away. **F28 owns the consequence** and must offer a real path (revoke, or transfer) instead of a raw delete that errors. | F05 | F28 |
 | 7 | `jobs`, `remote_id_scan` and `rate_limit_bucket` are **not** in the schema — F03 defers them to the features that own their columns. | F03 | F08, F11, F09 |
-| 8 | `src/lib/session.ts` holds a **provisional** `Session` type so the data layer could take a session from its first query. F05 replaces it with Better Auth's inferred type and adds the real guards. | F03 | F05 |
+| 15 | **`role` reaches the app as `string \| null`, not a union.** Better Auth types an `additionalField` declared as a list of literals as a plain `string`. `roleOf()` in `src/lib/session.ts` narrows it and **fails closed** — anything unrecognised is treated as `pilot`. Never read `session.user.role` directly; use `roleOf` / `isReviewer` / `isAdmin`. | F05 | Every wave that branches on role |
 | 9 | **F12 owes the KKIA annulus its containment assertion** — a point inside the hole must not be contained by the polygon. F04 asserted only the structure, because writing a second `pointInPolygon` outside `src/lib/airspace/` is the decay the plan warns about. | F04 | F12 |
 | 10 | **Nothing has checked the seeded polygons for self-intersection**, and no one has seen them on a map. F20 is the first render. | F04 | F20 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
@@ -116,6 +122,11 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-16 | FK delete actions vary by meaning: `cascade` for the account's own data, `set null` for records of an action, **`restrict`** for `drone.owner_user_id` and `booking.pilot_user_id`. | A registration record is not personal data a pilot takes with them when they close an account — an airframe may be flying with an Ajniha sticker on it. Deleting such an account is refused at the database rather than silently erasing the registry. The cost is that `deleteUser` now fails for any pilot with aircraft, which F28 must handle properly (Open Thread 14). | Feature file updated |
+| 2026-08-16 | The two `no-restricted-imports` blocks are composed from shared constants rather than written as one block per rule. | Flat config **replaces** a rule when a later block names it again. Adding rule 6 as its own block switched rule 5 off across the whole app, and nothing failed — `lint` stayed green. Both were re-proven on probes afterwards. | n/a |
+| 2026-08-16 | `roleOf()` narrows `role` and **fails closed** to `pilot`. | Better Auth types a literal-list `additionalField` as plain `string`, and the column is nullable. A typo or a hand-edited row must never widen access; the only direction an unrecognised value can fall is downward. | Feature file updated |
+| 2026-08-16 | `/admin` ships with a working role-assignment panel rather than an empty layout. | F05 names `setUserRole` as the only role path, and two of its acceptance criteria need a reviewer-guarded action and an `/admin` URL to 404 against. A layout with no page would have been dead weight that verified nothing. F22–F25 replace it. | Feature file updated |
+| 2026-08-16 | `setUserRoleAction` skips `rateLimit()` and zod. | F09 owns rate limiting and doesn't exist yet; the input is one id and one enum, and `isRole` is already the app's narrowing function. Recorded in the file so it reads as deferred, not forgotten. | n/a |
 | 2026-08-15 | Version research done inline against the npm registry, not by parallel sub-agents as F01 §"Version research" describes. | The session's operating rules forbid dispatching agents unless the user asks. The registry is the primary source the research was meant to reach, so the output is the same; only the mechanism differs. What was *not* done is the per-branch API/deprecation sweep — later waves must check current docs for their own package before writing against it. | Feature file updated |
 | 2026-08-15 | Rule 1 also lints class strings inside `cva()`/`cn()`/`clsx()`/`twMerge()`, not only `className` attributes. | shadcn keeps its class strings in `cva()`. Restricting the rule to the attribute meant `button.tsx` and `badge.tsx` shipped `pr-`/`pl-` on day one, unflagged — in the components every future page reuses. | Feature file updated |
 | 2026-08-15 | Kept the scaffold's generated `AGENTS.md`; our `CLAUDE.md` now ends with `@AGENTS.md`. | `next dev` rewrites `AGENTS.md` on every run — deleting it only produces a recurring uncommitted diff. The scaffold's own `CLAUDE.md` (a one-line `@AGENTS.md`) was deleted so the project's real one survived the move. | `CLAUDE.md` updated |
@@ -143,14 +154,16 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-15 (F03) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
-| `pnpm lint` | 2026-08-15 (F03) | ✅ clean, and all five rules proven to **fail** on deliberate probes (see entries) |
-| `pnpm build` | 2026-08-15 (F03) | ✅ runs `db:migrate` first, then `/ar` and `/en` prerendered (SSG), proxy registered |
-| `pnpm test` | 2026-08-15 (F04) | ✅ 60 passed, 3 files (format, geo/bbox, seed zones) |
-| `pnpm i18n:check` | 2026-08-15 (F03) | ✅ 303 keys, ar/en in sync; proven to fail on a deleted key |
-| `pnpm db:up` + `db:migrate` | 2026-08-15 (F03) | ✅ container healthy; migration `0000_fair_human_torch` applied clean to an empty database; 15 tables present |
+| `pnpm exec tsc --noEmit` | 2026-08-16 (F05) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
+| `pnpm lint` | 2026-08-16 (F05) | ✅ clean; rules 5 and 6 re-proven on probes after the flat-config restructure |
+| `pnpm build` | 2026-08-16 (F05) | ✅ migrates first; 19 routes, auth pages SSG, `(app)`/`(admin)` dynamic, `/api/auth/[...all]` registered |
+| `pnpm test` | 2026-08-16 (F05) | ✅ 60 passed, 3 files — **unchanged; F05 added no tests** (see entry) |
+| `pnpm i18n:check` | 2026-08-16 (F05) | ✅ 347 keys, ar/en in sync |
+| `pnpm db:up` + `db:migrate` | 2026-08-16 (F05) | ✅ `0001_cute_sprite` applied clean; **19 tables**, 18 FKs onto `user` |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
-| Two-account ownership | — | — |
+| Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
+| Two-account ownership | — | ❌ **not run** — Open Thread 12. Needs two accounts; skipped so no probe took the admin slot. |
+| Browser console clean | — | ❌ **not run** by us. The one console error found so far was reported by the user — Open Thread 11. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
 
@@ -170,6 +183,62 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 5 — Wave 3 · F05 Authentication, Roles & Access Control
+
+**Date:** 2026-08-16
+**Status:** ⚠️ done with deviations · **Wave 3 code-complete, account-level criteria NOT verified**
+
+**Built:**
+- `src/lib/auth.ts` — Better Auth: drizzle adapter (`transaction: true`), email+password, `role` (`input: false`) and `preferredLocale` additional fields, `changeEmail`/`deleteUser`, `nextCookies()` last, and the `databaseHooks.user.create.before` hook that makes the first account admin.
+- `src/lib/db/auth-schema.ts` — CLI output, unedited. `schema.ts` re-exports it (the same trap F03 hit with enums).
+- **Open Thread 6 closed:** 16 foreign keys onto `user.id` across 11 tables, in migration `0001_cute_sprite`.
+- `src/lib/session.ts` rewritten onto Better Auth's inferred type (**Open Thread 8 closed**); `src/lib/auth-guards.ts`, `src/lib/auth-client.ts`, `src/lib/auth-errors.ts`.
+- `src/app/api/auth/[...all]/route.ts`; `src/proxy.ts` now composes next-intl with the optimistic cookie check.
+- Five auth pages under `(public)/(auth)/` with their own layout, five client forms, sign-out button.
+- `(app)/layout.tsx` + `/dashboard` placeholder; `(admin)/layout.tsx` + `/admin` carrying role assignment.
+- `src/lib/actions/{result,user}.ts` — the `ActionResult` / `Reason` / `refuse()` shape for every later wave, and `setUserRoleAction`.
+- `src/lib/data/user.ts` — `listUsers`, `getUserById`, `countUsers`, `setUserRole` (row + audit event in one transaction).
+- `src/components/ui/button-link.tsx`, and ESLint **rule 6**.
+- 44 message keys; `roles` and `dashboard` namespaces are new.
+
+**Deviated from spec:**
+- **`src/lib/db/index.ts` split into `client.ts` + a `server-only` re-export.** The Better Auth CLI refuses a config that reaches `server-only`, transitively included. `auth.ts` is the sole module allowed to import `@/lib/db/client`; ESLint rule 6 enforces it. Feature file updated.
+- **`<Button render={<Link/>}>` replaced by `ButtonLink` everywhere.** `CLAUDE.md` was prescribing a pattern that logs a Base UI console error, and the escape hatch it names (`nativeButton={false}`) sets `role="button"` on an anchor. Two of the eight call sites were F02's, broken since Wave 1. `CLAUDE.md` and the feature file updated. **The user found this, not us** — Open Thread 11.
+- **The four Better Auth tables use `timestamp` without a zone**, against the timestamptz convention. Left as generated; drizzle round-trips the instants correctly. Feature file updated.
+- **FK delete actions are not uniform, and the choice is deliberate**: `cascade` for what belongs only to the account (`pilot_profile`, `notification`, `notification_preference`), `set null` for every record of an *action* (`*_by_user_id`, `audit_event.actor_user_id`, `email_log`), and **`restrict`** for `drone.owner_user_id` and `booking.pilot_user_id` — a registration record isn't personal data to take away. That makes `deleteUser` fail for any pilot with aircraft; Open Thread 14 hands the consequence to F28.
+- **`setUserRoleAction` has no `rateLimit()` (F09) and no zod schema.** Its whole input is an id and an enum, and `isRole` is already the narrowing function the app uses. Noted in the file.
+- **`/admin` exists with a role-assignment panel**, beyond a bare layout. F05 specifies `setUserRole` as the only role path, and the acceptance criteria need a reviewer-guarded action and an `/admin` URL to 404 against. F22–F25 replace the page.
+- **ESLint's two `no-restricted-imports` blocks had to be merged.** In flat config a later block naming the same rule **replaces** the earlier one — adding rule 6 as its own block silently switched rule 5 off everywhere. Both are now composed from shared constants and re-proven on probes.
+- Sign-in/sign-up go through Better Auth's endpoint from client components, not server actions — the framework sets the session cookie itself.
+- `.env` gained `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `APP_URL`, all pointing at **port 3001** (Open Thread 3). The browser client sets no `baseURL`, so it uses the page's own origin and the port can't break sign-in.
+
+**Verified:**
+- **The generated SQL was read in full before applying** — 4 tables, 16 FKs, no drops. `pnpm db:migrate` clean; `\dt` lists **19 tables**; `pg_constraint` confirms all 18 FKs onto `user` and their delete actions (`audit_event.actor_user_id` = set null, `drone.owner_user_id` = restrict).
+- **F03's deferred criterion, now testable and proven:** `create table … owner_user_id uuid not null references "user"(id)` → `ERROR: foreign key constraint … cannot be implemented … incompatible types: uuid and text`. This is why every user column is `text`.
+- **The proxy is not the boundary — demonstrated, not asserted.** With a **forged** `better-auth.session_token` cookie the proxy waves the request straight through, and the layout guard is what answers: `/ar/admin` → **404**, `/ar/dashboard` → 307 to `/ar/sign-in`. Signed out with no cookie, both are caught by the proxy (`?next=%2Fadmin`, `?next=%2Fdashboard`, locale prefix stripped).
+- All five auth pages 200 in both locales; `/api/auth/ok` 200. `/ar/sign-in` renders `<html lang="ar" dir="rtl">` with the Arabic copy and the proposal notice; `/ar/forgot-password` states plainly that email isn't configured.
+- After the `ButtonLink` fix the home page serves real `<a data-slot="button-link">` elements with no `role="button"`, and a sweep of all seven pages leaves **zero** errors and zero `nativeButton` warnings in the dev log.
+- ESLint rules 5 and 6 each proven to **fail** on deliberate probes after the config restructure; probes deleted, `eslint` clean.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (347 keys), `pnpm test` (60), `pnpm build` — all green.
+
+**Not verified:**
+- **Every account-level acceptance criterion.** The user chose to skip them rather than let a probe account take the admin slot (see Open Thread 12). Unproven: first account = `admin` and second = `pilot`; a pilot PATCHing `{role:"admin"}` being ignored (**the `input: false` test — the security control this feature turns on**); a signed-in pilot getting 404 rather than 403 on `/ar/admin`; a pilot's direct call to `setUserRoleAction` being refused; pilot B opening pilot A's drone. Each needs two real accounts. The hook, the guards and the action are written and read correctly, but **nothing has run them against a real session.**
+- **No test file was added.** `setUserRole`'s transaction, `roleOf`'s fail-closed narrowing and `safeNextPath`'s open-redirect check are all pure enough to unit-test, and none is tested. `roleOf` and `safeNextPath` need no database at all — the cheapest gap here to close.
+- **`pnpm db:studio` showing the user row** — no browser was used.
+- **Auth pages at 375 px, light and dark, Arabic RTL** — not checked; no browser. Given Open Thread 11, that is exactly where the next defect will be.
+- The new Arabic copy is unreviewed by a native speaker.
+
+**Next session should know (Wave 4 — F06–F09, four sub-agents in parallel):**
+- **`src/lib/auth.ts` is the one shared file** (plan §5). F06 adds `sendVerificationEmail` / `sendResetPassword`; F09 adds rate limiting. Both edits are **serialised**, and each means re-running the CLI → `db:generate` → **read the SQL** → `db:migrate`.
+- The CLI command that works, `server-only` collision and all: `pnpm dlx @better-auth/cli@latest generate --config src/lib/auth.ts --output src/lib/db/auth-schema.ts -y`. Keep the pool in `src/lib/db/client.ts` free of `server-only` or it breaks again.
+- **`requireEmailVerification` is `false`** and the two email pages say plainly that nothing will be sent. F06 flips both.
+- **Never read `session.user.role`** — it is `string | null`. Use `roleOf` / `isReviewer` / `isAdmin` (Open Thread 15).
+- Server actions: `getSession()` returns `null` rather than redirecting; guard, then `refuse("code")` from `@/lib/actions/result`. Redirecting guards need the locale passed in — `next/root-params` throws in actions (Open Thread 4).
+- The `user` table is **empty**. Whoever signs up first becomes admin. Still do not create a probe account.
+- Dev server takes **port 3001**; `BETTER_AUTH_URL` and `APP_URL` are set to match.
 
 ---
 

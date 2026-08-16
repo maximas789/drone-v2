@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local file storage — the no-token driver (src/lib/storage/local.ts)
+/uploads
+
 # vercel
 .vercel
 

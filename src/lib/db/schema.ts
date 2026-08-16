@@ -23,6 +23,7 @@ import {
   droneStatus,
   droneWeightClass,
   idDocumentType,
+  jobStatus,
   notificationCategory,
   notificationStatus,
   remoteIdDeclKind,
@@ -636,6 +637,62 @@ export const emailLog = pgTable(
   (t) => [
     index("email_log_user_idx").on(t.userId, t.createdAt),
     index("email_log_status_idx").on(t.status, t.createdAt),
+  ],
+);
+
+// --- Background jobs ------------------------------------------------------
+
+/**
+ * Inngest run state, mirrored into **our** database (F08).
+ *
+ * Inngest's own dashboard already shows every step of every run. This table
+ * exists because the operator should not have to leave the app to answer "did
+ * the expiry sweep run last night, and did it fail?" — F29's system page reads
+ * from here, and a hosting dashboard that keeps 30 days of history is not a
+ * substitute for a record the app owns.
+ *
+ * Writes come from a single Inngest middleware (`src/lib/inngest/jobs-table.ts`)
+ * rather than from the job bodies, so a function cannot forget to report
+ * itself, and a mirroring failure can never fail the run that it describes.
+ */
+export const job = pgTable(
+  "job",
+  {
+    id: id(),
+    /** Inngest's run id. The natural key — one row per run, upserted. */
+    runId: text().notNull().unique(),
+    /** Inngest's function id, e.g. `ajniha-registration-expiry-sweep`. */
+    functionId: text().notNull(),
+    status: jobStatus().notNull().default("running"),
+    /** Zero-indexed, as Inngest counts them. Bumped on every retry. */
+    attempt: integer().notNull().default(0),
+
+    startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp({ withTimezone: true }),
+    /** Stored, not derived: F29 sorts and filters on it. */
+    durationMs: integer(),
+
+    /** The **full** message. F29 shows it verbatim — never "an error occurred". */
+    error: text(),
+    /** Whatever the function returned: counts, ids swept, nothing. */
+    output: jsonb(),
+
+    /** The event name that triggered it, or null for a cron. */
+    triggerEvent: text(),
+    /**
+     * Set when this run exists because an operator pressed **Re-run**. A re-run
+     * is a new run with a new id — this column is what ties it back rather than
+     * pretending the old run restarted.
+     */
+    rerunOfRunId: text(),
+
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    // "Did this function run last night?" — the system page's default query.
+    index("job_function_started_idx").on(t.functionId, t.startedAt),
+    index("job_status_started_idx").on(t.status, t.startedAt),
   ],
 );
 

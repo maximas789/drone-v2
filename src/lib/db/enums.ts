@@ -99,6 +99,22 @@ export const notificationCategory = pgEnum("notification_category", [
   "zone_closure",
 ]);
 
+/**
+ * The lifecycle of one background job run, mirrored from Inngest (F08).
+ *
+ * **`cancelling` is a real state, not a label.** Inngest cancels at the next
+ * step boundary, so between the request and the boundary the run is still
+ * executing. Showing "cancelled" there would be a lie the operator catches when
+ * the next step's effects appear anyway.
+ */
+export const jobStatus = pgEnum("job_status", [
+  "running",
+  "completed",
+  "failed",
+  "cancelling",
+  "cancelled",
+]);
+
 export const dronePhotoKind = pgEnum("drone_photo_kind", [
   "overall",
   "serial_plate",

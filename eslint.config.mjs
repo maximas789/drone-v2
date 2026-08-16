@@ -122,6 +122,22 @@ const GUARDED_DB_PATH = {
     "Import { db } from '@/lib/db'. The raw client skips the server-only guard and exists solely so the Better Auth CLI can load src/lib/auth.ts.",
 };
 
+/**
+ * Rule 11 — no status change outside `src/lib/workflow/`.
+ *
+ * One `applyTransition()` writes the row, the audit event and the notification
+ * in a single transaction. A `.set({ status })` written anywhere else is a
+ * status change with no trail behind it — which, for a regulator, is a change
+ * that did not happen. Catches the drizzle shape specifically; it is the only
+ * way a status column is written in this codebase.
+ */
+const STATUS_WRITE_SELECTOR = {
+  selector:
+    'CallExpression[callee.property.name="set"] > ObjectExpression > Property[key.name="status"]',
+  message:
+    "No status change outside src/lib/workflow/. Add the edge to transitions.ts and call applyTransition() — it writes the row, the audit event and the notification in one transaction.",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -149,6 +165,35 @@ const eslintConfig = defineConfig([
 
   {
     name: "ajniha/rtl-and-locale",
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...classNameSelectors,
+        ...localeFormattingSelectors,
+        STATUS_WRITE_SELECTOR,
+      ],
+    },
+  },
+
+  {
+    /**
+     * The state machine itself, and only it. Same flat-config trap as
+     * `no-restricted-imports` below: naming the rule again **replaces** the
+     * list, so this block re-states everything except the status ban.
+     */
+    name: "ajniha/workflow-status-writer",
+    /**
+     * `src/lib/inngest/jobs-table.ts` is here for a different reason: `job.status`
+     * is not a domain status. It mirrors Inngest's own run state, has no
+     * transitions, no actor and nothing to notify — auditing "a cron started"
+     * as a regulator-visible event would bury the trail rule 11 exists to keep
+     * readable.
+     */
+    files: [
+      "src/lib/workflow/**/*.ts",
+      "src/lib/inngest/jobs-table.ts",
+      "src/lib/inngest/functions/run-cancelled.ts",
+    ],
     rules: {
       "no-restricted-syntax": [
         "error",

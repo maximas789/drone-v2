@@ -254,6 +254,7 @@
     "identityRejected": "لم يتم قبول وثيقة هويتك.",
     "bookingConfirmed": "تم تأكيد حجزك في {zone}.",
     "bookingCancelled": "أُلغي حجزك في {zone}.",
+    "bookingReminder": "تذكير: حجزك في {zone} غدًا.",
     "zoneClosed": "أُغلقت منطقة {zone} في وقت حجزك.",
     "registrationExpiring": "ينتهي تسجيل {drone} خلال {days} يوماً.",
     "registrationExpired": "انتهى تسجيل {drone}.",

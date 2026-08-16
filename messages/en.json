@@ -254,6 +254,7 @@
     "identityRejected": "Your identity document was not accepted.",
     "bookingConfirmed": "Your booking in {zone} is confirmed.",
     "bookingCancelled": "Your booking in {zone} was cancelled.",
+    "bookingReminder": "Reminder: your booking in {zone} is tomorrow.",
     "zoneClosed": "{zone} closed during your booked window.",
     "registrationExpiring": "{drone} expires in {days} days.",
     "registrationExpired": "{drone}'s registration has expired.",

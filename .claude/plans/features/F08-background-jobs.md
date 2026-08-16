@@ -12,7 +12,11 @@ The work that must happen whether or not anyone has the app open: registration e
 
 Client in `src/lib/inngest/client.ts`, endpoint at `/api/inngest`. Free and account-free in development: `npx inngest-cli dev` gives a local dashboard where every step of every run is visible.
 
-A `jobs` table mirrors run state into the app's own database so the system page ([F29](./F29-system-ops-page.md)) can show what ran, what failed, and why **without** the user opening Inngest's dashboard.
+> **Built:** the client sets **`isDev: process.env.NODE_ENV !== "production"`**. Without it the SDK starts in cloud mode, finds no signing key and answers `/api/inngest` with a **500** — including the introspection the dev CLI uses, so the symptom is "the dashboard lists no functions", naming nothing. The documented switch is the `INNGEST_DEV` env var; deriving it means a fresh clone works with no env at all.
+
+A `job` table (singular, like every other table here) mirrors run state into the app's own database so the system page ([F29](./F29-system-ops-page.md)) can show what ran, what failed, and why **without** the user opening Inngest's dashboard.
+
+Mirroring is a **middleware** (`Middleware.BaseMiddleware`, v4's class API — not v3's `new InngestMiddleware({ init })`), so a function cannot forget to report itself. Every write is wrapped: a bookkeeping failure never fails the run it describes.
 
 ### Scheduled functions
 
@@ -25,6 +29,8 @@ All crons are expressed in `Asia/Riyadh`.
 | `booking-closeout` | every 15 min | `approved` past `slotEnd`: `checkedInAt` set → `completed`; otherwise past `slotEnd + 30 min` → `no_show` |
 | `booking-reminders` | hourly | 24 h before an approved slot → notification + email |
 | `review-queue-digest` | hourly | Pending counts to reviewers; **skipped entirely when the queue is empty** |
+
+> **Digest suppression reads `email_log`, not the `job` table and not an audit event.** The question is "was a digest *sent*", and a run that found an empty queue sent nothing — suppressing on "did the function run" would silence the run half an hour later that finds three pending items. `audit_event` could not answer it either: its `entityType` has no `system` member, and inventing one for a mail-send marker would put a non-entity in the regulator's trail.
 | `rate-limit-sweep` | daily 04:00 | Delete `rate_limit_bucket` rows older than the longest window |
 
 ### Event-driven functions
@@ -34,6 +40,8 @@ All crons are expressed in `Asia/Riyadh`.
 | `drone/approved` | Render the QR PNG, store it, set `remote_id.qrPathname`, then send the approval email |
 | `zone/closure.published` | Find every `pending`/`approved` booking overlapping the window, cancel each with `cancelled_by_closure`, notify each pilot individually |
 | `drone/revoked` | Suspend the Remote ID, cancel every future booking for that drone |
+
+> **`drone/revoked` reuses the `booking.cancelled_by_closure` edge** rather than adding a near-identical one. From the pilot's side the fact is the same — the authority has taken the slot away — and two names for one thing in the regulator's trail is worse than one name that covers both. The `reason` column carries which it was.
 
 **Fan-out uses one `step.run` per booking**, so a single failing notification retries alone rather than replaying cancellations that already succeeded. Every cancellation is idempotent — re-running the step on an already-cancelled booking is a no-op.
 
@@ -62,13 +70,26 @@ A server-side PNG (~512 px, high error correction) encoding `${APP_URL}/ar/rid/$
 
 ```
 src/lib/inngest/client.ts
+src/lib/inngest/events.ts           typed event definitions (v4 eventType/staticSchema)
+src/lib/inngest/rules.ts            pure: schedules, thresholds, verdicts, windows
+src/lib/inngest/rules.test.ts
+src/lib/inngest/queries.ts          the system-scoped reads the jobs need
 src/lib/inngest/functions/{expiry-sweep,expiry-reminders,booking-closeout,
                            booking-reminders,review-digest,rate-limit-sweep,
-                           qr-render,closure-fanout,drone-revoked}.ts
+                           qr-render,closure-fanout,drone-revoked,
+                           run-cancelled}.ts
+src/lib/inngest/functions/index.ts  the registration array
 src/lib/inngest/jobs-table.ts       run mirroring
 src/app/api/inngest/route.ts
 src/lib/qr/render.ts
 ```
+
+Four files the original list did not name, each for a reason:
+
+- **`rules.ts`** — the arithmetic (Riyadh cron strings, the reminder thresholds, the closeout verdict, the reminder window) is pure and therefore testable without a connection string. Same split as `rate-limit/rules.ts` and `airspace/evaluate.ts`.
+- **`events.ts`** — v4's `eventType` is both the trigger and the sender's factory, so a payload that does not match the function reading it is a type error.
+- **`queries.ts`** — **not** `src/lib/data/*.ts`. Rule 8 makes every read there take a session first, because the session decides which rows the caller may see; a cron has no session and must see every user's rows. Handing it a fabricated session would put a fake reader in the one place the ownership rule is meant to be legible.
+- **`run-cancelled.ts`** — a cancelled run never reaches `onRunComplete` or `onRunError`, so without it the row would sit at `running` for ever. It subscribes to Inngest's own `inngest/function.cancelled`. `cancelling` is not written here: that is the gap between an operator pressing cancel and the run stopping, and F29 writes it when it sends the request.
 
 ## Acceptance criteria
 

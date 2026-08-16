@@ -92,6 +92,8 @@ pnpm build          # runs db:migrate first
 
 - **`drone-2-demo` sits inside the `C:\Users\alsha` home git repo.** It needs its own `git init`, or commits land in a personal notes vault. Verify with `git rev-parse --show-toplevel`.
 - **The first account created becomes admin.** Never create a probe account before the user signs up — deleting it later locks them out of their own system page.
+- **`BETTER_AUTH_URL` must match the origin the app is served from.** Anything else and every auth POST — sign-in included — is refused with `INVALID_ORIGIN`. Same class of trap as `APP_URL` below, and just as silent.
+- **A `next dev` 404 embeds a stack trace naming the guard; `next start` does not.** Route-protection checks are only meaningful against a production serve.
 - **QR codes embed `APP_URL` at render time.** If it still says `localhost` in production, every printed sticker is dead. The system page checks for this.
 - **`setRTLTextPlugin()` must be called exactly once**, before the first map instance, or Arabic labels render disconnected and reversed. Calling it twice throws.
 - **Map labels need `["coalesce", ["get", "name:ar"], ["get", "name"]]`** — without the fallback, features with no Arabic name render blank.

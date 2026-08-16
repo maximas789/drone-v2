@@ -28,7 +28,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 0 — Groundwork | F01 | ⚠️ Done with deviations (Session 1) |
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
-| 3 — Auth | F05 | ⚠️ Done with deviations (Session 5) — **account-level criteria unverified, see entry** |
+| 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⬜ Not started |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
@@ -105,7 +105,8 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
 | 11 | **Nothing in `pnpm lint` / `typecheck` / `build` / `test` catches a browser console error.** Base UI's `nativeButton` warning had been firing on F02's home page since Wave 1 and every check stayed green; the user found it by opening the page. Every wave from here builds UI, and none of them has a check that would notice. F31's gate needs a real browser pass, and F20/F23 (MapLibre, terra-draw) are the likeliest to hit this again. | F05 | F31, and every UI wave |
-| 12 | **F05's account-level acceptance criteria are unverified** — the user chose to skip them rather than let a probe account take the admin slot. Unproven: first account = admin / second = pilot; `input: false` blocking a self-service `{role:"admin"}` update; a signed-in pilot getting 404 on `/ar/admin`; a pilot's direct call to `setUserRoleAction` being refused; pilot B opening pilot A's drone. Each needs two real accounts and ten minutes. The `user` table is still **empty**, so whoever signs up first still becomes admin. | F05 | F31; ideally re-run as soon as the owner signs up |
+| 12 | **`BETTER_AUTH_URL` must equal the origin the app is actually served from**, or every auth POST is refused with `INVALID_ORIGIN` — sign-in included. Found by serving the production build on a different port. It is the same class of failure as the `APP_URL` QR trap and fails just as silently in a browser. F29's system page should check it. | F05 | Deployment, F29 |
+| 16 | **A dev-mode 404 embeds a stack trace naming the guard** (`requireReviewer`, absolute file path) in its RSC payload; the production build does not. So the "404, not a stack trace" criterion is **only meaningful against `next start`**. F31 must run its route checks against a production serve, never `next dev`. | F05 | F31 |
 | 13 | **`requirePilotProfile` redirects to `/profile/complete`, which does not exist yet** (F17 builds it). Nothing calls the guard today, so nothing 404s; F17 must build that page or the first caller sends pilots into a dead end. | F05 | F17 |
 | 14 | **`drone.owner_user_id` and `booking.pilot_user_id` are `ON DELETE RESTRICT`**, so deleting an account that holds registered aircraft or bookings is refused by the database — while `deleteUser` is enabled in `src/lib/auth.ts`. Deliberate: a registration record is not personal data to take away. **F28 owns the consequence** and must offer a real path (revoke, or transfer) instead of a raw delete that errors. | F05 | F28 |
 | 7 | `jobs`, `remote_id_scan` and `rate_limit_bucket` are **not** in the schema — F03 defers them to the features that own their columns. | F03 | F08, F11, F09 |
@@ -162,7 +163,8 @@ What has actually been **run**, not what was written. F31 reads this.
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F05) | ✅ `0001_cute_sprite` applied clean; **19 tables**, 18 FKs onto `user` |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
-| Two-account ownership | — | ❌ **not run** — Open Thread 12. Needs two accounts; skipped so no probe took the admin slot. |
+| Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
+| Production serve (`next start`) | 2026-08-16 (F05) | ✅ signed in and re-ran the guard checks against the built app; 404 carries no stack trace there. |
 | Browser console clean | — | ❌ **not run** by us. The one console error found so far was reported by the user — Open Thread 11. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -224,9 +226,20 @@ Newest at the top.
 - ESLint rules 5 and 6 each proven to **fail** on deliberate probes after the config restructure; probes deleted, `eslint` clean.
 - `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (347 keys), `pnpm test` (60), `pnpm build` — all green.
 
+**Account-level criteria — run on request, with two probe accounts since deleted:**
+
+The user first chose to skip these, then asked for them to be run. Two throwaway accounts were created, every criterion exercised, and both deleted; the database is back to **0 users / 0 sessions / 0 accounts / 0 audit events**, seed data untouched, so the owner's sign-up still becomes admin.
+
+- **First account = `admin`, second = `pilot`** — confirmed in the sign-up response and in the row. `preferredLocale` honoured per account (`ar` / `en`).
+- **The `input: false` test.** A pilot POSTing `{"role":"admin"}` to `/api/auth/update-user` → `FIELD_NOT_ALLOWED`, HTTP 400, role unchanged — and it rejects the **whole request**, so a `{name, role}` payload doesn't sneak the name through either. First attempt was refused by CSRF (`MISSING_OR_NULL_ORIGIN`) and had to be re-run with a valid `Origin`; the CSRF refusal was **not** the test passing.
+- **Signed-in pilot → `/ar/admin` = 404**, admin → 200, signed out → 307. On the production build the 404 body carries no stack trace, no guard name and no file path. In **dev** it does — see Open Thread 16.
+- **The server action, called directly** (real `Next-Action` id lifted from the production bundle, UI bypassed entirely). A **positive control first** — admin promotes a pilot to reviewer, `ok:true`, row changed — because otherwise every refusal below could just mean the action never ran. Then: pilot promoting itself → `not_admin`; pilot demoting the admin → `not_admin`; forged cookie past the proxy → `not_authenticated`; admin changing its own role → `cannot_change_own_role`; bogus role → `invalid_role`; unknown user → `user_not_found`. Roles unchanged throughout.
+- **Ownership isolation**, at the data layer — there is no drone page until F18, so this is `getDroneById`, not a URL. Owner sees the row; **another pilot sees `null`**; an admin sees it; a stranger's own list is empty; and an unrecognised role sees `null`, so `roleOf` fails closed in practice and not just on paper. The drone was inserted **with no serial number** — the product's central case, exercised once more.
+- **`restrict` FK proven:** deleting the owner while their drone existed was refused by Postgres.
+- **The audit trail wrote itself correctly** — two `user.role_changed` rows with the right `before`/`after` and `actor_role`, from the transaction in `setUserRole`.
+
 **Not verified:**
-- **Every account-level acceptance criterion.** The user chose to skip them rather than let a probe account take the admin slot (see Open Thread 12). Unproven: first account = `admin` and second = `pilot`; a pilot PATCHing `{role:"admin"}` being ignored (**the `input: false` test — the security control this feature turns on**); a signed-in pilot getting 404 rather than 403 on `/ar/admin`; a pilot's direct call to `setUserRoleAction` being refused; pilot B opening pilot A's drone. Each needs two real accounts. The hook, the guards and the action are written and read correctly, but **nothing has run them against a real session.**
-- **No test file was added.** `setUserRole`'s transaction, `roleOf`'s fail-closed narrowing and `safeNextPath`'s open-redirect check are all pure enough to unit-test, and none is tested. `roleOf` and `safeNextPath` need no database at all — the cheapest gap here to close.
+- **No test file was added.** `roleOf`'s fail-closed narrowing and `safeNextPath`'s open-redirect check are pure and need no database; `setUserRole`'s transaction needs one. None is tested. The probes above proved the behaviour **once, by hand, then deleted themselves** — nothing will catch a regression. This is the cheapest gap left in F05.
 - **`pnpm db:studio` showing the user row** — no browser was used.
 - **Auth pages at 375 px, light and dark, Arabic RTL** — not checked; no browser. Given Open Thread 11, that is exactly where the next defect will be.
 - The new Arabic copy is unreviewed by a native speaker.
@@ -237,8 +250,10 @@ Newest at the top.
 - **`requireEmailVerification` is `false`** and the two email pages say plainly that nothing will be sent. F06 flips both.
 - **Never read `session.user.role`** — it is `string | null`. Use `roleOf` / `isReviewer` / `isAdmin` (Open Thread 15).
 - Server actions: `getSession()` returns `null` rather than redirecting; guard, then `refuse("code")` from `@/lib/actions/result`. Redirecting guards need the locale passed in — `next/root-params` throws in actions (Open Thread 4).
-- The `user` table is **empty**. Whoever signs up first becomes admin. Still do not create a probe account.
-- Dev server takes **port 3001**; `BETTER_AUTH_URL` and `APP_URL` are set to match.
+- The `user` table is **empty** — the two probe accounts were deleted. Whoever signs up first becomes admin. Still do not create a probe account without asking.
+- Dev server takes **port 3001**; `BETTER_AUTH_URL` and `APP_URL` are set to match. **Change `BETTER_AUTH_URL` if you serve on another port** or every auth POST returns `INVALID_ORIGIN` (Open Thread 12).
+- **Testing a server action by hand:** its id is in the production client chunks (`grep -r createServerReference .next/static/chunks`), the body is a JSON array as `Content-Type: text/plain;charset=UTF-8`, and it must be POSTed **to a route that references it** — anywhere else returns `{}` without running. Always run a positive control first.
+- **Running a script against `src/lib/data/*`:** needs `node --env-file=.env --conditions=react-server --import tsx` (the condition satisfies `server-only`; `--env-file` because ESM imports hoist above `process.loadEnvFile`), a `.mts` extension for top-level await, and an import from `@/lib/db/client` — the tsx loader can't see named exports through `index.ts`'s `export *`. Next itself has no such trouble.
 
 ---
 

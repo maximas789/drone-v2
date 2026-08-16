@@ -28,6 +28,20 @@ function tag(locale: Locale): string {
   return LOCALE_TAG[locale] ?? LOCALE_TAG[DEFAULT_LOCALE];
 }
 
+/**
+ * The same forced tag, for the one caller that hands a locale to somebody
+ * else's formatter rather than formatting itself: `createTranslator` in
+ * `src/lib/email/i18n.ts` compiles ICU messages, and ICU does its own number
+ * formatting for `{n, plural, … #}`. Given a bare `ar` it emits `٣`; given
+ * this tag it emits `3` and still picks the Arabic plural category.
+ *
+ * Exported rather than inlined so there is exactly one place that knows what
+ * the extension has to be.
+ */
+export function intlLocaleTag(locale: Locale): string {
+  return tag(locale);
+}
+
 function dateTimeFormat(
   locale: Locale,
   options: Intl.DateTimeFormatOptions,

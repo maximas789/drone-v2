@@ -7,6 +7,44 @@ import { sql } from "drizzle-orm";
 // the only module in the app allowed to skip the guarded entry point — see the
 // comment in `src/lib/db/index.ts`, and the ESLint rule that enforces it.
 import { db } from "@/lib/db/client";
+import { toLocale } from "@/lib/locale";
+
+/**
+ * Better Auth's own `User` type does not carry the additional fields declared
+ * below, so `preferredLocale` arrives on the callback argument untyped. Read
+ * through `toLocale`, which falls back to Arabic rather than to whatever the
+ * sender happened to be using.
+ */
+function recipientLocale(user: unknown) {
+  return toLocale((user as { preferredLocale?: unknown } | null)?.preferredLocale);
+}
+
+/**
+ * Stated in the reset email, so it must not drift from the config. Better
+ * Auth's own default is the same hour; setting it explicitly is what makes the
+ * sentence in the email true by construction rather than by coincidence.
+ */
+const RESET_TOKEN_MINUTES = 60;
+
+/**
+ * **Dynamically imported, and that is load-bearing.** `@/lib/email/send`
+ * reaches `@/lib/db`, which carries `server-only` — and the Better Auth CLI
+ * loads this file outside React and refuses any config that reaches it,
+ * however transitively. A dynamic import inside a callback body is never
+ * evaluated at config-load time, so the CLI stays happy and the request path
+ * gets the guarded module.
+ */
+async function deliver(
+  send: (mod: typeof import("@/lib/email/send")) => Promise<unknown>,
+) {
+  try {
+    await send(await import("@/lib/email/send"));
+  } catch (caught) {
+    // `sendEmail` already swallows its own failures; this catches the import
+    // itself. An auth flow must not break because mail did.
+    console.error("[auth] email delivery failed:", caught);
+  }
+}
 
 /**
  * Better Auth — the one place accounts, sessions and roles are defined.
@@ -33,11 +71,57 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    // Email verification and password reset are wired in the UI but have
-    // nowhere to send from until F06 supplies `sendVerificationEmail` /
-    // `sendResetPassword`. Requiring verification now would lock every new
-    // account out of the app it just created.
+    /**
+     * Still `false`, and deliberately so now that mail works. Blocking sign-in
+     * on verification turns one mistyped address into a support request the
+     * user cannot answer — and with no `RESEND_API_KEY` the message only ever
+     * reaches the terminal, which would lock every new account out of the app
+     * it just created. F28 builds the nag-and-resend banner instead.
+     */
     requireEmailVerification: false,
+
+    resetPasswordTokenExpiresIn: RESET_TOKEN_MINUTES * 60,
+
+    /**
+     * `async` but **not awaited** — Better Auth's own instruction, and a
+     * security rule rather than a style preference: awaiting the send makes the
+     * response measurably slower when the account exists than when it does not,
+     * which tells an attacker which addresses are registered. The sibling
+     * defence is in `authErrorKey`, where `USER_NOT_FOUND` and a wrong password
+     * map to the same message.
+     */
+    sendResetPassword: async ({ user, url }) => {
+      void deliver(({ sendEmail }) =>
+        sendEmail({
+          to: user.email,
+          template: "reset-password",
+          locale: recipientLocale(user),
+          userId: user.id,
+          params: {
+            url,
+            name: user.name || undefined,
+            expiresInMinutes: RESET_TOKEN_MINUTES,
+          },
+        }),
+      );
+    },
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+
+    sendVerificationEmail: async ({ user, url }) => {
+      void deliver(({ sendEmail }) =>
+        sendEmail({
+          to: user.email,
+          template: "verify-email",
+          locale: recipientLocale(user),
+          userId: user.id,
+          params: { url, name: user.name || undefined },
+        }),
+      );
+    },
   },
 
   user: {

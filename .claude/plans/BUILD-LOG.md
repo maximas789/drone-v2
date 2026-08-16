@@ -29,7 +29,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 1 — Shell | F02 | ⚠️ Done with deviations (Session 2) |
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
-| 4 — Platform services | F06, F07, F08, F09 | ⬜ Not started |
+| 4 — Platform services | F06, F07, F08, F09 | 🟨 **F06 done with deviations (Session 6)**; F07–F09 not started |
 | 5 — Domain core | F10–F15 | ⬜ Not started |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
@@ -63,8 +63,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | @base-ui/react | 1.7.0 | registry · installed | Pulled in by shadcn. Composition prop is **`render`**, not Radix's `asChild`. |
 | maplibre-gl | 6.3.0 | registry · latest only | F20 |
 | terra-draw | 1.32.3 | registry · latest only | F23 |
-| resend | 6.20.0 | registry · latest only | F06 |
-| react-email | 6.9.2 | registry · latest only | F06 |
+| resend | 6.20.0 | registry · installed | F06. `emails.send()` returns `{ data, error }` and does **not** throw on an API error; `idempotencyKey` is the *second* argument, not a payload field. |
+| react-email | 6.9.2 | registry · installed | F06. One package: components **and** `render`/`toPlainText` (it re-exports `@react-email/render`, which resolves to 2.1.0). Not `@react-email/components`, which still installs and still resolves. **`render()` is async.** |
 | @vercel/blob | 2.8.0 | registry · latest only | F07 |
 | inngest | 4.18.1 | registry · latest only | F08 |
 | zod | 4.4.3 | registry · latest only | Action input parsing |
@@ -90,6 +90,9 @@ Anything a skill reference file got wrong, so it can be corrected and so no late
 | shadcn `Button` usage | Radix-style `asChild` | shadcn is on Base UI now; the composition prop is `render` | Corrected again in F05 — see the row below. |
 | `CLAUDE.md` traps + F02's home page | `<Button render={<Link href="…" />}>` for a link-styled button | Base UI's `Button` **logs a console error** when `render` yields a non-`<button>`, and its named escape hatch `nativeButton={false}` sets `role="button"` on the `<a>` — so a screen reader announces a navigation control as a button | Added `src/components/ui/button-link.tsx`, which styles a genuine anchor from the same `buttonVariants`. All 8 call sites converted, including the 2 on F02's home page that had been emitting the error since Wave 1. `CLAUDE.md` and the F05 feature file updated. **Reported by the user, not found by any check we run** — see Open Thread 11. |
 | `features/F05-auth-roles-access.md` | `pnpm dlx @better-auth/cli generate --config src/lib/auth.ts` | The CLI loads the config outside React and **refuses** any config that reaches `server-only`, however transitively: *"Please remove import 'server-only' from your auth config file."* `src/lib/db/index.ts` carried it | Pool moved to `src/lib/db/client.ts` (no `server-only`); `index.ts` is now `import "server-only"; export * from "./client"`. ESLint rule 6 confines `@/lib/db/client` to `src/lib/auth.ts`. Feature file updated. |
+| `skills/.../references/email.md` | `pnpm add -D @react-email/ui` and `email dev --dir src/emails` for previews | The preview surface F06 specifies is a route in **this** app (`/[locale]/dev/emails`), which renders through the same `renderEmail` that sends. `email dev` expects default-exported components with its own prop conventions and would have been a second, divergent renderer | Neither package nor script installed. Feature file updated. |
+| `skills/.../references/email.md` | `email_log.status` reaches `logged` when there is no key | F06's own table says `skipped` | `skipped`. Statuses are `queued → skipped \| sent \| failed`. |
+| `skills/.../references/email.md` | `sendEmail({ …, react })` — hand the React element to Resend | Works, but then the terminal fallback and the preview page would each need their own renderer, and what you preview would not be what is sent | We render **once** to `html` + `text` and send those. The plain-text render is also what prints to the terminal. |
 | Better Auth generated schema | (implicit) timestamptz everywhere | The CLI emits `timestamp` **without** time zone on all four tables | Left exactly as generated — the rule to not edit CLI output wins. Drizzle writes `toISOString()` and reads back with `+0000`, so instants round-trip correctly; the column just doesn't carry the zone. Feature file updated. |
 
 ---
@@ -113,6 +116,9 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 15 | **`role` reaches the app as `string \| null`, not a union.** Better Auth types an `additionalField` declared as a list of literals as a plain `string`. `roleOf()` in `src/lib/session.ts` narrows it and **fails closed** — anything unrecognised is treated as `pilot`. Never read `session.user.role` directly; use `roleOf` / `isReviewer` / `isAdmin`. | F05 | Every wave that branches on role |
 | 9 | **F12 owes the KKIA annulus its containment assertion** — a point inside the hole must not be contained by the polygon. F04 asserted only the structure, because writing a second `pointInPolygon` outside `src/lib/airspace/` is the decay the plan warns about. | F04 | F12 |
 | 10 | **Nothing has checked the seeded polygons for self-intersection**, and no one has seen them on a map. F20 is the first render. | F04 | F20 |
+| 17 | **`emailConfigured` is baked in at build time on the SSG auth pages.** `/[locale]/forgot-password` and `/verify-email` are prerendered, so the "no provider configured" notice reflects `RESEND_API_KEY` as it was during `next build`, not as it is at runtime. Setting the key on the host without rebuilding leaves the wrong sentence on the page. Same class as the `APP_URL` QR trap. | F06 | F29 (should check it), deployment |
+| 18 | **Nothing consumes `email_log` in the UI yet.** The rows are written and are the answer to "why didn't that email arrive?", but there is no screen that shows them. F29's system/ops page owes that. No Resend **webhook** was built either, so `delivered`/`bounced`/`complained` never arrive — deliberate: the endpoint needs a public URL and a signing secret. | F06 | F29 |
+| 19 | **`/dev/emails` sample links always carry the `ar` prefix.** Each template's `sample` is a static object built at module load with `localeUrl(path)`, whose default locale is Arabic, so the *English* preview shows `/en`-less URLs. A preview-data artefact only — real sends get the recipient's locale from the caller. | F06 | Nothing; cosmetic |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -123,6 +129,11 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-16 | Email copy lives in `messages/{ar,en}.json` under an `email` namespace, read through **`createTranslator`** rather than `getTranslations`. | One catalogue, so `i18n:check` covers email copy too and Arabic is still authored first. `getTranslations` was not an option: mail is sent from a Route Handler (root-params throws), from Inngest (F08, no request), and from the preview page. `createTranslator` is next-intl's own request-free core and takes full ICU, including the six Arabic plural categories. | Feature file updated |
+| 2026-08-16 | The email translator is given **`ar-SA-u-ca-gregory-nu-latn`**, not `ar`, via a new `intlLocaleTag` export from `format.ts`. | ICU formats its own numbers for `{days, plural, … #}`. A bare `ar` puts `٣` in an email — the exact defect rule 6 exists to prevent, arriving through a route the ESLint rule cannot see. The forced tag still selects the Arabic plural category. | Feature file updated |
+| 2026-08-16 | `sendEmail` is **dynamically imported** inside the Better Auth callbacks. | It reaches `@/lib/db` → `server-only`, and the CLI refuses any config that reaches it. A dynamic import inside a callback body is never evaluated at config-load time. Proven: the CLI ran and emitted a byte-identical `auth-schema.ts`. | Feature file updated |
+| 2026-08-16 | `email_log` writes live in `src/lib/email/send.ts`, not behind a `src/lib/data/*.ts` function. | Rule 8 binds pages and server actions; `send.ts` is a service, has no session to take as a first argument, and the feature file puts the write there. **The read side is different** — when F29 lists email logs it must go through `src/lib/data/`, session first. | n/a |
+| 2026-08-16 | The dev preview page carries **no message keys**; its chrome is hardcoded English. | It is a tool for whoever is building the app, not a surface of it. Dev-tool strings in the shipped catalogues would be a lie about what the app has, and `i18n:check` would then enforce translating them. | Feature file updated |
 | 2026-08-16 | FK delete actions vary by meaning: `cascade` for the account's own data, `set null` for records of an action, **`restrict`** for `drone.owner_user_id` and `booking.pilot_user_id`. | A registration record is not personal data a pilot takes with them when they close an account — an airframe may be flying with an Ajniha sticker on it. Deleting such an account is refused at the database rather than silently erasing the registry. The cost is that `deleteUser` now fails for any pilot with aircraft, which F28 must handle properly (Open Thread 14). | Feature file updated |
 | 2026-08-16 | The two `no-restricted-imports` blocks are composed from shared constants rather than written as one block per rule. | Flat config **replaces** a rule when a later block names it again. Adding rule 6 as its own block switched rule 5 off across the whole app, and nothing failed — `lint` stayed green. Both were re-proven on probes afterwards. | n/a |
 | 2026-08-16 | `roleOf()` narrows `role` and **fails closed** to `pilot`. | Better Auth types a literal-list `additionalField` as plain `string`, and the column is nullable. A typo or a hand-edited row must never widen access; the only direction an unrecognised value can fall is downward. | Feature file updated |
@@ -155,16 +166,19 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-16 (F05) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
-| `pnpm lint` | 2026-08-16 (F05) | ✅ clean; rules 5 and 6 re-proven on probes after the flat-config restructure |
-| `pnpm build` | 2026-08-16 (F05) | ✅ migrates first; 19 routes, auth pages SSG, `(app)`/`(admin)` dynamic, `/api/auth/[...all]` registered |
-| `pnpm test` | 2026-08-16 (F05) | ✅ **105 passed, 5 files** — 45 new for `session.ts` and `auth-errors.ts`, each proven to fail on a deliberate mutation |
-| `pnpm i18n:check` | 2026-08-16 (F05) | ✅ 347 keys, ar/en in sync |
-| `pnpm db:up` + `db:migrate` | 2026-08-16 (F05) | ✅ `0001_cute_sprite` applied clean; **19 tables**, 18 FKs onto `user` |
+| `pnpm exec tsc --noEmit` | 2026-08-16 (F06) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
+| `pnpm lint` | 2026-08-16 (F06) | ✅ clean |
+| `pnpm build` | 2026-08-16 (F06) | ✅ migrates first; `/[locale]/dev/emails` prerenders as a **404** in a production build, which is the gate working |
+| `pnpm test` | 2026-08-16 (F06) | ✅ **265 passed, 6 files** — 160 new for the email templates, proven to fail on three deliberate mutations |
+| `pnpm i18n:check` | 2026-08-16 (F06) | ✅ 447 keys, ar/en in sync |
+| `pnpm db:up` + `db:migrate` | 2026-08-16 (F06) | ✅ still `0001_cute_sprite`; **F06 added no migration** — the regenerated `auth-schema.ts` was byte-identical |
+| Email — no key | 2026-08-16 (F06) | ✅ printed in full to the terminal, `email_log` row `skipped`, caller continued. Rows deleted after. |
+| Email — forced failure | 2026-08-16 (F06) | ✅ invalid key → `status: 'failed'`, `error: 'API key is invalid'` (Resend's own words), caller continued |
+| Email — real delivery | — | ❌ **not run.** Needs a Resend account; `providerMessageId` has never held a real value. |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
-| Production serve (`next start`) | 2026-08-16 (F05) | ✅ signed in and re-ran the guard checks against the built app; 404 carries no stack trace there. |
+| Production serve (`next start`) | 2026-08-16 (F06) | ✅ on port **3210** — `/ar` 200, auth pages 200, `/ar/dev/emails` and `/en/dev/emails` **404** with no stack trace. (F05's guard checks were the earlier run.) |
 | Browser console clean | — | ❌ **not run** by us. The one console error found so far was reported by the user — Open Thread 11. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -174,6 +188,8 @@ What has actually been **run**, not what was written. F31 reads this.
 Named, never assumed. Add as discovered.
 
 - Sending email to any address other than the account owner's — needs a verified domain in DNS.
+- **Any real Resend send at all** — needs an account and a key. `status: 'sent'` and `providerMessageId` are the only two `email_log` states never observed. The failure path *was* exercised, with an invalid key.
+- Resend delivery webhooks (`delivered` / `bounced` / `complained`) — need a public URL and a signing secret. Not built.
 - Vercel Blob uploads — needs a deployed store; the local driver is exercised instead.
 - OG preview card as a third party sees it — needs a public domain.
 - QR codes encoding a production URL — needs `APP_URL` on a real domain.
@@ -185,6 +201,61 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 6 — Wave 4 · F06 Transactional Email
+
+**Date:** 2026-08-16
+**Status:** ⚠️ done with deviations · **F07–F09 not started.** Run alone, not as one of four parallel agents.
+
+**Built:**
+- `src/lib/email/send.ts` — the only file that talks to Resend. Log row **before** the network call, updated after. Never throws.
+- `src/lib/email/config.ts` (`emailConfigured`, `EMAIL_FROM` — no db, no `server-only`), `i18n.ts` (`createTranslator`), `render.ts` (`renderEmail` → `{subject, html, text}`), `types.ts`, `layout.tsx`.
+- **11 templates** in `src/lib/email/templates/`, plus a typed registry in `index.ts`. `sendEmail` takes a template name and the params *that* template needs; a mismatch is a type error.
+- `src/lib/url.ts` — `APP_URL`, `absoluteUrl`, `localeUrl`. F19's QR codes want the same module.
+- `src/lib/format.ts` gained **`intlLocaleTag`**.
+- `src/lib/auth.ts` — `sendResetPassword`, `emailVerification.sendVerificationEmail`, `sendOnSignUp: true`, `autoSignInAfterVerification: true`, `resetPasswordTokenExpiresIn` set explicitly so the sentence in the email cannot drift from the config.
+- `src/app/[locale]/dev/emails/page.tsx` — all 11 templates × both locales, each in an iframe, plus the plain-text render.
+- `messages/{ar,en}.json` — a new `email` namespace plus two `auth` keys; the catalogue grew from 347 to **447**.
+- `src/lib/email/templates.test.ts` — **160 tests**; suite now 265 across 6 files.
+- The two auth pages' "nothing will be sent" notice now follows `emailConfigured` instead of the wave.
+
+**Deviated from spec:**
+- **`getTranslations` is not used; `createTranslator` is.** Mail is sent from places with no next-intl request context — a Route Handler (Open Thread 4), an Inngest function (F08), the preview page. Copy still lives in the shared catalogues, so `i18n:check` covers it. Feature file updated.
+- **The translator is given `ar-SA-u-ca-gregory-nu-latn`, not `ar`.** ICU formats its own numbers inside a plural; a bare `ar` would have put `٣ أيام` in an email. This is rule 6 being violated through a route ESLint cannot see, so `format.ts` now exports the tag and `templates.test.ts` asserts the result. Feature file updated.
+- **`sendEmail` is dynamically imported inside the Better Auth callbacks** — it reaches `server-only` and the CLI refuses such a config. Proven to work: the CLI ran and emitted a byte-identical `auth-schema.ts`.
+- **The CLI produced no schema change, so there is no F06 migration.** `emailVerification` adds nothing that F05 hadn't already generated. All three steps were still run.
+- **Four files the spec did not name** — `config.ts`, `i18n.ts`, `render.ts`, `types.ts` — each with a reason recorded in the feature file. The important one is `render.ts`: the preview page, the test suite and `sendEmail` all render through it, so what `/dev/emails` shows is what gets sent.
+- **Emails are rendered to `html` + `text` and those are sent**, rather than handing Resend the React element. One renderer, and the terminal fallback prints the same bytes.
+- **`email_log` writes are in `send.ts`, not `src/lib/data/`.** It is a service with no session. The **read** side is not exempt — F29 must go through `src/lib/data/`, session first.
+- **The preview page carries no message keys.** Dev-tool chrome in the shipped catalogues would be a lie about what the app has.
+- **`requireEmailVerification` stays `false`**, and that is now a decision rather than a deferral: with no key the verification link only reaches the terminal.
+- **No `email:dev` script, no `@react-email/ui`.** The skill's preview server would have been a second renderer with different conventions; `/dev/emails` is the one the feature file asks for.
+
+**Verified:**
+- **No key:** `sendEmail` printed both messages to the terminal in full — Arabic RTL text, real clickable link — wrote `email_log` rows with `status: 'skipped'`, and the caller reached the line after them. Rows deleted; `email_log` is back to **0**.
+- **Recipient locale, not sender's:** the same event sent to an `ar` and an `en` recipient produced two rows differing in `locale` **and** `subject` (`تم اعتماد تسجيل الصقر` / `الصقر is registered`).
+- **Forced provider failure:** with a deliberately invalid key, `status: 'failed'`, `error: 'API key is invalid'` — Resend's own message, not ours — and the caller continued. This is the "does not roll back" criterion, exercised as far as it can be before F14 exists.
+- **`/dev/emails` over HTTP:** 200 in both locales, **22 iframes**, every `template (locale)` pair present, zero Arabic-Indic digits, zero `هـ`, zero `text-align: left|right` anywhere on the page.
+- **Production serve on 3210:** `/ar/dev/emails` and `/en/dev/emails` **404**, body carries no file path or function name; `/ar`, `/ar/sign-in`, `/ar/forgot-password` all 200.
+- **160 new tests**, and each claim proven to fail on a deliberate mutation, then reverted: dropping the forced locale tag → **11 failures**; `textAlign: "start"` → `"left"` in the shared shell → **22 failures**; a Saudi mobile number pasted into one template's body → **2 failures**.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (447 keys), `pnpm test` (265), `pnpm build` — all green.
+
+**Not verified:**
+- **No email has ever actually been sent.** There is no Resend key on this machine, so `status: 'sent'` and `providerMessageId` have never held a real value, and nobody has seen one of these in a mail client. Rendering is not delivery: Gmail's and Outlook's handling of `dir`, inline styles and the Arabic face is exactly the class of thing that only shows up on arrival.
+- **No browser was used**, again (Open Thread 11). `/dev/emails` exists precisely so a human can look at 22 renders side by side, and nobody has. The Arabic RTL layout is asserted structurally — `dir="rtl"`, `text-align: start` and no physical alignment anywhere — which is stronger than nothing and is not the same as seeing it.
+- **The reviewer digest's "no pilot PII" promise is structural, not observed.** Its params are counts and a URL, and the test asserts the sample nickname and Remote ID code never appear — but F08 is what decides what actually gets passed in, and nothing stops a future caller widening the params.
+- The new Arabic copy — 11 subjects and ~100 strings — is unreviewed by a native speaker.
+
+**Next session should know (F07 uploads, F08 jobs, F09 rate limiting):**
+- **`src/lib/auth.ts` is done being edited by F06.** F09 is the remaining serialised edit, and it means CLI → `db:generate` → **read the SQL** → `db:migrate` again. F09's rate-limit tables are also Open Thread 7's `rate_limit_bucket`.
+- **F08 sends the four cron emails.** `sendEmail` is already the durable path: call it from an Inngest function, pass the recipient's `preferredLocale`, and pass `entityId` so the row is traceable. Templates `drone-expiring`, `drone-expired`, `booking-reminder`, `review-queue-digest` exist with their params typed.
+- **F14 sends the decision emails** — `drone-approved`, `drone-rejected`, `booking-approved`, `booking-rejected`, `booking-cancelled-by-authority`. Send them **after** the transaction commits, never inside it.
+- **`email_log` has no UI.** Open Thread 18: F29 owes it one, through `src/lib/data/`, session first.
+- **Testing a module that carries `server-only` needs help.** Vitest externalises the package and it throws. What worked: a throwaway `vitest.probe.config.mts` aliasing `server-only` to an empty module, plus `disableConsoleIntercept: true` to see the output. `node --import tsx --conditions=react-server` does **not** work — it resolves next-intl to the react-client build and dies on `createContext`.
+- **Port 3100 is taken by something else on this machine**, as well as 3000 (Open Thread 3). A `next start` there answers, from a foreign app, and will happily give you a convincing wrong answer. 3210 was free. Always check the server actually bound before trusting a status code.
+- Still **do not create a probe account** — `user` is empty and whoever signs up first becomes admin. The F06 probes deliberately wrote `email_log` rows with a null `userId` instead.
 
 ---
 

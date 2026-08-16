@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import { emailConfigured } from "@/lib/email/config";
 
 export default async function ForgotPasswordPage() {
   const t = await getTranslations("auth");
@@ -20,12 +21,16 @@ export default async function ForgotPasswordPage() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {/*
-          Said plainly rather than left for the reader to discover: this build
-          has no email sender until F06, so the form works and nothing arrives.
+          Said plainly rather than left for the reader to discover. F06 wired a
+          real sender, so this now appears only when there is no API key — in
+          which case the reset link is printed to the server terminal and the
+          form still works end to end.
         */}
-        <p className="text-muted-foreground text-sm">
-          {t("emailNotConfigured")}
-        </p>
+        {emailConfigured ? null : (
+          <p className="text-muted-foreground text-sm">
+            {t("emailNotConfigured")}
+          </p>
+        )}
 
         <ForgotPasswordForm />
 

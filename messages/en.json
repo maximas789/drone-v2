@@ -99,13 +99,14 @@
     "verifyEmailSuccess": "Your email address is confirmed.",
     "verifyEmailFailed": "We couldn't confirm that email address. The link may have expired.",
     "verifyEmailMissingToken": "This link carries no confirmation token.",
-    "emailNotConfigured": "Email delivery isn't switched on in this build, so nothing will arrive yet.",
+    "emailNotConfigured": "No email provider is configured in this build, so messages are printed to the server log instead of being delivered.",
     "backToSignIn": "Back to sign in",
     "errorInvalidCredentials": "That email address or password is wrong.",
     "errorEmailTaken": "That email address is already registered.",
     "errorPasswordTooShort": "That password is too short.",
     "errorGeneric": "That didn't go through. Please try again.",
-    "errorPasswordMismatch": "Those two passwords don't match."
+    "errorPasswordMismatch": "Those two passwords don't match.",
+    "verifyEmailCheckInbox": "We've sent a confirmation link to your email address."
   },
   "profile": {
     "title": "Profile",
@@ -395,5 +396,130 @@
     "welcome": "Welcome, {name}",
     "signedInAs": "Signed in as {role}",
     "placeholder": "Your registered aircraft and upcoming bookings will appear here once those screens are built."
+  },
+  "email": {
+    "common": {
+      "appName": "Ajniha",
+      "greeting": "Hello {name},",
+      "greetingAnon": "Hello,",
+      "proposalNotice": "This is a proposed system, not an official service endorsed or adopted by the General Authority of Civil Aviation.",
+      "sentBy": "Sent by",
+      "urgent": "Urgent notice"
+    },
+    "verifyEmail": {
+      "subject": "Confirm your email address",
+      "preview": "Finish setting up your Ajniha account",
+      "heading": "Confirm your email address",
+      "body": "An Ajniha account was created with this email address. Confirm it to activate the account.",
+      "action": "Confirm email address",
+      "ignore": "If you didn't create this account, ignore this message and nothing will happen."
+    },
+    "resetPassword": {
+      "subject": "Reset your password",
+      "preview": "A link to reset your account password",
+      "heading": "Reset your password",
+      "body": "We received a request to reset the password on your Ajniha account.",
+      "action": "Set a new password",
+      "expiry": "This link is valid for {minutes} minutes from when it was sent.",
+      "ignore": "If you didn't ask for this, ignore the message — your password hasn't changed."
+    },
+    "droneApproved": {
+      "subject": "{nickname} is registered",
+      "preview": "Your aircraft's Remote ID code",
+      "heading": "Registration approved",
+      "body": "“{nickname}” is registered. The code below is its Remote ID — what identifies it in place of a manufacturer serial number.",
+      "remoteIdLabel": "Remote ID code",
+      "validUntilLabel": "Valid until",
+      "action": "Open the digital ID card",
+      "keepCode": "Print the QR code from the card and fix it to the airframe. The same code survives renewal, so you won't need a new sticker."
+    },
+    "droneRejected": {
+      "subject": "{nickname} needs a change before it can be registered",
+      "preview": "A reviewer asked for a change before approval",
+      "heading": "Not approved yet",
+      "body": "A reviewer looked at the registration for “{nickname}” and couldn't approve it as submitted.",
+      "reasonLabel": "Reviewer's note",
+      "whatNext": "Fix what's described above and resubmit the same request. You don't need to start a new registration.",
+      "action": "Edit the request"
+    },
+    "droneExpiring": {
+      "subject": "{nickname}'s registration is running out",
+      "preview": "Renew before it lapses to keep booking flights",
+      "heading": "“{nickname}”'s registration is running out",
+      "body": "Once the registration lapses, you won't be able to book flight slots with this aircraft.",
+      "expiresLabel": "Expires on",
+      "remainingLabel": "Remaining",
+      "remaining": "{days, plural, =0 {Expires today} one {1 day} other {# days}}",
+      "remoteIdLabel": "Remote ID code",
+      "action": "Renew the registration",
+      "keepsCode": "Renewing keeps the same Remote ID code, so the sticker already on the airframe stays valid."
+    },
+    "droneExpired": {
+      "subject": "{nickname}'s registration has lapsed",
+      "preview": "Booking flights with this aircraft is blocked until you renew",
+      "heading": "“{nickname}”'s registration has lapsed",
+      "body": "This aircraft's registration is no longer valid.",
+      "expiredLabel": "Lapsed on",
+      "remoteIdLabel": "Remote ID code",
+      "blocked": "Flight slots can't be booked with an aircraft whose registration has lapsed.",
+      "action": "Renew the registration",
+      "keepsCode": "Renewing keeps the same Remote ID code, so the sticker already on the airframe stays valid."
+    },
+    "bookingApproved": {
+      "subject": "Your booking at {zone} is approved",
+      "preview": "The details of your approved flight slot",
+      "heading": "Booking approved",
+      "body": "The flight slot below is approved.",
+      "zoneLabel": "Zone",
+      "slotLabel": "Slot (Riyadh time)",
+      "ceilingLabel": "Maximum altitude",
+      "action": "Booking details",
+      "note": "The approval covers this slot and this zone only. Any change of time or place needs a new booking."
+    },
+    "bookingRejected": {
+      "subject": "Your booking at {zone} wasn't approved",
+      "preview": "Why it wasn't approved, and other slots",
+      "heading": "Booking not approved",
+      "body": "The flight slot you asked for wasn't approved.",
+      "zoneLabel": "Zone",
+      "slotLabel": "Slot requested (Riyadh time)",
+      "reasonLabel": "Why",
+      "alternativesLabel": "Other slots you could take",
+      "noAlternatives": "There are no alternative slots to suggest right now.",
+      "action": "Pick another slot"
+    },
+    "bookingCancelled": {
+      "subject": "Your booking at {zone} has been cancelled",
+      "preview": "An approved flight slot has been cancelled",
+      "heading": "An approved flight slot has been cancelled",
+      "body": "The flight slot below was cancelled by the authority operating the zone after it had been approved.",
+      "zoneLabel": "Zone",
+      "slotLabel": "Slot (Riyadh time)",
+      "reasonLabel": "Why",
+      "doNotFly": "Flying at this time in this zone is no longer authorised.",
+      "action": "View my bookings"
+    },
+    "bookingReminder": {
+      "subject": "Reminder: your flight slot at {zone}",
+      "preview": "Your flight slot starts within twenty-four hours",
+      "heading": "Your flight slot is tomorrow",
+      "body": "A reminder about your approved flight slot.",
+      "zoneLabel": "Zone",
+      "slotLabel": "Slot (Riyadh time)",
+      "ceilingLabel": "Maximum altitude",
+      "remoteIdLabel": "Remote ID code",
+      "action": "Booking details",
+      "checklist": "Before take-off: check that Remote ID is broadcasting, that the aircraft carries its code sticker, and that you stay under the altitude above."
+    },
+    "reviewQueueDigest": {
+      "subject": "Review queue summary",
+      "preview": "How much is waiting right now",
+      "heading": "Waiting for review",
+      "body": "A periodic summary of what is waiting for review right now.",
+      "dronesLabel": "Drone registrations",
+      "bookingsLabel": "Booking requests",
+      "action": "Open the review queue",
+      "noPii": "This summary carries counts only — no identifying detail about any operator. The details are inside the queue."
+    }
   }
 }

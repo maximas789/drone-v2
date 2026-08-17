@@ -339,6 +339,18 @@
     "title": "الإشعارات",
     "empty": "لا توجد إشعارات.",
     "markAllRead": "تعليم الكل كمقروء",
+    "filterUnread": "غير المقروءة فقط",
+    "emptyUnread": "لا توجد إشعارات غير مقروءة.",
+    "unreadCount": "الإشعارات — {count} غير مقروء",
+    "preferencesTitle": "تفضيلات الإشعارات",
+    "inApp": "داخل التطبيق",
+    "byEmail": "بالبريد",
+    "alwaysOnNotice": "قرارات التسجيل والحجز تصلك دائماً ولا يمكن إيقافها.",
+    "category": {
+      "booking_reminder": "تذكير بالحجز",
+      "registration_expiry": "قرب انتهاء التسجيل",
+      "zone_closure": "إغلاق منطقة"
+    },
     "droneApproved": "تم اعتماد تسجيل {drone}.",
     "droneRejected": "تم رفض تسجيل {drone}.",
     "droneRevoked": "أُلغي تسجيل {drone}.",

@@ -1,7 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { locale as localeParam } from "next/root-params";
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button-link";
 import {
@@ -33,17 +31,18 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("dashboard.title")}</h1>
-          <p className="text-muted-foreground text-sm">
-            {t("dashboard.welcome", { name: session.user.name })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <LocaleSwitcher />
-          <SignOutButton />
-        </div>
+      {/**
+       * No locale switcher and no sign-out button here: **F15 moved both into
+       * `(app)/layout.tsx`**, beside the notification bell, because they belong
+       * to the shell rather than to one page. Leaving them here as well
+       * rendered each control twice — found by opening the page, not by any
+       * check this repo runs (open thread 11).
+       */}
+      <header>
+        <h1 className="text-2xl font-semibold">{t("dashboard.title")}</h1>
+        <p className="text-muted-foreground text-sm">
+          {t("dashboard.welcome", { name: session.user.name })}
+        </p>
       </header>
 
       <Card>

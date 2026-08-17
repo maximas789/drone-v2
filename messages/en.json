@@ -339,6 +339,18 @@
     "title": "Notifications",
     "empty": "No notifications.",
     "markAllRead": "Mark all as read",
+    "filterUnread": "Unread only",
+    "emptyUnread": "No unread notifications.",
+    "unreadCount": "Notifications — {count} unread",
+    "preferencesTitle": "Notification preferences",
+    "inApp": "In app",
+    "byEmail": "By email",
+    "alwaysOnNotice": "Registration and booking decisions always reach you and cannot be switched off.",
+    "category": {
+      "booking_reminder": "Booking reminder",
+      "registration_expiry": "Registration expiring",
+      "zone_closure": "Zone closure"
+    },
     "droneApproved": "{drone} has been approved.",
     "droneRejected": "{drone} was not approved.",
     "droneRevoked": "Registration for {drone} has been revoked.",

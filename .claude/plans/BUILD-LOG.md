@@ -30,7 +30,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
-| 5 — Domain core | F10–F15 | 🟨 **F10–F14 done with deviations (Sessions 10–12).** F15 not started. |
+| 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
@@ -107,8 +107,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` currently holds only `POSTGRES_URL` — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
-| 11 | **Nothing in `pnpm lint` / `typecheck` / `build` / `test` catches a browser console error.** Base UI's `nativeButton` warning had been firing on F02's home page since Wave 1 and every check stayed green; the user found it by opening the page. **F06 opened three pages in Chrome and found them clean**, so the thread is no longer untouched — but it is still a manual pass with no automation behind it, and every other route is unopened. F31's gate needs a real browser pass, and F20/F23 (MapLibre, terra-draw) are the likeliest to hit this again. | F05 | F31, and every UI wave |
-| 20 | **The 375 px viewport is still unchecked, on every page.** F06 tried: resizing the browser window through the automation tool did not change the rendered viewport, and chasing it further was not worth the session. **F11 tried again and got the same result** — `resize_window` reports success, `read_page` still says 1440 — which now matters more, because `/rid/[code]` is a page reached by scanning a sticker with a phone. Named here rather than quietly dropped for a fifth wave running. | F02, F05, F06, F11 | F31 |
+| 11 | **Nothing in `pnpm lint` / `typecheck` / `build` / `test` catches a rendering defect.** F15 is the second proof: a duplicated locale switcher and sign-out button rendered on `/dashboard` with all five checks green, and was found by opening the page. Earlier: Base UI's `nativeButton` warning had been firing on F02's home page since Wave 1 and every check stayed green; the user found it by opening the page. **F06 opened three pages in Chrome and found them clean**, so the thread is no longer untouched — but it is still a manual pass with no automation behind it, and every other route is unopened. F31's gate needs a real browser pass, and F20/F23 (MapLibre, terra-draw) are the likeliest to hit this again. | F05 | F31, and every UI wave |
 | 12 | **`BETTER_AUTH_URL` must equal the origin the app is actually served from**, or every auth POST is refused with `INVALID_ORIGIN` — sign-in included. Found by serving the production build on a different port. It is the same class of failure as the `APP_URL` QR trap and fails just as silently in a browser. F29's system page should check it. | F05 | Deployment, F29 |
 | 16 | **A dev-mode 404 embeds a stack trace naming the guard** (`requireReviewer`, absolute file path) in its RSC payload; the production build does not. So the "404, not a stack trace" criterion is **only meaningful against `next start`**. F31 must run its route checks against a production serve, never `next dev`. | F05 | F31 |
 | 13 | **`requirePilotProfile` redirects to `/profile/complete`, which does not exist yet** (F17 builds it). Nothing calls the guard today, so nothing 404s; F17 must build that page or the first caller sends pilots into a dead end. | F05 | F17 |
@@ -137,6 +136,8 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 40 | **None of F12/F13/F14's server actions has been driven over HTTP** — **19** of them now. No page calls any: F18 owns registration, F20 the map, F21 booking, F22 the queues. Tested and probed, never posted at with a real session cookie. The largest standing gap in the build. | F12/F13/F14 | F18, F20, F21, F22, F31 |
 | 41 | **"A reviewer approves and the pilot gets an email with a QR" has never run as one flow.** `approveDroneAction` sends `drone/approved`; F08's `qr-render` job renders and mails. Both halves are proven — the job against hand-triggered events, the action against the database — but Inngest was not running during F14's probe and no Resend key exists, so the seam between them is structural. | F14 | F31 |
 | 42 | **An admin can approve their own drone.** Staff hold `owner` and `admin` at once, deliberately, so that staff can use the app as pilots; the cost is no segregation of duties on a decision. It also cannot be blocked in this build, where the only admin is the only account. **F22 owns a four-eyes rule** if it wants one. | F14 | F22 |
+| 43 | **`notification.emailLogId` is wired on the approval path only.** `linkNotificationEmail` matches on `(userId, entityId)` and `qr-render` calls it after sending. The expiry sweep, the booking reminders and the closure fan-out all send email beside a notification and do not link it, so F29's "why didn't that email arrive?" answers for approvals and shrugs for the rest. | F15 | F29 |
+| 44 | **375 px works through a same-origin iframe, and only that way.** `resize_window` reports success and leaves the viewport at 1440 — six attempts across five sessions. The technique that works: inject an `iframe` 375 px wide pointing at the page, whose media queries evaluate at its own width, then measure `scrollWidth` vs `clientWidth` inside it. **F31's gate must use this**, not the tool. | F15 | F31, every UI wave |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -147,6 +148,10 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-17 | **The `zoneAr`/`zoneEn` pair is collapsed in the renderer**, not by the writer and not in the catalogue. | `notify()` demands both variants so rendering needs no join; `i18n:check` forbids a catalogue that carries both. The renderer is the first point that knows which language the reader chose — it is the only place the collapse can happen. | Feature file updated |
+| 2026-08-17 | **`src/lib/data/notification.ts` is exempt from rule 11.** | Read/unread is not a domain status: no transitions, no actor, nothing to notify, nothing to audit. Same call as `jobs-table.ts`. The exemption is that one file — F15's own probe had to use raw SQL to reset rows. | n/a |
+| 2026-08-17 | **Notification preferences live on the notifications page**, not on a settings page. | F28 owns account settings and does not exist. A Settings section holding a single panel would be a claim about a page the app does not have. | Feature file updated |
+| 2026-08-17 | **`localeHref` was deleted after being written and tested.** | `Link` from `@/i18n/navigation` already prefixes the locale, so the helper was dead on arrival, and a dead export is a lie about what the app does. Replaced by a test asserting no writer *stores* a locale-prefixed href — the thing that actually matters. | n/a |
 | 2026-08-17 | **An actor holds several `ActorKind`s at once**, and an edge needs one of them to match. | A reviewer cancelling their own booking is both `reviewer` and `owner`. A single "highest" kind would stop staff using the app as pilots — the exact population this product exists for. An admin implicitly holds `reviewer`, so no edge lists both. | Feature file updated |
 | 2026-08-17 | **An admin may approve their own drone.** | The kinds overlap by design, and in this build the only admin is the only account — blocking it would deadlock the app. Stated rather than hidden; F22 owns a four-eyes rule if it wants one. Open Thread 42. | Feature file updated |
 | 2026-08-17 | **The written-reason check runs before the edge-legality check.** | A reviewer who typed "no" must be told to write a reason, not told the transition is invalid. Two different things, and only one of them is true. | Feature file updated |
@@ -218,10 +223,10 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-17 (F14) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
-| `pnpm lint` | 2026-08-17 (F14) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
-| `pnpm build` | 2026-08-17 (F14) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
-| `pnpm i18n:check` | 2026-08-17 (F14) | ✅ **546 keys**, ar/en in sync |
+| `pnpm exec tsc --noEmit` | 2026-08-17 (F15) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-17 (F15) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
+| `pnpm build` | 2026-08-17 (F15) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
+| `pnpm i18n:check` | 2026-08-17 (F15) | ✅ **556 keys**, ar/en in sync |
 | `pnpm db:up` + `db:migrate` | 2026-08-17 (F11) | ✅ `0004_broken_the_initiative` applied — `remote_id_scan`, `drone_report`, `remote_id_viewer_level`. **SQL read in full**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.** |
 | Remote ID codec, issuance, declarations | 2026-08-17 (F10) | ✅ against the live database — 100 000-code alphabet and duplicate checks, forced collision, five-collision throw, renewal keeping the code, suspension/reactivation, the module-claim transfer. See the session entry |
 | Scan page + JSON twin at four viewer levels | 2026-08-17 (F11) | ✅ over HTTP — anonymous **12 keys**, owner 28, reviewer 29; the full national ID appears in no payload at any level |
@@ -232,7 +237,7 @@ What has actually been **run**, not what was written. F31 reads this.
 | A decision driven over HTTP | — | ❌ **not run.** 19 server actions now exist and no page calls any of them |
 | Approval → QR → email, as one flow | — | ❌ **never run as one.** The action sends the event and F08's job was proven separately; Inngest was not running during F14's probe |
 | Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
-| `pnpm test` | 2026-08-17 (F14) | ✅ **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm test` | 2026-08-17 (F15) | ✅ **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -253,7 +258,9 @@ What has actually been **run**, not what was written. F31 reads this.
 | Production serve (`next start`) | 2026-08-16 (F06) | ✅ on port **3210** — `/ar` 200, auth pages 200, `/ar/dev/emails` and `/en/dev/emails` **404** with no stack trace. (F05's guard checks were the earlier run.) |
 | Uploads, end to end | 2026-08-16 (F07) | ✅ over HTTP with three probe accounts: type sniffing, size ceiling, cross-pilot 404, locked target, delete removing row **and** bytes, traversal refused. See the session entry. |
 | Vercel Blob driver | — | ❌ **never executed.** No token, no store. |
-| Browser console clean | 2026-08-17 (F11) | ⚠️ **partial.** F12/F13 rendered nothing, so this is unchanged — `src/components/airspace/decision-reasons.tsx` has never been opened in a browser. `/ar/rid/{code}` and `/ar/admin` join them: zero errors, zero warnings, through a reveal and a report submission. Earlier (F07): the dropzone page joined F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
+| Browser console clean | 2026-08-17 (F15) | ⚠️ **partial, but less so.** `/ar/notifications`, `/en/notifications`, `/ar/dashboard` and a 375 px iframe: **22 messages, all React DevTools / HMR / Fast Refresh, zero errors, zero warnings.** `src/components/airspace/decision-reasons.tsx` is still unopened. Earlier (F11): `/ar/rid/{code}` and `/ar/admin` join them: zero errors, zero warnings, through a reveal and a report submission. Earlier (F07): the dropzone page joined F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
+| **375 px, Arabic RTL** | 2026-08-17 (F15) | ✅ **first time in this build**, closing open thread 20 after five failures. Via a same-origin 375 px iframe, not `resize_window` (which failed a sixth time): no horizontal overflow, header on one row, items wrapping, preference rows intact |
+| Notifications, end to end | 2026-08-17 (F15) | ✅ `scripts/probe-notifications.mts` **15/15** — ownership, idempotent mark-read, preferences honoured, **a rejection arriving with every preference off**, and the email link. Plus the same rows rendered in Arabic and then in English in Chrome |
 | Rendered Arabic, in a browser | 2026-08-16 (F06) | ✅ first time in this build. All 11 email templates × 2 locales seen. Letter joins correct, right-aligned, `AJN-4F2K-91XZ` reads LTR under its Arabic label, `15 مارس 2029` / `30 يوماً` Gregorian and Latin. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -276,6 +283,81 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 13 — Wave 5 · F15 Notifications
+
+**Date:** 2026-08-17
+**Status:** ⚠️ done with deviations · **Wave 5 is complete.** Ran in the same context as Sessions 11–12, no `/clear` between.
+
+**The first rendered UI in four sessions**, and it paid for itself immediately: opening the page found a duplicated header that no check in this repo would ever have caught, and the 375 px viewport finally rendered after five failed attempts.
+
+**Built:**
+- `src/lib/notifications/render.ts` — **pure**: `NOTIFICATION_TYPES`, `collapseParams`, `isNotificationType`. Plus `render.test.ts` (11). Suite now **520 across 20 files**.
+- `src/lib/data/notification.ts` — the read surfaces, `markNotificationRead`, `markAllNotificationsRead`, `setMyPreference`, `linkNotificationEmail`. **Strictly per-user, with no `isReviewer` escape hatch anywhere** — unlike every other file in that folder.
+- `src/lib/actions/notification.ts` — mark one, mark all, set a preference. `notification.read` added to `LIMITS`.
+- `/[locale]/(app)/notifications` and four components: `notification-bell` (server), `notification-list`, `notification-item`, `notification-preferences`.
+- **A shell header in `(app)/layout.tsx`** — the bell needed somewhere to live, and an unread count that appears on one page is not a notification system.
+- `qr-render` now links the notification to the email that carried it.
+- Ten catalogue keys (**556**).
+- `scripts/probe-notifications.mts` — seeds a realistic spread **for the owner's own account** so the list can be opened signed in, and `clean` removes it.
+
+**Deviations, each with its reason:**
+- **The type keys are camelCase under `notifications.*`** (`droneApproved`), not the dotted `notification.drone.approved` F15's file describes. The catalogue and every writer have used this shape since F08; the log wins and the feature file is corrected.
+- **`collapseParams` is where the `zoneAr`/`zoneEn` pair becomes `{zone}`.** F08 left this seam open on purpose: `notify()` demands both variants so rendering needs no join, while `i18n:check` forbids a catalogue that carries both. The renderer is the first point that knows which language the reader chose, so it is the only place the collapse can happen. A pair collapses **only when both halves are present**, so a param merely ending in `En` is left alone.
+- **`localeHref` was written, tested, and then deleted.** `Link` from `@/i18n/navigation` already prefixes the reader's locale, so the helper was dead the moment the component was written. Replaced with a source-scanning test asserting **no writer stores a locale-prefixed `href`**, which is the thing that actually matters.
+- **`render.test.ts` reads the source** to assert every `type:` literal handed to `notify()` is a known type. A catalogue check cannot see a writer that invents a type; that failure renders the raw key `notifications.whatever` to the one person it was written for. The first version of the scan matched `type: "png"` and `type: "Polygon"` — it now requires a `userId:` in the neighbourhood.
+- **`src/lib/data/notification.ts` is exempt from ESLint rule 11**, for the `jobs-table.ts` reason and not the workflow one: **read/unread is not a domain status.** No transitions, no actor, nothing to notify, nothing a regulator would audit. Writing "a pilot opened their bell menu" into the approval trail would bury the trail the rule exists to keep readable. The exemption is that file alone — the probe had to use raw SQL to reset rows, which is the rule working correctly.
+- **Preferences live on the notifications page, not on a settings page.** F28 owns account settings and does not exist; a Settings section holding one panel would be a claim about a page the app does not have. F28 can move it.
+- **`markNotificationRead` is idempotent and returns `true` for an already-read row.** Re-reading must not move `readAt` — that column is the record of when they actually saw it — but "already read" is a success to the caller, and only "not yours or not there" is a refusal.
+- **The bell is a server component, counted on navigation.** No polling, no websockets: nothing this app sends needs to arrive within seconds, and a socket would be complexity with no user benefit.
+- **The unread count goes through `formatNumber`.** A bare number handed to ICU renders `٣` under `ar` (open thread 22) — a bell in Arabic-Indic digits beside a Latin-numeral date is the exact inconsistency `format.ts` exists to prevent.
+- **`emailLogId` is wired on the approval path only.** `linkNotificationEmail` matches on `(userId, entityId)` — both sides are set by the code that wrote them, so it is a join and not a guess — and `qr-render` calls it after the send. The other senders (expiry sweep, reminders, closure fan-out) do not link yet; recorded as thread 43 rather than claimed.
+
+**One real defect, found by opening the page:**
+- **The locale switcher and the sign-out button rendered twice** on `/dashboard` — once in the new shell header, once in the dashboard's own. `typecheck`, `lint`, `build` and 520 tests were all green with it on screen. Removed from the page, which is where they stopped belonging the moment the shell grew a header. **This is open thread 11's whole point**, and it is the second time the thread has caught something the moment somebody looked.
+
+**Verified — against the live database and in Chrome.** `scripts/probe-notifications.mts`, **15/15**, plus four page loads:
+
+| Criterion | Result |
+|---|---|
+| Five notifications written, all unread | OK |
+| No stored rendered sentence | OK — every param is a value, not prose |
+| Every stored `href` is locale-less | OK — `/drones/probe`, never `/ar/drones/probe` |
+| The same row in both languages, **no join** | OK — `وادي نمار` / `Wadi Namar` from the one stored pair |
+| The catalogue never sees `zoneAr`/`zoneEn` | OK — collapsed to `zone` before `t()` |
+| Another account marking it read | OK — refused, row untouched, and their own list is empty |
+| Marking one read | OK — unread 5 → 4, `readAt` stamped |
+| Marking it again | OK — `readAt` unmoved |
+| Switching off booking reminders | OK — **the in-app row is not written**, and the email half is off |
+| A **rejection** with every preference off | OK — **still arrives.** It carries no category, so there is nothing to suppress |
+| A category with no stored row | OK — defaults to on |
+| `notification.emailLogId` | OK — linked to the right `email_log` row |
+| Mark-all | OK — count reaches zero |
+| **Arabic RTL, in Chrome** | OK — heading and items right-aligned, unread dots on the start edge, `17 أغسطس 2026` Gregorian with Latin numerals, `خلال 30 يوماً` Latin, the Latin drone name reading correctly inside the Arabic sentence |
+| **The English switch** | OK — the identical rows, written while the locale was `ar`, read in English including the zone names |
+| Mark-read in the browser | OK — dot cleared and badge 6 → 5 **in place**, no reload |
+| The preferences panel | OK — stored state reflected, and the notice *"قرارات التسجيل والحجز تصلك دائماً ولا يمكن إيقافها"* in plain words |
+| **Console** | OK — 22 messages across four page loads, **all** React DevTools / `[HMR]` / `[Fast Refresh]`. Zero errors, zero warnings |
+
+**Open thread 20 is closed — 375 px finally rendered.** `resize_window` failed for the **sixth** time (reports success, viewport stays 1440). What worked: a **same-origin iframe 375 px wide**, whose media queries evaluate at its own width. `innerWidth: 375`, `dir: rtl`, `lang: ar`, `scrollWidth === clientWidth` — **no horizontal overflow**, header on one row, list items wrapping correctly, and the three preference rows holding their layout. Screenshotted. **Every future wave should use the iframe, not `resize_window`.**
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (556), `pnpm test` (520), `pnpm build` — all green; `/[locale]/notifications` builds dynamic.
+- **Every probe row deleted.** `notification`, `notification_preference`, `email_log` and `audit_event` all back to **0**; the owner account and the 12 seeded zones untouched.
+
+**Not verified:**
+- **No email was actually sent**, so `linkNotificationEmail` was exercised against a hand-written `email_log` row rather than a real send. The join is proven; the send is still thread 41.
+- **The three types F14 added have no writer that has run in anger** — `droneRevoked`, `droneReinstated` and `bookingRejected` were rendered from seeded rows, not from a real decision.
+- **Mark-read was driven from the browser, not posted at directly.** Same standing gap as every other action (thread 40).
+- **English at 375 px** was not checked — only Arabic, which is the harder direction and the one that matters here.
+- **No screen reader.** The bell's accessible name and the preference checkboxes were written for one and never heard by one.
+
+**Next session should know (Wave 6 begins):**
+- **F17 is the unblocker.** `requirePilotProfile` still redirects to `/profile/complete`, which does not exist (thread 13), and nothing else in Wave 6 works for a real pilot until it does.
+- **The shell header exists now** in `(app)/layout.tsx` and holds the bell, the locale switcher and sign-out. Wave 6 pages should not grow their own — that is what produced this session's one defect.
+- **Use the iframe technique for 375 px.** It is the only thing that has ever worked, and F31's gate needs it.
+- **`DecisionReasons` (F12) has still never been rendered.** F20 and F21 are its first callers.
 
 ---
 

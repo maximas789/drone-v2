@@ -86,6 +86,13 @@ export const LIMITS = {
   "review.decide": [{ window: MINUTE, max: 30 }],
   "admin.lookup": [{ window: MINUTE, max: 60 }],
   /**
+   * Not in F09's table — added by F15. Marking a notification read fires on
+   * every click-through in the list, so this is a flood-stop and nothing more.
+   * Tight enough to matter, generous enough that clearing a full page one item
+   * at a time never trips it.
+   */
+  "notification.read": [{ window: MINUTE, max: 120 }],
+  /**
    * Not in F09's table — added because it is the one server action that exists
    * today, and an unenforced limiter is an untested one. Generous: an admin
    * working down a list of users is normal traffic.

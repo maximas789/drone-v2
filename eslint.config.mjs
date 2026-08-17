@@ -189,10 +189,18 @@ const eslintConfig = defineConfig([
      * as a regulator-visible event would bury the trail rule 11 exists to keep
      * readable.
      */
+    /**
+     * `src/lib/data/notification.ts` is here for the `jobs-table.ts` reason,
+     * not the workflow one: **read/unread is not a domain status.** It has no
+     * transitions, no actor, nothing to notify and nothing a regulator would
+     * audit — writing "a pilot opened their bell menu" into the approval trail
+     * would bury the trail rule 11 exists to keep readable.
+     */
     files: [
       "src/lib/workflow/**/*.ts",
       "src/lib/inngest/jobs-table.ts",
       "src/lib/inngest/functions/run-cancelled.ts",
+      "src/lib/data/notification.ts",
     ],
     rules: {
       "no-restricted-syntax": [

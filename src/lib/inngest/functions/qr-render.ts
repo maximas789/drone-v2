@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { remoteId } from "@/lib/db/schema";
+import { linkNotificationEmail } from "@/lib/data/notification";
 import { sendEmail } from "@/lib/email/send";
 import { qrPathnameFor, renderQrPng } from "@/lib/qr/render";
 import { putFile } from "@/lib/storage";
@@ -61,7 +62,7 @@ export const qrRender = inngest.createFunction(
       const row = await getApprovedDroneForQr(droneId);
       if (!row || !row.remoteIdCode) return;
 
-      await sendEmail({
+      const sent = await sendEmail({
         to: row.ownerEmail,
         template: "drone-approved",
         locale: row.ownerLocale,
@@ -80,6 +81,23 @@ export const qrRender = inngest.createFunction(
           cardUrl: localeUrl(`/drones/${droneId}/card`, row.ownerLocale),
         },
       });
+
+      /**
+       * Ties the in-app notification to the email that carried it, which is
+       * what lets F29 answer "the notification is there — why didn't the email
+       * arrive?" with the provider's own error rather than a shrug.
+       *
+       * **After the send, never before**, and it never fails the run: the
+       * approval and the notification are already committed, and a missing link
+       * is a worse report, not a worse outcome.
+       */
+      if (sent.logId) {
+        await linkNotificationEmail(db, {
+          userId: row.ownerUserId,
+          entityId: droneId,
+          emailLogId: sent.logId,
+        });
+      }
     });
 
     return { droneId, skipped: null, pathname: stored.pathname };

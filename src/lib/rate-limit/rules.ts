@@ -56,6 +56,19 @@ export const LIMITS = {
    */
   "rid.resolve": [{ window: MINUTE, max: 30 }],
   /**
+   * Not in F09's table — added by F11, which built the action.
+   *
+   * Reporting is **anonymous by design**, so the only thing standing between
+   * the reviewer queue and a flood of junk is this. Two windows for the same
+   * reason `booking.create` has two: a burst and a sustained drip are different
+   * attacks. Generous enough that a bystander watching one drone can file a
+   * second report when they remember a detail.
+   */
+  "rid.report": [
+    { window: MINUTE, max: 3 },
+    { window: HOUR, max: 10 },
+  ],
+  /**
    * **Deliberately generous.** This fires on map interaction, debounced to
    * ~250 ms client-side; the server limit is a backstop, not the primary
    * control. Setting it tight would make the live map feel broken.

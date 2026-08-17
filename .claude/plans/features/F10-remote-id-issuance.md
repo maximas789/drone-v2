@@ -91,12 +91,22 @@ Throughout the app, drones are addressed by Remote ID rather than serial number:
 ## Files
 
 ```
-src/lib/remote-id/codec.ts        generateCode, normalizeCode, isValidCode
+src/lib/remote-id/codec.ts        generateCode, normalizeCode, isValidCode, formatCode
 src/lib/remote-id/issue.ts        issueRemoteId (transactional, retry on 23505)
-src/lib/remote-id/declaration.ts  declare, supersede, verify
+src/lib/remote-id/declaration.ts  declareModule, verify, reject, supersede
 src/lib/remote-id/index.ts
-src/lib/remote-id/__tests__/codec.test.ts
+src/lib/remote-id/codec.test.ts
 ```
+
+**As built (Session 10):**
+
+- Tests are **co-located** (`codec.test.ts`), not in `__tests__/` — every other suite in this codebase is, and `vitest.config.mts` includes `src/**/*.test.ts` either way.
+- `issueRemoteId` takes an **injectable `generate`** defaulting to `generateCode`. A retry loop that has never executed is a retry loop that does not work, and at ~9 × 10⁻⁸ per insert the only way to run it is to hand it a generator that repeats.
+- Each insert attempt runs inside a **savepoint** (`tx.transaction`). A unique violation aborts the entire Postgres transaction, so a bare retry fails with "current transaction is aborted" rather than producing a second code.
+- **Drizzle wraps the driver error.** `DrizzleQueryError.code` is undefined and the `PostgresError` is its `cause`, so the 23505 check walks the cause chain. Reading `code` off the top-level error caught nothing and rethrew every collision — found by forcing one.
+- `networkCapable: true` is set **at issue**, not as the column default (which stays `false`): a row created by any other route has not earned the claim.
+- **Renewal reactivation lives in `src/lib/workflow/remote-id.ts`** as `reactivateRemoteIdForDrone`, beside `suspendRemoteIdForDrone`. `remote_id.status` is a status, and rule 11 keeps every status write in that folder.
+- A concurrent insert that loses on `remote_id_droneId_unique` returns the **winner's** code rather than throwing — one drone, one Remote ID, for ever.
 
 ## Acceptance criteria
 

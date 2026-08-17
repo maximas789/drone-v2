@@ -29,6 +29,13 @@
       "when": 1786885740496,
       "tag": "0003_closed_toro",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786938835364,
+      "tag": "0004_broken_the_initiative",
+      "breakpoints": true
     }
   ]
 }

@@ -141,7 +141,18 @@
     "statusApproved": "معتمدة",
     "statusRejected": "مرفوضة",
     "statusExpired": "منتهية",
-    "statusRevoked": "ملغاة"
+    "statusRevoked": "ملغاة",
+    "buildTypes": {
+      "commercial": "تجارية",
+      "self_built": "مصنّعة ذاتياً",
+      "fpv": "طيران بمنظور أول (FPV)"
+    },
+    "weightClasses": {
+      "micro": "صغيرة جداً",
+      "light": "خفيفة",
+      "medium": "متوسطة",
+      "heavy": "ثقيلة"
+    }
   },
   "upload": {
     "dropHere": "اسحب الملفات هنا",
@@ -172,7 +183,66 @@
     "revealIdentity": "كشف هوية المالك",
     "revealLogged": "سيُسجَّل هذا الكشف باسمك.",
     "notFound": "لا يوجد تسجيل بهذا الرمز.",
-    "printCard": "طباعة البطاقة"
+    "printCard": "طباعة البطاقة",
+    "scanHeading": "نتيجة المسح",
+    "scanIntro": "هذه الصفحة تُظهر ما يراه أي شخص يمسح رمز الطائرة.",
+    "statusActive": "تسجيل ساري",
+    "statusActiveBody": "هذه الطائرة مسجّلة وتسجيلها ساري المفعول.",
+    "statusExpired": "تسجيل منتهٍ",
+    "statusExpiredBody": "الرمز صحيح، لكن تسجيل هذه الطائرة انتهت صلاحيته.",
+    "statusSuspended": "تسجيل موقوف",
+    "statusSuspendedBody": "تسجيل هذه الطائرة موقوف من الجهة المختصة.",
+    "statusRevoked": "تسجيل ملغى",
+    "statusRevokedBody": "تسجيل هذه الطائرة ملغى ولا يُسمح بالطيران به.",
+    "statusUnregistered": "غير مسجّلة",
+    "statusUnregisteredBody": "لا يوجد تسجيل بهذا الرمز في المنظومة.",
+    "invalidCode": "رمز غير صالح",
+    "invalidCodeBody": "الرمز المكتوب ليس رمز هوية عن بُعد. الصيغة الصحيحة مثل AJN-4F2K-91XZ.",
+    "flightInProgress": "توجد رحلة مصرّح بها جارية الآن",
+    "noFlightInProgress": "لا توجد رحلة مصرّح بها الآن",
+    "flightZone": "منطقة الرحلة",
+    "flightWindow": "وقت الرحلة",
+    "registeredCity": "مدينة التسجيل",
+    "validUntil": "ساري حتى",
+    "networkRid": "هوية عن بُعد عبر الشبكة",
+    "broadcastRid": "هوية عن بُعد بالبث",
+    "aircraftSection": "بيانات الطائرة",
+    "ownerSection": "بيانات المالك",
+    "ownerName": "اسم المالك",
+    "ownerMobile": "جوال المالك",
+    "idDocument": "رقم الهوية",
+    "photos": "الصور",
+    "declarations": "وحدات البث المعلنة",
+    "declarationVerified": "موثّقة",
+    "declarationUnverified": "غير موثّقة",
+    "declarationsEmpty": "لا توجد وحدات بث معلنة.",
+    "bookingHistory": "سجل الحجوزات",
+    "bookingHistoryEmpty": "لا توجد حجوزات.",
+    "scanLog": "سجل عمليات المسح",
+    "scanLogEmpty": "لم يُمسح هذا الرمز من قبل.",
+    "scanRevealed": "كُشفت الهوية",
+    "revealTitle": "كشف هوية المالك",
+    "revealReason": "سبب الكشف",
+    "revealReasonHint": "اكتب سبباً واضحاً لا يقل عن عشرة أحرف. يُحفظ السبب في سجل التدقيق باسمك قبل عرض أي بيان.",
+    "revealSubmit": "اكشف الهوية",
+    "revealResult": "الهوية المكشوفة",
+    "reportOpen": "الإبلاغ عن هذه الطائرة",
+    "reportTitle": "الإبلاغ عن هذه الطائرة",
+    "reportIntro": "صف ما تراه. لا يُعرض لك أي بيان عن المالك، ولا يعرف المالك من أبلغ.",
+    "reportDescription": "وصف ما تراه",
+    "reportLocation": "موقعك أو وصف المكان",
+    "reportSubmit": "إرسال البلاغ",
+    "reportFiled": "تم استلام البلاغ وسيراجعه المختصون. شكراً لك.",
+    "privacyNote": "لا تُعرض بيانات المالك إلا للجهة المختصة، وكل عملية كشف تُسجَّل.",
+    "resolveCount": "عدد مرات المسح",
+    "viewerLevels": {
+      "anonymous": "زائر",
+      "pilot": "طيّار",
+      "owner": "المالك",
+      "reviewer": "مراجع",
+      "admin": "مدير النظام"
+    },
+    "revealLoggedDone": "سُجِّل هذا الكشف باسمك في سجل التدقيق."
   },
   "zones": {
     "title": "المناطق",
@@ -247,7 +317,11 @@
     "reasonNotAdmin": "هذا الإجراء متاح لمدير النظام فقط.",
     "reasonInvalidRole": "الدور المطلوب غير معروف.",
     "reasonUserNotFound": "لم يُعثر على هذا المستخدم.",
-    "reasonCannotChangeOwnRole": "لا يمكنك تغيير دورك بنفسك."
+    "reasonCannotChangeOwnRole": "لا يمكنك تغيير دورك بنفسك.",
+    "reportsTitle": "بلاغات الطائرات",
+    "reportsIntro": "بلاغات وردت من صفحة المسح العامة، الأحدث أولاً.",
+    "reportsEmpty": "لا توجد بلاغات.",
+    "reportsUnresolved": "رمز غير مسجّل"
   },
   "review": {
     "queueDrones": "طلبات الطائرات",
@@ -402,13 +476,17 @@
     "uploadFailed": "تعذّر رفع الملف.",
     "uploadTooLarge": "الملف أكبر من الحد المسموح ({max}).",
     "uploadTypeRejected": "نوع الملف غير مقبول. الصور بصيغة JPEG أو PNG أو WebP، والمستندات بصيغة PDF.",
-    "uploadTargetLocked": "لا يمكن إضافة ملفات بعد إرسال الطلب للمراجعة."
+    "uploadTargetLocked": "لا يمكن إضافة ملفات بعد إرسال الطلب للمراجعة.",
+    "revealReasonRequired": "اكتب سبباً للكشف لا يقل عن عشرة أحرف.",
+    "revealNotLogged": "تعذّر تسجيل عملية الكشف في سجل التدقيق، ولذلك لم تُعرض الهوية.",
+    "reportDescriptionRequired": "اكتب وصفاً لا يقل عن عشرة أحرف."
   },
   "meta": {
     "defaultTitle": "أجنحة — تسجيل الطائرات بدون طيار",
     "titleTemplate": "{page} · أجنحة",
     "description": "منصة مقترحة لتسجيل الطائرات بدون طيار المصنّعة ذاتياً باستخدام الهوية عن بُعد، وحجز فترات الطيران في مناطق محددة.",
-    "keywords": "طائرات بدون طيار, الهوية عن بُعد, تسجيل, المجال الجوي"
+    "keywords": "طائرات بدون طيار, الهوية عن بُعد, تسجيل, المجال الجوي",
+    "scanTitle": "التحقق من طائرة"
   },
   "roles": {
     "pilot": "مشغّل",

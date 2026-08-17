@@ -141,7 +141,18 @@
     "statusApproved": "Approved",
     "statusRejected": "Rejected",
     "statusExpired": "Expired",
-    "statusRevoked": "Revoked"
+    "statusRevoked": "Revoked",
+    "buildTypes": {
+      "commercial": "Commercial",
+      "self_built": "Self-built",
+      "fpv": "FPV"
+    },
+    "weightClasses": {
+      "micro": "Micro",
+      "light": "Light",
+      "medium": "Medium",
+      "heavy": "Heavy"
+    }
   },
   "upload": {
     "dropHere": "Drag files here",
@@ -172,7 +183,66 @@
     "revealIdentity": "Reveal owner identity",
     "revealLogged": "This reveal will be logged against your name.",
     "notFound": "No registration matches this code.",
-    "printCard": "Print card"
+    "printCard": "Print card",
+    "scanHeading": "Scan result",
+    "scanIntro": "This page shows what anyone who scans this aircraft's code sees.",
+    "statusActive": "Registration valid",
+    "statusActiveBody": "This aircraft is registered and its registration is valid.",
+    "statusExpired": "Registration expired",
+    "statusExpiredBody": "The code is genuine, but this aircraft's registration has lapsed.",
+    "statusSuspended": "Registration suspended",
+    "statusSuspendedBody": "This aircraft's registration has been suspended by the authority.",
+    "statusRevoked": "Registration revoked",
+    "statusRevokedBody": "This aircraft's registration has been revoked and it may not fly.",
+    "statusUnregistered": "Not registered",
+    "statusUnregisteredBody": "No registration in the system matches this code.",
+    "invalidCode": "Not a valid code",
+    "invalidCodeBody": "What was entered is not a Remote ID. They look like AJN-4F2K-91XZ.",
+    "flightInProgress": "An authorised flight is in progress",
+    "noFlightInProgress": "No authorised flight right now",
+    "flightZone": "Flight zone",
+    "flightWindow": "Flight window",
+    "registeredCity": "City of registration",
+    "validUntil": "Valid until",
+    "networkRid": "Network Remote ID",
+    "broadcastRid": "Broadcast Remote ID",
+    "aircraftSection": "Aircraft details",
+    "ownerSection": "Owner details",
+    "ownerName": "Owner name",
+    "ownerMobile": "Owner mobile",
+    "idDocument": "ID number",
+    "photos": "Photos",
+    "declarations": "Declared broadcast modules",
+    "declarationVerified": "Verified",
+    "declarationUnverified": "Unverified",
+    "declarationsEmpty": "No broadcast module declared.",
+    "bookingHistory": "Booking history",
+    "bookingHistoryEmpty": "No bookings.",
+    "scanLog": "Scan log",
+    "scanLogEmpty": "This code has not been scanned before.",
+    "scanRevealed": "Identity revealed",
+    "revealTitle": "Reveal owner identity",
+    "revealReason": "Reason for the reveal",
+    "revealReasonHint": "Give a clear reason of at least ten characters. It is written to the audit log against your name before anything is shown.",
+    "revealSubmit": "Reveal identity",
+    "revealResult": "Revealed identity",
+    "reportOpen": "Report this drone",
+    "reportTitle": "Report this drone",
+    "reportIntro": "Describe what you can see. Nothing about the owner is shown to you, and the owner is not told who reported.",
+    "reportDescription": "What you can see",
+    "reportLocation": "Your location, or a description of the place",
+    "reportSubmit": "File report",
+    "reportFiled": "Report received. A reviewer will look at it. Thank you.",
+    "privacyNote": "Owner details are shown only to the authority, and every reveal is logged.",
+    "resolveCount": "Times scanned",
+    "viewerLevels": {
+      "anonymous": "Anonymous",
+      "pilot": "Pilot",
+      "owner": "Owner",
+      "reviewer": "Reviewer",
+      "admin": "Admin"
+    },
+    "revealLoggedDone": "This reveal has been written to the audit log against your name."
   },
   "zones": {
     "title": "Zones",
@@ -247,7 +317,11 @@
     "reasonNotAdmin": "This action is available to administrators only.",
     "reasonInvalidRole": "That role isn't one we recognise.",
     "reasonUserNotFound": "That user could not be found.",
-    "reasonCannotChangeOwnRole": "You can't change your own role."
+    "reasonCannotChangeOwnRole": "You can't change your own role.",
+    "reportsTitle": "Drone reports",
+    "reportsIntro": "Reports filed from the public scan page, newest first.",
+    "reportsEmpty": "No reports.",
+    "reportsUnresolved": "Unregistered code"
   },
   "review": {
     "queueDrones": "Drone registrations",
@@ -402,13 +476,17 @@
     "uploadFailed": "The file couldn't be uploaded.",
     "uploadTooLarge": "That file is larger than the limit ({max}).",
     "uploadTypeRejected": "That file type isn't accepted. Photos must be JPEG, PNG or WebP; documents must be PDF.",
-    "uploadTargetLocked": "Files can't be added once the request is with a reviewer."
+    "uploadTargetLocked": "Files can't be added once the request is with a reviewer.",
+    "revealReasonRequired": "Write a reason of at least ten characters.",
+    "revealNotLogged": "The reveal could not be written to the audit log, so nothing was shown.",
+    "reportDescriptionRequired": "Write a description of at least ten characters."
   },
   "meta": {
     "defaultTitle": "Ajniha — drone registration",
     "titleTemplate": "{page} · Ajniha",
     "description": "A proposed platform for registering self-built drones using Remote ID, and booking flight slots in designated zones.",
-    "keywords": "drones, remote id, registration, airspace"
+    "keywords": "drones, remote id, registration, airspace",
+    "scanTitle": "Check an aircraft"
   },
   "roles": {
     "pilot": "Pilot",

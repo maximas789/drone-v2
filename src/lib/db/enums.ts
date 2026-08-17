@@ -46,6 +46,25 @@ export const remoteIdStatus = pgEnum("remote_id_status", [
   "retired",
 ]);
 
+/**
+ * Who was looking when a Remote ID was resolved (F11).
+ *
+ * Stored on the scan row rather than derived at read time: the viewer's role
+ * may change afterwards, and "a reviewer resolved this" must stay true of the
+ * moment it happened — the same reasoning as `audit_event.actorRole`.
+ *
+ * `owner` is not a role. It is the relationship between the viewer and the
+ * record, computed server-side from the session and the drone's owner, and it
+ * is the reason the level cannot be a parameter anyone passes in.
+ */
+export const remoteIdViewerLevel = pgEnum("remote_id_viewer_level", [
+  "anonymous",
+  "pilot",
+  "owner",
+  "reviewer",
+  "admin",
+]);
+
 export const remoteIdDeclKind = pgEnum("remote_id_decl_kind", [
   "faa_broadcast_module",
   "gaca_dri",

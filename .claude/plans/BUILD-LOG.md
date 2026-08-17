@@ -30,7 +30,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
-| 5 — Domain core | F10–F15 | ⬜ Not started |
+| 5 — Domain core | F10–F15 | 🟨 **F10 + F11 done with deviations (Session 10).** F12–F15 not started. |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
@@ -108,12 +108,14 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
 | 11 | **Nothing in `pnpm lint` / `typecheck` / `build` / `test` catches a browser console error.** Base UI's `nativeButton` warning had been firing on F02's home page since Wave 1 and every check stayed green; the user found it by opening the page. **F06 opened three pages in Chrome and found them clean**, so the thread is no longer untouched — but it is still a manual pass with no automation behind it, and every other route is unopened. F31's gate needs a real browser pass, and F20/F23 (MapLibre, terra-draw) are the likeliest to hit this again. | F05 | F31, and every UI wave |
-| 20 | **The 375 px viewport is still unchecked, on every page.** F06 tried: resizing the browser window through the automation tool did not change the rendered viewport, and chasing it further was not worth the session. Named here rather than quietly dropped for a third wave running. | F02, F05, F06 | F31 |
+| 20 | **The 375 px viewport is still unchecked, on every page.** F06 tried: resizing the browser window through the automation tool did not change the rendered viewport, and chasing it further was not worth the session. **F11 tried again and got the same result** — `resize_window` reports success, `read_page` still says 1440 — which now matters more, because `/rid/[code]` is a page reached by scanning a sticker with a phone. Named here rather than quietly dropped for a fifth wave running. | F02, F05, F06, F11 | F31 |
 | 12 | **`BETTER_AUTH_URL` must equal the origin the app is actually served from**, or every auth POST is refused with `INVALID_ORIGIN` — sign-in included. Found by serving the production build on a different port. It is the same class of failure as the `APP_URL` QR trap and fails just as silently in a browser. F29's system page should check it. | F05 | Deployment, F29 |
 | 16 | **A dev-mode 404 embeds a stack trace naming the guard** (`requireReviewer`, absolute file path) in its RSC payload; the production build does not. So the "404, not a stack trace" criterion is **only meaningful against `next start`**. F31 must run its route checks against a production serve, never `next dev`. | F05 | F31 |
 | 13 | **`requirePilotProfile` redirects to `/profile/complete`, which does not exist yet** (F17 builds it). Nothing calls the guard today, so nothing 404s; F17 must build that page or the first caller sends pilots into a dead end. | F05 | F17 |
 | 14 | **`drone.owner_user_id` and `booking.pilot_user_id` are `ON DELETE RESTRICT`**, so deleting an account that holds registered aircraft or bookings is refused by the database — while `deleteUser` is enabled in `src/lib/auth.ts`. Deliberate: a registration record is not personal data to take away. **F28 owns the consequence** and must offer a real path (revoke, or transfer) instead of a raw delete that errors. | F05 | F28 |
-| 7 | `remote_id_scan` is **not** in the schema — F03 defers it to the feature that owns its columns. `rate_limit_bucket` (F09) and `job` (F08) are now built; only F11's table is left. | F03 | F11 |
+| 34 | **`remote_id.broadcastCapable` is a snapshot taken at write time.** It is recomputed from the declaration rows on every declare/verify/reject/supersede, but a declaration whose `validUntil` passes overnight leaves the flag stale until the next write, and nothing sweeps it. **F12 must evaluate the declaration's own validity window** for a future slot rather than trusting the boolean. | F10 | F12 |
+| 35 | **`drone_report` has no triage columns and no reviewer queue.** Reports are written, audited and listed on `/admin` newest-first, but there is no "handled" state, no assignment and no way to close one. Deliberate — an enum member nothing writes is a lie about what the app does — so **F22 owns adding whatever its queue needs**. | F11 | F22 |
+| 36 | **`viewerLevelFor` was never exercised with a reviewer who is also the drone's owner.** Staff wins by the order of the checks, so such a person sees the staff branch and their own reveal control; no row like that has ever existed. Worth a deliberate case when F22 gives reviewers aircraft. | F11 | F22, F31 |
 | 15 | **`role` reaches the app as `string \| null`, not a union.** Better Auth types an `additionalField` declared as a list of literals as a plain `string`. `roleOf()` in `src/lib/session.ts` narrows it and **fails closed** — anything unrecognised is treated as `pilot`. Never read `session.user.role` directly; use `roleOf` / `isReviewer` / `isAdmin`. | F05 | Every wave that branches on role |
 | 9 | **F12 owes the KKIA annulus its containment assertion** — a point inside the hole must not be contained by the polygon. F04 asserted only the structure, because writing a second `pointInPolygon` outside `src/lib/airspace/` is the decay the plan warns about. | F04 | F12 |
 | 10 | **Nothing has checked the seeded polygons for self-intersection**, and no one has seen them on a map. F20 is the first render. | F04 | F20 |
@@ -142,6 +144,11 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-17 | `issueRemoteId` retries inside a **savepoint**, and the 23505 check **walks the error's cause chain**. | A unique violation aborts the whole Postgres transaction, so a bare retry answers "current transaction is aborted" instead of a second code. And drizzle wraps the driver error: `DrizzleQueryError.code` is undefined, the `PostgresError` is its `cause`. The first version read `code` off the top level, matched nothing and rethrew every collision — the retry loop never ran. Both found by forcing a collision. | Feature file updated |
+| 2026-08-17 | `networkCapable: true` is written **at issue**, while the column default stays `false`. | Ajniha implements Network Remote ID itself, so an issued row has earned the claim — but a row created by any other route has not, and a capability the app cannot deliver is a lie in a regulator-facing record. | Feature file updated |
+| 2026-08-17 | `getRemoteIdRecordByCode` returns the **whole** record to any caller, signed out included. | The one deliberate exception to what rule 8 usually means, and it is why F11 works: scoping in the data layer would put a second masking rule beside `redactRemoteId`, and two places deciding what a bystander may see is precisely the drift the single function exists to prevent. Bookings and the scan log *are* scoped there, because those are questions the redactor cannot answer. | Feature file updated |
+| 2026-08-17 | `isIdentified()` is a **type predicate** rather than an inline `level !== "anonymous"` test. | TypeScript will not narrow a union away on the negative side of a disjunction when the member's own discriminant is a union — the public branch survives, and the compiler only *appears* to enforce the masking table. The `@ts-expect-error` test in `redact.test.ts` is what pins it. | Feature file updated |
+| 2026-08-17 | A `drone_report` table, and an interim reports list on `/admin`. | F11 and F24 both file reports and no feature file names a table. Written with no triage columns — F22 owns the queue and should add what it needs rather than inherit an enum nothing writes. The list exists because "visible to reviewers" is otherwise a claim about a table nobody can read; same call as F05's role panel. | Feature file updated |
 | 2026-08-16 | `/api/files/[...path]` **streams** stored bytes rather than redirecting to them, in both drivers. | A redirect hands the caller the blob's own URL, which then resolves for anyone they pass it to and long after the row is deleted — the ownership check would hold for the first request only. Streaming also means the local and blob paths behave identically, so what is tested locally is what runs. | Feature file updated |
 | 2026-08-16 | The response `Content-Type` is **re-sniffed from the bytes on the way out**, with `nosniff`. | Trusting a stored column would mean a file that somehow got past the upload check is served as whatever the row claims. The bytes are the only thing that cannot have drifted. | Feature file updated |
 | 2026-08-16 | Photo reordering is **buttons**, not drag-and-drop. | Drag has no keyboard path and no screen-reader story. And the directions are *earlier*/*later*, which are physically opposite in Arabic — naming by position is the only version that reads correctly in both languages. | Feature file updated |
@@ -194,11 +201,15 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-16 (F07) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck` |
-| `pnpm lint` | 2026-08-16 (F07) | ✅ clean — includes **rule 11**, added in F08 |
-| `pnpm build` | 2026-08-16 (F07) | ✅ `/api/upload` and `/api/files/[...path]` build as dynamic routes; `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
-| `pnpm test` | 2026-08-16 (F07) | ✅ **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
-| `pnpm i18n:check` | 2026-08-16 (F07) | ✅ 469 keys, ar/en in sync |
+| `pnpm exec tsc --noEmit` | 2026-08-17 (F10/F11) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-17 (F10/F11) | ✅ clean — includes **rule 11**, added in F08 |
+| `pnpm build` | 2026-08-17 (F10/F11) | ✅ `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
+| `pnpm i18n:check` | 2026-08-17 (F10/F11) | ✅ **541 keys**, ar/en in sync |
+| `pnpm db:up` + `db:migrate` | 2026-08-17 (F11) | ✅ `0004_broken_the_initiative` applied — `remote_id_scan`, `drone_report`, `remote_id_viewer_level`. **SQL read in full**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.** |
+| Remote ID codec, issuance, declarations | 2026-08-17 (F10) | ✅ against the live database — 100 000-code alphabet and duplicate checks, forced collision, five-collision throw, renewal keeping the code, suspension/reactivation, the module-claim transfer. See the session entry |
+| Scan page + JSON twin at four viewer levels | 2026-08-17 (F11) | ✅ over HTTP — anonymous **12 keys**, owner 28, reviewer 29; the full national ID appears in no payload at any level |
+| Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
+| `pnpm test` | 2026-08-17 (F10/F11) | ✅ **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -212,14 +223,14 @@ What has actually been **run**, not what was written. F31 reads this.
 | Rate limiting — layer 1 | 2026-08-16 (F09) | ✅ 5 sign-up attempts through, **6th and 7th HTTP 429**. Run with a 1-char password so no account was created (`user` still 0), counters deleted afterwards. |
 | Rate limiting — direct action POST | — | ❌ **still not run.** The owner has an account now, but the test needs their session cookie and that is not something to lift out of their browser. |
 | Sign-up sends its verification email | 2026-08-16 (F09 session) | ✅ **after a fix.** It did not, until the owner's real sign-up exposed it — see the Session 7 addendum. |
-| Owner account | 2026-08-16 | ✅ one user, `admin`, `preferred_locale = ar`. Three probe accounts were created and deleted while chasing the bug above; `user` is back to that one row, `email_log` and `rate_limit` emptied, the 12 seeded zones untouched. |
+| Owner account | 2026-08-17 | ✅ one user, `admin`, `preferred_locale = ar`. Three probe accounts were created and deleted while chasing the bug above; `user` is back to that one row, `email_log` and `rate_limit` emptied, the 12 seeded zones untouched. **Re-confirmed after F10/F11:** every probe row from that session deleted too — `drone`, `remote_id`, `remote_id_scan`, `drone_report`, `pilot_profile`, `audit_event` and `email_log` all back to 0. |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
 | Production serve (`next start`) | 2026-08-16 (F06) | ✅ on port **3210** — `/ar` 200, auth pages 200, `/ar/dev/emails` and `/en/dev/emails` **404** with no stack trace. (F05's guard checks were the earlier run.) |
 | Uploads, end to end | 2026-08-16 (F07) | ✅ over HTTP with three probe accounts: type sniffing, size ceiling, cross-pilot 404, locked target, delete removing row **and** bytes, traversal refused. See the session entry. |
 | Vercel Blob driver | — | ❌ **never executed.** No token, no store. |
-| Browser console clean | 2026-08-16 (F07) | ⚠️ **partial.** The dropzone page joins F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
+| Browser console clean | 2026-08-17 (F11) | ⚠️ **partial.** `/ar/rid/{code}` and `/ar/admin` join them: zero errors, zero warnings, through a reveal and a report submission. Earlier (F07): the dropzone page joined F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
 | Rendered Arabic, in a browser | 2026-08-16 (F06) | ✅ first time in this build. All 11 email templates × 2 locales seen. Letter joins correct, right-aligned, `AJN-4F2K-91XZ` reads LTR under its Arabic label, `15 مارس 2029` / `30 يوماً` Gregorian and Latin. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -242,6 +253,88 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 10 — Wave 5 · F10 Remote ID Issuance & Codec · F11 Redaction & Public Resolution
+
+**Date:** 2026-08-17
+**Status:** ⚠️ done with deviations · **Wave 5 is now F12–F15.** Built as a pair, as instructed — they share the code format and the `/rid/{code}` surface.
+
+**Built:**
+- `src/lib/remote-id/` — `codec.ts` (**pure**), `issue.ts`, `declaration.ts`, `redact.ts` (**pure**), `resolve.ts`, `index.ts`, plus `codec.test.ts` (**14**) and `redact.test.ts` (**18**). Suite now **373 across 11 files**.
+- `reactivateRemoteIdForDrone` in `src/lib/workflow/remote-id.ts` — renewal, beside suspension.
+- **Two new tables**, closing Open Thread 7: `remote_id_scan` (+ enum `remote_id_viewer_level`) and `drone_report`. Migration `0004_broken_the_initiative` — **SQL read in full first**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.**
+- `src/lib/actions/remote-id.ts` — `revealIdentityAction`, `reportDroneAction`. `rid.report` added to `LIMITS`.
+- `src/lib/data/remote-id.ts` grew `getRemoteIdRecordByCode`, `listBookingsForRemoteId`, `listScansForRemoteId`, `listDroneReports`.
+- `/[locale]/rid/[code]` (noindex), `/api/rid/[code]`, `src/app/robots.ts`, four `src/components/remote-id/*` components, a reports list on `/admin`, and **72 new message keys** (catalogue **541**).
+- `scripts/probe-remote-id.mts` — the throwaway that drove all of F10 against the live database. Kept, and re-runnable; it deletes its own rows on the way in.
+
+**Deviations, each with its reason:**
+- **`issueRemoteId` takes an injectable `generate`.** A retry loop nobody has executed is a retry loop that does not work, and at ~9 × 10⁻⁸ per insert the only way to run it is to hand it a generator that repeats. Every caller in the app uses the default.
+- **Each insert attempt is a savepoint** (`tx.transaction` inside the caller's transaction). A unique violation aborts the whole Postgres transaction, so a bare retry fails with "current transaction is aborted" instead of minting a second code.
+- **`networkCapable: true` is set at issue, not as the column default** (which stays `false`). A row created by any other route has not earned the claim.
+- **Renewal reactivation lives in `src/lib/workflow/`**, not in `issue.ts` — `remote_id.status` is a status, and rule 11 owns every status write.
+- **`remote_id_scan` carries `scannedCode` and a nullable `remoteIdId`**, beyond the five columns F11 named. An unknown or malformed code is still a resolution, and a run of them is the enumeration attempt the table exists to expose. F09's own file says so.
+- **A `drone_report` table exists that no feature file specified.** "Files a report visible to reviewers" needs somewhere to put it; F24's *report unregistered drone* files the same shape, which is why `remoteIdId` is nullable. No status column and no triage columns — F22 owns the queue and can add what it needs rather than inheriting an enum nothing writes.
+- **The interim reports list sits on `/admin`.** Same call as F05's role panel: a table nobody can read makes the criterion a claim about a database. `listDroneReports` returns `[]` to a non-reviewer, so the scoping is in the data layer.
+- **`report-dialog.tsx` is an inline panel, not a modal**, and there is a fourth component (`identity-reveal.tsx`). No dialog primitive is installed; a hand-rolled modal with no focus trap is worse for a screen reader than none, on the one page most likely to be read by a stranger on a phone.
+- **`resolveRemoteId` is not a server action** — the page and the route handler both call it directly. That is what makes "the JSON twin has the same field set" a property of the code.
+- **`/api/rid/[code]` answers 200 with `{ ok: false, reason }`** for unknown and malformed codes, mirroring the page's "not a 404". 429 is the only status it varies.
+- **`getRemoteIdRecordByCode` returns the whole record to any caller, signed out included** — the one deliberate exception to what rule 8 usually means, documented in the file. Scoping it there would put a second masking rule beside `redactRemoteId`. Bookings and the scan log *are* session-scoped in the data layer, because those are questions the redactor cannot answer.
+- **No zod.** Still not installed, and the inputs are one code plus two bounded strings. Recorded as deferred rather than forgotten: F12/F14 should introduce it.
+
+**Two real bugs, both found by running it:**
+- **Drizzle wraps the driver's error.** `DrizzleQueryError.code` is undefined and the `PostgresError` is its `cause`, so the original 23505 check matched nothing, rethrew every collision, and the retry loop never ran. Found by forcing a collision. `uniqueViolationConstraint` now walks the cause chain, and `declaration.ts` uses the same function.
+- **`isIdentified()` had to become a type predicate.** TypeScript will not narrow a union *away* on the negative side of `level === "anonymous" || level === "pilot"` — the public member's own discriminant is a union, so excluding one literal leaves the member in place. Without it the compiler only appeared to enforce the masking table; the `@ts-expect-error` test is what pins it.
+
+**Verified — against the live database and over HTTP.** A probe pilot, a probe drone with **no serial number**, three airframes, two HTTP-signed-up accounts (one promoted to reviewer), and the owner's admin session in Chrome.
+
+| Criterion | Result |
+|---|---|
+| Alphabet and duplicates across 100 000 generated codes | OK — no `I`/`L`/`O`/`U`, no duplicates, every symbol used |
+| `normalizeCode` on spaced/lowercase/undashed/misread input | OK — six spellings, one canonical code; `O→0 I→1 L→1 U→V` |
+| A code is not derivable from a row id | OK — `generateCode.length === 0`; asserted structurally |
+| Forced collision | OK — regenerated, inserted, **one `remote_id.collision` audit event** |
+| Five collisions in a row | OK — **threw**, no row written |
+| Approving issues one active row | OK — `networkCapable=true`, `broadcastCapable=false`, `remote_id.issued` logged |
+| Expiry → renewal leaves the code unchanged | OK — same string before and after, `created: false` |
+| Revocation suspends, code retained | OK — `suspended`, same code; reactivation restores `active` and clears the reason |
+| Unverified declaration → `broadcastCapable` false; verified → true | OK, both directions |
+| Two airframes claiming one module serial | OK — `module_already_claimed`; after supersession the second **succeeds**, and capability follows the row |
+| **Signed out** `/ar/rid/{code}` | OK — code, status, valid-until, build type, weight class, city. **The HTML source contains none** of the owner name, national ID, mobile, nickname or masked ID |
+| `/api/rid/{code}` signed out | OK — **12 keys, identical to the anonymous page's field set** |
+| Signed in as a **different pilot** | OK — `level=pilot`, same 12 keys, no identity |
+| Signed in as the **owner** | OK — 28 keys, full record, national ID `•••••5432`, **the whole number nowhere in the payload** |
+| Signed in as a **reviewer** | OK — 29 keys (+ scan log), `canReveal: true`; ID still masked until a reveal |
+| Reveal with a reason | OK — identity returned **and** `remote_id.identity_revealed` written with the reason, `actorRole: admin`, hashed IP; exactly one scan row flipped |
+| **Forcing the audit write to fail** | OK — mutation applied to `audit()`, reveal refused in Arabic with "the reveal could not be logged", **no identity shown, no event, no flag**. Reverted after. |
+| Every resolution writes a scan row and increments `resolveCount` | OK — 0 → 1, `lastResolvedAt` stamped, level recorded |
+| `remote_id_scan` holds no raw IP | OK — 27 rows hashed (64 hex), 3 null where no header existed; the address appears nowhere |
+| Unknown code | OK — **200 page**, "not registered", reporting still offered; scan row written |
+| Malformed code | OK — 200 page, "not a valid code"; logged too. *(Note: `not-a-code` normalises to a valid-looking `N0TAC0DE` — the ambiguity mapping doing its job.)* |
+| "Report this drone" | OK — filed from the page, row written with hashed IP, `remote_id.reported` audited, **visible to reviewers on `/admin`** |
+| `robots.txt` | OK — `Disallow: /*/rid/` served; the page also carries `noindex, nofollow` |
+| Arabic RTL, in Chrome | OK — code reads LTR under its Arabic label, `16 أغسطس 2029` Gregorian and Latin, scan-log viewer levels translated (`زائر` / `طيّار` / `المالك`), report and reveal forms mirror correctly. **Console clean** — React DevTools notice and `[HMR] connected`, nothing else |
+| Mutation testing | **Six mutations, all caught**: dropping the ambiguity map, standard base32, dropping the prefix strip, expiring on the sweep instead of the clock, leaking `ownerNameAr` onto the anonymous branch, and masking two digits fewer |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (541), `pnpm test` (373), `pnpm build` — all green. Both routes build dynamic; `/robots.txt` static.
+- **Every probe row deleted afterwards.** `user` is back to the single owner account, `drone`/`remote_id`/`remote_id_scan`/`drone_report`/`audit_event`/`pilot_profile`/`email_log` all **0**, the 12 seeded zones untouched.
+
+**Not verified:**
+- **375 px, a fifth time.** `resize_window` reported success and the rendered viewport stayed 1440 (`read_page` confirms). The scan page is the *most* phone-first surface in the app and it is the one still unchecked at phone width. Open Thread 20.
+- **No QR was scanned into this page.** F08 proved the PNG's payload byte-for-byte; a camera has still never resolved one.
+- **The reveal and report actions were driven from the browser, not posted at directly.** Same gap as F07's and F09's — a direct action POST needs a session cookie lifted from the owner's browser.
+- **`viewerLevelFor` was never exercised with a reviewer who is *also* the owner.** Staff wins by construction (the check order), and no such row existed.
+- **Concurrency on issuance.** The `remote_id_droneId_unique` race path returns the winner's code, but two simultaneous issues were never staged; the argument is structural.
+
+**Next session should know (F12–F15):**
+- **F14 calls `issueRemoteId(tx, { droneId, actor })` inside the approval transaction**, then sends `droneApprovedEvent` after it commits. Renewal calls `reactivateRemoteIdForDrone`, **never** `issueRemoteId` for a second code.
+- **`booking.remoteIdId` is already `NOT NULL`** in the schema — F13 must resolve the drone's Remote ID when creating a booking, and a drone with no `remote_id` row cannot be booked at all. That is the intended coupling.
+- **`broadcastCapable` is a snapshot taken at write time.** A declaration whose `validUntil` passes overnight leaves it stale until the next write, and nothing sweeps it. **F12 must check the declaration's own window** rather than trusting the boolean for a future slot.
+- **F22 owns declaration verification in the UI**; `verifyDeclaration` / `rejectDeclaration` / `supersedeDeclaration` already exist and already move `broadcastCapable`.
+- **F24 reuses `redactRemoteId` and `drone_report`.** Do not write a second projection for the admin lookup — the grep criterion in F11 is the point.
+- **F30 inherits `src/app/robots.ts`.** It has the `/*/rid/` disallow and nothing else it will eventually need.
 
 ---
 

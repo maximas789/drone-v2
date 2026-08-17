@@ -87,13 +87,25 @@ Both run `normalizeCode()` first, and both are rate-limited at 30/min per IP has
 
 ```
 src/lib/remote-id/redact.ts
-src/lib/remote-id/resolve.ts             lookup + scan logging
-src/lib/actions/remote-id.ts             resolveRemoteId, revealIdentity, reportDrone
+src/lib/remote-id/resolve.ts             resolveRemoteId + viewerLevelFor + scan logging
+src/lib/actions/remote-id.ts             revealIdentityAction, reportDroneAction
 src/app/[locale]/(public)/rid/[code]/page.tsx
 src/app/api/rid/[code]/route.ts
-src/components/remote-id/{status-badge,scan-result,report-dialog}.tsx
-src/lib/remote-id/__tests__/redact.test.ts
+src/components/remote-id/{status-badge,scan-result,report-dialog,identity-reveal}.tsx
+src/lib/remote-id/redact.test.ts
+src/app/robots.ts                        the /*/rid/ disallow (F30 owns it afterwards)
 ```
+
+**As built (Session 10):**
+
+- **`resolveRemoteId` is not an action.** Resolution happens as the page renders and as the route handler runs; both call the same function, which is what makes "the JSON twin returns the same field set" structural rather than a promise. Only the two mutations are actions.
+- **`remote_id_scan` carries `scannedCode`, and `remoteIdId` is nullable.** An unknown or malformed code is still a resolution, and a run of them is the enumeration attempt this table exists to make visible.
+- **A new `drone_report` table**, owned by this feature: `remoteIdId` (nullable, for F24's unregistered case), `reportedCode`, `description`, optional coordinates and note, `reporterUserId`, `ipHash`, `userAgent`. F22's queues replace the interim list on `/admin`.
+- **`rid.report` was added to `LIMITS`** — 3/min and 10/hour, keyed on the account or the IP hash. An anonymous action with no limit is a queue-flooding tool.
+- **`report-dialog.tsx` renders an inline panel, not a modal.** No dialog primitive is installed, and a hand-rolled modal without a focus trap is worse for a screen reader than none — on a page whose whole point is a stranger with a phone.
+- **A fourth component, `identity-reveal.tsx`**, rather than the reveal form living inside `scan-result.tsx`: it holds action state and the returned identity, and the scan result is otherwise a pure render of the union.
+- `isIdentified()` is a **type predicate** in `redact.ts`. TypeScript will not narrow a union away on the negative side of `level === "anonymous" || level === "pilot"`, so without it the compiler only *appears* to enforce the masking table.
+- **`/api/rid/[code]` answers 200 with `{ ok: false, reason }` for an unknown code**, mirroring the page. 429 is the one status it uses, because a rate limit is a genuine HTTP condition.
 
 ## Acceptance criteria
 

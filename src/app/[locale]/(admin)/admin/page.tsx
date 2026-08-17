@@ -13,7 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireReviewer } from "@/lib/auth-guards";
+import { listDroneReports } from "@/lib/data/remote-id";
 import { listUsers } from "@/lib/data/user";
+import { formatDateTime } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 import { isAdmin, roleOf } from "@/lib/session";
 
@@ -31,6 +33,7 @@ export default async function AdminPage() {
   const session = await requireReviewer();
   const t = await getTranslations();
   const users = await listUsers(session);
+  const reports = await listDroneReports(session);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
@@ -67,6 +70,53 @@ export default async function AdminPage() {
             <p className="text-muted-foreground text-sm">
               {t("admin.adminOnlyNotice")}
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/*
+        F11's half: a report filed from the public scan page has to land
+        somewhere a reviewer sees, or "files a report visible to reviewers" is
+        a claim about a table nobody reads. F22's queues replace this list —
+        `listDroneReports` returns nothing to a non-reviewer, so the scoping is
+        in the data layer rather than in this markup.
+      */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("admin.reportsTitle")}</CardTitle>
+          <CardDescription>{t("admin.reportsIntro")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {reports.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              {t("admin.reportsEmpty")}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3 text-sm">
+              {reports.map((report) => (
+                <li key={report.id} className="flex flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span dir="ltr" className="font-mono font-medium">
+                      {report.reportedCode}
+                    </span>
+                    {report.remoteIdCode ? null : (
+                      <Badge variant="outline">
+                        {t("admin.reportsUnresolved")}
+                      </Badge>
+                    )}
+                    <span className="text-muted-foreground text-xs">
+                      {formatDateTime(report.createdAt, locale)}
+                    </span>
+                  </div>
+                  <p className="whitespace-pre-wrap">{report.description}</p>
+                  {report.locationNote ? (
+                    <p className="text-muted-foreground text-xs">
+                      {report.locationNote}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>

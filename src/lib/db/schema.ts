@@ -28,6 +28,7 @@ import {
   notificationStatus,
   remoteIdDeclKind,
   remoteIdStatus,
+  remoteIdViewerLevel,
   zoneKind,
   zoneStatus,
 } from "./enums";
@@ -309,6 +310,97 @@ export const remoteIdDeclaration = pgTable(
     uniqueIndex("remote_id_decl_active_module_uniq")
       .on(t.kind, t.moduleSerial)
       .where(sql`superseded_at is null and module_serial is not null`),
+  ],
+);
+
+/**
+ * One row per resolution of a Remote ID — the public scan page, the JSON twin,
+ * and (F24) the admin lookup.
+ *
+ * **This table is what makes "an authority can resolve identity" auditable
+ * rather than merely possible.** The owner of a drone cannot see who scanned
+ * it — that would turn the licence plate into a tracker pointed back at
+ * bystanders — but an admin can see every reveal, and a reveal that is not in
+ * here did not happen.
+ *
+ * `remoteIdId` is **nullable on purpose**: an unknown code is still a
+ * resolution, and a run of them is precisely the enumeration attempt this table
+ * exists to make visible. `scannedCode` records what was asked for either way.
+ *
+ * IPs are `sha256(RATE_LIMIT_PEPPER + ip)`. A raw address never lands here.
+ */
+export const remoteIdScan = pgTable(
+  "remote_id_scan",
+  {
+    id: id(),
+    /** `set null`: the scan record outlives the registration it looked at. */
+    remoteIdId: uuid().references(() => remoteId.id, { onDelete: "set null" }),
+    /** Normalised where it normalised; otherwise what was typed, truncated. */
+    scannedCode: text().notNull(),
+
+    /** Null for the roadside case — an inspector with no account. */
+    viewerUserId: text().references(() => user.id, { onDelete: "set null" }),
+    /** The level **at the time**, never recomputed. */
+    viewerLevel: remoteIdViewerLevel().notNull(),
+
+    /** `sha256(pepper + ip)`. Never raw — see `src/lib/ip-hash.ts`. */
+    ipHash: text(),
+    userAgent: text(),
+
+    /**
+     * Set by the reveal action, in the same transaction as the
+     * `remote_id.identity_revealed` audit event. Two records of one act, on
+     * purpose: this one answers "was this code's owner ever exposed", the audit
+     * event answers "who did it and why".
+     */
+    revealedIdentity: boolean().notNull().default(false),
+
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("remote_id_scan_remote_idx").on(t.remoteIdId, t.createdAt),
+    index("remote_id_scan_viewer_idx").on(t.viewerUserId, t.createdAt),
+    // "Show me every reveal" — the admin question this table is here for.
+    index("remote_id_scan_revealed_idx").on(t.revealedIdentity, t.createdAt),
+  ],
+);
+
+/**
+ * A member of the public reporting a drone they can see.
+ *
+ * Filed from the anonymous scan page, so **nothing about the owner is needed to
+ * write one** — that is the point. The reporter learns nothing they did not
+ * already know; the reviewer gets the code, what was described, and where.
+ *
+ * `remoteIdId` is nullable because F24's *"report unregistered drone"* files
+ * the same kind of record with no registration behind it. `reportedCode` is
+ * what was scanned or typed, and it survives the row it pointed at.
+ */
+export const droneReport = pgTable(
+  "drone_report",
+  {
+    id: id(),
+    remoteIdId: uuid().references(() => remoteId.id, { onDelete: "set null" }),
+    reportedCode: text().notNull(),
+
+    /** Free text, in whatever language the reporter wrote it. Never rendered as trusted markup. */
+    description: text().notNull(),
+    /** Where the reporter was, if they offered it. WGS84, degrees. */
+    locationLat: doublePrecision(),
+    locationLng: doublePrecision(),
+    locationNote: text(),
+
+    /** Null when the reporter was signed out, which is the common case. */
+    reporterUserId: text().references(() => user.id, { onDelete: "set null" }),
+    ipHash: text(),
+    userAgent: text(),
+
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("drone_report_remote_idx").on(t.remoteIdId, t.createdAt),
+    // The reviewer queue: newest first, which F22 will page through.
+    index("drone_report_created_idx").on(t.createdAt),
   ],
 );
 

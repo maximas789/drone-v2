@@ -11,8 +11,13 @@ Every status change in the app goes through one place that validates the transit
 ### One entry point
 
 ```ts
-applyTransition({ entity, id, to, actor, reason?, tx }): Result
+applyTransition({ transition, id, actor, reason?, patch?, notification? }, tx?): Result
 ```
+
+**Built:** the edge is named (`"drone.approved"`), not described by `entity` +
+`to` — two edges can share a target status (`booking.approved` and
+`booking.auto_approved` both reach `approved`) and only a name tells them apart
+in the trail.
 
 A `TRANSITIONS` table declares every legal edge with its guard, its audit action, and its notification. `applyTransition` validates the edge, runs the guard, writes the row, writes the `audit_event`, and enqueues the notification — **all inside one transaction**.
 
@@ -41,10 +46,16 @@ A `TRANSITIONS` table declares every legal edge with its guard, its audit action
 | From | To | Who | Guard | Audit action | Notify |
 |---|---|---|---|---|---|
 | — | `pending` | pilot | full `evaluateAirspace` passes | `booking.created` | reviewers if `!autoApprove` |
-| — | `approved` | pilot (auto) | `zone.autoApprove` **and** no recent no-shows | `booking.auto_approved` | pilot |
+| `pending` | `approved` | pilot (auto) | `zone.autoApprove` **and** no recent no-shows | `booking.auto_approved` | pilot |
+
+**Built:** auto-approval is a **real transition from `pending`**, driven inside
+the same transaction as the booking's creation — not an `approved` value handed
+to the insert. An automatic approval is still a decision, and a status that
+appeared with nothing recording who decided it is what this whole folder exists
+to prevent.
 | `pending` | `approved` | reviewer, admin | **re-run `evaluateAirspace`**, store `decisionSnapshot` | `booking.approved` | pilot |
 | `pending` | `rejected` | reviewer, admin | reason required | `booking.rejected` | pilot + alternatives |
-| `pending`/`approved` | `cancelled` | owner | before `slotStart − 2h` | `booking.cancelled_by_pilot` | reviewers if it was approved |
+| `pending`/`approved` | `cancelled` | owner | before `slotStart − 2h` | `booking.cancelled_by_pilot` | — *(built: none. The pilot cancelled it and is looking at the result; F22's queue is where the seat coming back is visible.)* |
 | `pending`/`approved` | `cancelled` | reviewer, admin | reason required, any time | `booking.cancelled_by_authority` | pilot, high priority |
 | `approved` | `cancelled` | **system** | closure or revocation overlaps | `booking.cancelled_by_closure` | pilot |
 | `approved` | `completed` | **system** | `checkedInAt` set and past `slotEnd` | `booking.completed` | — |
@@ -56,9 +67,35 @@ A `TRANSITIONS` table declares every legal edge with its guard, its audit action
 
 **Three no-shows in 90 days disables auto-approve for that pilot** — derived in `src/lib/data/pilot.ts`, not a stored flag, so it self-heals as the window rolls forward rather than needing a reset job.
 
+### Who may drive an edge
+
+`ActorKind` is `system | owner | reviewer | admin`, and **an actor holds several
+at once**: a reviewer cancelling their own booking is both `reviewer` and
+`owner`, and an edge needs only one of them to match. An admin implicitly holds
+`reviewer`, so no edge has to list both.
+
+`owner` is resolved in `apply.ts` **from the locked row** — `drone.ownerUserId`
+or `booking.pilotUserId` — never from anything the caller says about itself.
+
+**Consequence, stated rather than hidden: an admin may approve their own drone.**
+The kinds overlap by design so that staff can use the app as pilots, and in this
+build the only admin is the only account, so blocking it would deadlock the app.
+[F22](./F22-admin-review-queues.md) owns a four-eyes rule if it wants one.
+
 ### Rejection is never silent
 
-The reason is required at the Zod boundary (min 20 chars for a drone, so "no" isn't a valid rejection of someone's registration), stored on the row, written to `audit_event.reason`, and quoted **verbatim** in the email — in the pilot's own locale, not the reviewer's.
+The reason is required (min 20 chars for a drone, so "no" isn't a valid
+rejection of someone's registration), stored on the row, written to
+`audit_event.reason`, and quoted **verbatim** in the email — in the pilot's own
+locale, not the reviewer's.
+
+**Built:** the minimum is declared on the edge as `reasonMinLength` and enforced
+in `apply.ts`, not at each call site — five edges need one, and a reason that
+slipped through unvalidated is a blank line in the regulator's trail. It is
+checked **before** edge legality, so a reviewer who typed "no" is told to write a
+reason rather than told the transition is invalid.
+
+*(No Zod. Still not installed as of F14 — recorded as deferred, not forgotten.)*
 
 ### The audit trail
 
@@ -88,10 +125,25 @@ Always takes the transaction. An audit write outside the transaction that made t
 
 ```
 src/lib/workflow/{index,drone,booking,transitions,apply}.ts
+src/lib/workflow/rules.ts           PURE: registrationExpiryFrom, pilotMayCancel
 src/lib/audit.ts
-src/lib/data/pilot.ts               noShowCount, autoApproveEligible
-src/lib/workflow/__tests__/{drone,booking,audit}.test.ts
+src/lib/data/pilot.ts               countRecentNoShows, autoApproveEligible
+src/lib/actions/drone.ts            7 actions
+src/lib/actions/booking.ts          6 more
+src/lib/workflow/{rules,transitions}.test.ts
+scripts/probe-workflow.mts          both lifecycles, against the live database
 ```
+
+**`rules.ts` is a split the spec did not name, and it is not optional.** The
+arithmetic that decides when a registration lapses and whether a pilot may still
+cancel first sat behind `server-only`, where no unit test could import it — the
+same trap F09 hit with the rate-limit rules. `actorKindsFor` moved into
+`transitions.ts` for the same reason: it decides who may do what.
+
+**The lifecycle tests are a probe, not a suite.** "A decision writes the row, the
+audit event and the notification together or not at all" is a claim about
+Postgres; `scripts/probe-workflow.mts` drives all 34 of them against the live
+database. Only the pure halves are unit-tested.
 
 ## Acceptance criteria
 
@@ -113,7 +165,7 @@ src/lib/workflow/__tests__/{drone,booking,audit}.test.ts
 **Booking lifecycle**
 - [ ] A booking in an `autoApprove` zone lands `approved`; in a normal zone it lands `pending`.
 - [ ] A pilot with 3 no-shows in 90 days gets `pending` even in an auto-approve zone; at 91 days it reverts to auto-approve with no manual reset.
-- [ ] Approving **re-runs** `evaluateAirspace` — approving a booking whose zone closed after the request is refused.
+- [ ] Approving **re-runs** `evaluateAirspace` — approving a booking whose zone closed after the request is refused. *(Built: the re-check reads through the **approving transaction**, and passes no availability or busy-slot data — the booking already holds its seat, and feeding its own row back would have it refuse itself with `slot_full`.)*
 - [ ] `decisionSnapshot` is populated at approval and includes `geometryVersion`.
 - [ ] A pilot cancelling within 2 hours of the slot is refused; earlier succeeds.
 - [ ] An authority can cancel at any time, with a reason.

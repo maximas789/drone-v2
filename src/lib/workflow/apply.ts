@@ -6,10 +6,12 @@ import { db, type DbExecutor } from "@/lib/db";
 import { booking, drone } from "@/lib/db/schema";
 import { notify, type NotifyInput } from "@/lib/notify";
 import {
+  actorKindsFor,
+  actorMayDrive,
   isAlreadyApplied,
   isLegalEdge,
+  reasonIsSufficient,
   transitionFor,
-  type ActorKind,
   type TransitionName,
 } from "./transitions";
 
@@ -23,14 +25,19 @@ import {
  *
  * **A refusal is never an exception.** An illegal edge returns
  * `invalid_transition` and writes nothing; a row already in the target status
- * returns `already_applied` and writes nothing. Only genuine breakage throws.
+ * returns `already_applied` and writes nothing; a missing or too-short reason
+ * returns `reason_required` and writes nothing. Only genuine breakage throws.
  */
 
 export type TransitionOutcome =
   | { ok: true; from: string; to: string }
   | {
       ok: false;
-      reason: "not_found" | "invalid_transition" | "already_applied";
+      reason:
+        | "not_found"
+        | "invalid_transition"
+        | "already_applied"
+        | "reason_required";
       from?: string;
     };
 
@@ -38,7 +45,7 @@ export type ApplyTransitionInput = {
   transition: TransitionName;
   id: string;
   actor: Actor;
-  /** Required by some edges (F14); recorded on the row and in the trail. */
+  /** Required by some edges; recorded on the row and in the trail. */
   reason?: string | null;
   /**
    * Extra columns the edge sets alongside the status — `completedAt`,
@@ -51,8 +58,9 @@ export type ApplyTransitionInput = {
 };
 
 /**
- * Runs in its own transaction unless an executor is passed in. F14's server
- * actions will pass one, because a decision writes more than the status.
+ * Runs in its own transaction unless an executor is passed in. Every caller in
+ * `drone.ts` and `booking.ts` passes one, because a decision writes more than
+ * the status — the registration dates, the Remote ID row, the snapshot.
  */
 export async function applyTransition(
   input: ApplyTransitionInput,
@@ -75,23 +83,33 @@ async function applyWithin(
 ): Promise<TransitionOutcome> {
   const def = transitionFor(transition);
 
+  const locked = await lockRow(tx, def.entity, id);
+  if (!locked) return { ok: false, reason: "not_found" };
+
   /**
-   * Only `"system"` maps today. **F14 adds the role branch here** — and until
-   * it does, a human actor must not be able to drive one of these four. A pilot
-   * who could mark their own booking `completed` is a pilot who never no-shows.
+   * The role branch. `owner` is resolved from the row that was just locked, not
+   * from anything the caller said about itself — which is the whole reason this
+   * happens here rather than at the call site.
    */
-  const actorKind: ActorKind | null = actor.isSystem ? "system" : null;
-  if (!actorKind || !def.actors.includes(actorKind)) {
-    return { ok: false, reason: "invalid_transition" };
+  const kinds = actorKindsFor(actor, locked.ownerUserId);
+  if (!actorMayDrive(transition, kinds)) {
+    return { ok: false, reason: "invalid_transition", from: locked.status };
   }
 
-  const before = await lockStatus(tx, def.entity, id);
-  if (!before) return { ok: false, reason: "not_found" };
-  if (isAlreadyApplied(transition, before)) {
-    return { ok: false, reason: "already_applied", from: before };
+  /**
+   * Checked **before** the edge legality, so that a reviewer who typed "no" is
+   * told to write a reason rather than being told the transition is invalid —
+   * two very different things to be told, and only one of them is true.
+   */
+  if (!reasonIsSufficient(transition, reason)) {
+    return { ok: false, reason: "reason_required", from: locked.status };
   }
-  if (!isLegalEdge(transition, before)) {
-    return { ok: false, reason: "invalid_transition", from: before };
+
+  if (isAlreadyApplied(transition, locked.status)) {
+    return { ok: false, reason: "already_applied", from: locked.status };
+  }
+  if (!isLegalEdge(transition, locked.status)) {
+    return { ok: false, reason: "invalid_transition", from: locked.status };
   }
 
   await writeStatus(tx, def.entity, id, def.to, patch);
@@ -101,14 +119,14 @@ async function applyWithin(
     entityType: def.entity,
     entityId: id,
     action: def.action,
-    before: { status: before },
+    before: { status: locked.status },
     after: { status: def.to },
     reason,
   });
 
   if (notification) await notify(tx, notification);
 
-  return { ok: true, from: before, to: def.to };
+  return { ok: true, from: locked.status, to: def.to };
 }
 
 /**
@@ -116,26 +134,29 @@ async function applyWithin(
  * safe: the second blocks on the row until the first commits, then reads the
  * **new** status and refuses with `already_applied`. A plain read would let
  * both pass the check and write two audit events — and send two emails.
+ *
+ * It returns the owner as well, because "may this actor drive this edge" is a
+ * question about the row and not only about the session.
  */
-async function lockStatus(
+async function lockRow(
   tx: DbExecutor,
   entity: "drone" | "booking",
   id: string,
-): Promise<string | null> {
+): Promise<{ status: string; ownerUserId: string } | null> {
   if (entity === "drone") {
     const [row] = await tx
-      .select({ status: drone.status })
+      .select({ status: drone.status, ownerUserId: drone.ownerUserId })
       .from(drone)
       .where(eq(drone.id, id))
       .for("update");
-    return row?.status ?? null;
+    return row ?? null;
   }
   const [row] = await tx
-    .select({ status: booking.status })
+    .select({ status: booking.status, ownerUserId: booking.pilotUserId })
     .from(booking)
     .where(eq(booking.id, id))
     .for("update");
-  return row?.status ?? null;
+  return row ?? null;
 }
 
 async function writeStatus(

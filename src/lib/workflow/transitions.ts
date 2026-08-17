@@ -1,27 +1,27 @@
 /**
  * Every legal status edge, declared as data.
  *
- * **This file is deliberately incomplete.** F08 needed the four edges the
- * clock drives, and rule 11 ("no status change outside `src/lib/workflow/`")
- * meant they could not be written inline in a job. So the table exists with the
- * *system* edges in it and nothing else.
- *
- * **F14 owns the rest** — every human edge in its two tables (`draft →
- * pending`, `pending → approved`, `approved → revoked`, and so on), together
- * with their guards, their required reasons and their role checks. Add rows
- * here; do not build a second mechanism, and do not widen `actor` on these four
- * to let a human drive them. A pilot who could mark their own booking
- * `completed` is a pilot who never no-shows.
+ * F08 wrote the four edges the clock drives. **F14 completed the table** with
+ * every human edge from both lifecycles, and added the role branch in
+ * `apply.ts` that reads `actors` here.
  *
  * Pure by construction: no database, no session, no translation. The table is
- * data, `apply.ts` is what executes it.
+ * data; `apply.ts` is what executes it. A guard that needs to *read* something —
+ * whether a profile is complete, whether a slot is more than two hours away —
+ * lives in `drone.ts` or `booking.ts`, because a table that could run a query
+ * would stop being readable as a list of what is allowed.
  */
 
 export type WorkflowEntity = "drone" | "booking";
 
 /**
- * Who is permitted to drive an edge. Only `"system"` is populated today —
- * F14 adds `"owner"`, `"reviewer"` and `"admin"`.
+ * Who may drive an edge.
+ *
+ * `owner` is **not a role** — it is the relationship between the actor and the
+ * row, resolved in `apply.ts` from `drone.ownerUserId` / `booking.pilotUserId`.
+ * An actor can hold several kinds at once: a reviewer cancelling their own
+ * booking is both `reviewer` and `owner`, and the edge only needs one of them
+ * to match.
  */
 export type ActorKind = "system" | "owner" | "reviewer" | "admin";
 
@@ -33,9 +33,94 @@ export type TransitionDef = {
   /** The `audit_event.action` string. Stable, dotted, never translated. */
   action: string;
   actors: readonly ActorKind[];
+  /**
+   * Minimum length of a written reason, when one is required.
+   *
+   * **20 characters for a rejection**, so that "no" is not a valid answer to
+   * somebody's registration. It is declared here rather than checked at each
+   * call site because a rejection reason that slipped through unvalidated is a
+   * blank line in the regulator's trail.
+   */
+  reasonMinLength?: number;
 };
 
 export const TRANSITIONS = {
+  // --- Drone: the human edges ---------------------------------------------
+
+  /** Submitted for review. Guarded in `drone.ts` — photos, profile, serial. */
+  "drone.submitted": {
+    entity: "drone",
+    from: ["draft"],
+    to: "pending",
+    action: "drone.submitted",
+    actors: ["owner"],
+  },
+
+  /**
+   * The decision that turns a form into an aircraft. `drone.ts` sets the
+   * registration dates and issues the Remote ID in the same transaction.
+   */
+  "drone.approved": {
+    entity: "drone",
+    from: ["pending"],
+    to: "approved",
+    action: "drone.approved",
+    actors: ["reviewer", "admin"],
+  },
+
+  "drone.rejected": {
+    entity: "drone",
+    from: ["pending"],
+    to: "rejected",
+    action: "drone.rejected",
+    actors: ["reviewer", "admin"],
+    reasonMinLength: 20,
+  },
+
+  /** Edited and sent back. `rejectionCount` goes up; the old reason stays in the trail. */
+  "drone.resubmitted": {
+    entity: "drone",
+    from: ["rejected"],
+    to: "pending",
+    action: "drone.resubmitted",
+    actors: ["owner"],
+  },
+
+  /**
+   * Renewal after expiry. **The Remote ID code is not reissued** — the row is
+   * reactivated, so a sticker already on the airframe keeps resolving.
+   */
+  "drone.renewal_submitted": {
+    entity: "drone",
+    from: ["expired"],
+    to: "pending",
+    action: "drone.renewal_submitted",
+    actors: ["owner"],
+  },
+
+  /**
+   * **Admin only.** Revocation suspends the Remote ID and takes away every
+   * future slot; a reviewer who can approve should not also be able to
+   * unilaterally ground an aircraft.
+   */
+  "drone.revoked": {
+    entity: "drone",
+    from: ["approved"],
+    to: "revoked",
+    action: "drone.revoked",
+    actors: ["admin"],
+    reasonMinLength: 20,
+  },
+
+  "drone.reinstated": {
+    entity: "drone",
+    from: ["revoked"],
+    to: "approved",
+    action: "drone.reinstated",
+    actors: ["admin"],
+    reasonMinLength: 20,
+  },
+
   /**
    * The nightly sweep. `registrationExpiresAt <= now` is checked by the job
    * against the live row, not passed in — see `src/lib/inngest/rules.ts`.
@@ -46,6 +131,59 @@ export const TRANSITIONS = {
     to: "expired",
     action: "drone.expired",
     actors: ["system"],
+  },
+
+  // --- Booking: the human edges -------------------------------------------
+
+  /**
+   * A zone with `autoApprove` and a pilot with no recent no-shows. Driven by
+   * the owner immediately after the row is created, in the same transaction, so
+   * that an auto-approval is a decision in the trail rather than a status that
+   * appeared from nowhere.
+   */
+  "booking.auto_approved": {
+    entity: "booking",
+    from: ["pending"],
+    to: "approved",
+    action: "booking.auto_approved",
+    actors: ["owner"],
+  },
+
+  /** `booking.ts` **re-runs `evaluateAirspace`** before this is allowed through. */
+  "booking.approved": {
+    entity: "booking",
+    from: ["pending"],
+    to: "approved",
+    action: "booking.approved",
+    actors: ["reviewer", "admin"],
+  },
+
+  "booking.rejected": {
+    entity: "booking",
+    from: ["pending"],
+    to: "rejected",
+    action: "booking.rejected",
+    actors: ["reviewer", "admin"],
+    reasonMinLength: 20,
+  },
+
+  /** Guarded in `booking.ts`: not inside the last two hours before the slot. */
+  "booking.cancelled_by_pilot": {
+    entity: "booking",
+    from: ["pending", "approved"],
+    to: "cancelled",
+    action: "booking.cancelled_by_pilot",
+    actors: ["owner"],
+  },
+
+  /** Any time, with a reason. The pilot is told, and told why. */
+  "booking.cancelled_by_authority": {
+    entity: "booking",
+    from: ["pending", "approved"],
+    to: "cancelled",
+    action: "booking.cancelled_by_authority",
+    actors: ["reviewer", "admin"],
+    reasonMinLength: 20,
   },
 
   /** Checked in, and the slot has ended. */
@@ -103,4 +241,65 @@ export function isLegalEdge(name: TransitionName, from: string): boolean {
  */
 export function isAlreadyApplied(name: TransitionName, from: string): boolean {
   return TRANSITIONS[name].to === from;
+}
+
+/**
+ * Every kind an actor holds at once, given the row's owner.
+ *
+ * **Pure, and here rather than in `apply.ts`, for the reason F09 found the hard
+ * way with the rate-limit rules**: logic behind `server-only` is logic no unit
+ * test can import. This decides who may do what, which makes it exactly the
+ * half that must be testable without a database.
+ *
+ * A reviewer cancelling **their own** booking is both `reviewer` and `owner`,
+ * and an edge only needs one of them to match — collapsing this to a single
+ * "highest" kind would stop staff using the app as pilots, which is precisely
+ * the population this product is for.
+ *
+ * A system actor is only ever `system`: a cron has no account, and an edge
+ * marked `owner` must never be drivable by the clock.
+ */
+export function actorKindsFor(
+  actor: { userId: string | null; role: string | null; isSystem: boolean },
+  ownerUserId: string | null,
+): ActorKind[] {
+  if (actor.isSystem) return ["system"];
+
+  const kinds: ActorKind[] = [];
+  // Both sides must be present. A null actor id matching a null owner would
+  // make a deleted account the owner of every row it left behind.
+  if (actor.userId && ownerUserId && actor.userId === ownerUserId) {
+    kinds.push("owner");
+  }
+  if (actor.role === "reviewer") kinds.push("reviewer");
+  // Everything a reviewer may do, an admin may do. Listing both on every edge
+  // would be duplication that one missed entry turns into a privilege gap.
+  if (actor.role === "admin") kinds.push("admin", "reviewer");
+  return kinds;
+}
+
+/** `true` when at least one of the actor's kinds may drive this edge. */
+export function actorMayDrive(
+  name: TransitionName,
+  kinds: readonly ActorKind[],
+): boolean {
+  const allowed = TRANSITIONS[name].actors as readonly ActorKind[];
+  return kinds.some((kind) => allowed.includes(kind));
+}
+
+/**
+ * The written reason, validated against the edge's own requirement.
+ *
+ * Trimmed first: twenty spaces is not a reason, and neither is a newline.
+ */
+export function reasonIsSufficient(
+  name: TransitionName,
+  reason: string | null | undefined,
+): boolean {
+  // Through `transitionFor`, not `TRANSITIONS[name]`: `as const satisfies`
+  // narrows each entry to its own literal shape, and the edges that need no
+  // reason genuinely have no such property to read.
+  const required = transitionFor(name).reasonMinLength;
+  if (required === undefined) return true;
+  return (reason ?? "").trim().length >= required;
 }

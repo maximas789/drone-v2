@@ -30,7 +30,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
-| 5 — Domain core | F10–F15 | 🟨 **F10–F13 done with deviations (Sessions 10–11).** F14 + F15 not started. |
+| 5 — Domain core | F10–F15 | 🟨 **F10–F14 done with deviations (Sessions 10–12).** F15 not started. |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
@@ -134,8 +134,9 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
 | 37 | **A booking has no launch point, so no-fly overlays are not resolved at booking time.** `createBookingAction` evaluates with `AirspaceQuery.zoneId` because the booking form picks a zone, not a coordinate, and `booking` has no lat/lng column. A permitted zone overlapping a no-fly zone would therefore be bookable at the overlap — the *map* resolves it (point query), the booking does not. The seeded `RUH-P-01` and `RUH-NF-KKIA` touch in a ~50 m sliver, so this is not hypothetical. **Either F23 refuses to publish an overlapping permitted zone, or F21 sends the launch point and the schema grows a column for it.** | F12/F13 | F21, F23 |
 | 38 | **The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.** A zone with `nightAllowed: false` therefore refuses its own first slot for part of the year — the engine is right (you may not fly before sunrise) but the hours and the rule disagree, and F21's picker will show slots that are always refused. `slotStates` has no `night` state to grey them with, deliberately: F13's state table has five members and inventing a sixth here would put sun maths in the slot grid. **F21 or F23 owns the reconciliation.** | F12/F13 | F21, F23 |
-| 39 | **`cancelBooking` and `checkInBooking` do not exist.** Both are status changes and rule 11 puts them behind `applyTransition`, whose table holds only the four system edges. **F14 owns them**, and `src/lib/actions/booking.ts` carries a comment where they go. Cancelling frees a seat regardless — that is the partial index — and the probe proves it with raw SQL. | F13 | F14 |
-| 40 | **None of F12/F13's server actions has been driven over HTTP.** No page calls them: F20 owns the map and F21 the booking flow. Tested and probed, never posted at with a real session cookie. Same standing gap as F07's, F09's and F11's actions. | F12/F13 | F20, F21, F31 |
+| 40 | **None of F12/F13/F14's server actions has been driven over HTTP** — **19** of them now. No page calls any: F18 owns registration, F20 the map, F21 booking, F22 the queues. Tested and probed, never posted at with a real session cookie. The largest standing gap in the build. | F12/F13/F14 | F18, F20, F21, F22, F31 |
+| 41 | **"A reviewer approves and the pilot gets an email with a QR" has never run as one flow.** `approveDroneAction` sends `drone/approved`; F08's `qr-render` job renders and mails. Both halves are proven — the job against hand-triggered events, the action against the database — but Inngest was not running during F14's probe and no Resend key exists, so the seam between them is structural. | F14 | F31 |
+| 42 | **An admin can approve their own drone.** Staff hold `owner` and `admin` at once, deliberately, so that staff can use the app as pilots; the cost is no segregation of duties on a decision. It also cannot be blocked in this build, where the only admin is the only account. **F22 owns a four-eyes rule** if it wants one. | F14 | F22 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -146,6 +147,12 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-17 | **An actor holds several `ActorKind`s at once**, and an edge needs one of them to match. | A reviewer cancelling their own booking is both `reviewer` and `owner`. A single "highest" kind would stop staff using the app as pilots — the exact population this product exists for. An admin implicitly holds `reviewer`, so no edge lists both. | Feature file updated |
+| 2026-08-17 | **An admin may approve their own drone.** | The kinds overlap by design, and in this build the only admin is the only account — blocking it would deadlock the app. Stated rather than hidden; F22 owns a four-eyes rule if it wants one. Open Thread 42. | Feature file updated |
+| 2026-08-17 | **The written-reason check runs before the edge-legality check.** | A reviewer who typed "no" must be told to write a reason, not told the transition is invalid. Two different things, and only one of them is true. | Feature file updated |
+| 2026-08-17 | **`registrationExpiryFrom` and `pilotMayCancel` live in a pure `src/lib/workflow/rules.ts`.** | The first version sat behind `server-only` in `drone.ts` and no unit test could import it — the same trap F09 hit with the rate-limit rules. Arithmetic that decides when a registration lapses is exactly what must be testable without a database. `actorKindsFor` moved to `transitions.ts` for the same reason. | Feature file updated |
+| 2026-08-17 | **Auto-approval is a real transition inside the creation transaction**, not an `approved` value in the insert. | An automatic approval is still a decision, and a status that appeared with nothing recording who decided it is what `src/lib/workflow/` exists to prevent. | Feature file updated |
+| 2026-08-17 | **The approval re-check passes no availability and no busy slots.** | The booking already holds its seat; feeding its own row back to the engine would have it refuse itself with `slot_full` and `duplicate_booking`. Capacity was decided by the unique index at claim time. | Feature file updated |
 | 2026-08-17 | **`time.ts` does Riyadh civil time as arithmetic, not through `Intl`** — and `time.test.ts` cross-checks it against `format.ts` on every day of a year. | A slot start must be byte-identical in a browser and on the server, or `booking_seat_uniq` protects nothing. `Intl` is the right answer for what a person reads and the wrong one for what an index compares. The cross-check is what turns "Saudi Arabia has no DST" from an assumption into a test. | Feature file updated |
 | 2026-08-17 | **Real sunrise/sunset by the solar equation**, rather than a fixed night window. | Riyadh sunset runs from 17:07 in December to 18:44 in June. A fixed window is wrong by over an hour twice a year, and a zone that forbids night flight has to mean the actual sky. Verified to ±10 minutes against published times. | Feature file updated |
 | 2026-08-17 | **The engine speaks ISO strings, never `Date`.** | The map fetches its context as JSON; the server builds it from rows. A `Date` survives one of those round trips and not the other, and the entire point of the module is that the two cannot disagree. | Feature file updated |
@@ -211,18 +218,21 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-17 (F12/F13) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
-| `pnpm lint` | 2026-08-17 (F12/F13) | ✅ clean — includes **rule 11** (F08) and the **airspace purity rule**, which F12 probed rather than assumed: all four bans fire on `evaluate.ts` |
-| `pnpm build` | 2026-08-17 (F12/F13) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
-| `pnpm i18n:check` | 2026-08-17 (F12/F13) | ✅ **543 keys**, ar/en in sync |
+| `pnpm exec tsc --noEmit` | 2026-08-17 (F14) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-17 (F14) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
+| `pnpm build` | 2026-08-17 (F14) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
+| `pnpm i18n:check` | 2026-08-17 (F14) | ✅ **546 keys**, ar/en in sync |
 | `pnpm db:up` + `db:migrate` | 2026-08-17 (F11) | ✅ `0004_broken_the_initiative` applied — `remote_id_scan`, `drone_report`, `remote_id_viewer_level`. **SQL read in full**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.** |
 | Remote ID codec, issuance, declarations | 2026-08-17 (F10) | ✅ against the live database — 100 000-code alphabet and duplicate checks, forced collision, five-collision throw, renewal keeping the code, suspension/reactivation, the module-claim transfer. See the session entry |
 | Scan page + JSON twin at four viewer levels | 2026-08-17 (F11) | ✅ over HTTP — anonymous **12 keys**, owner 28, reviewer 29; the full national ID appears in no payload at any level |
 | Airspace engine, against the live database | 2026-08-17 (F12) | ✅ bbox pre-filter over the real Riyadh polygons, carve-out beating the restricted base, a no-fly point, an over-ceiling refusal and the daily cap. The **KKIA annulus containment assertion** (thread 9) and the **declaration-window broadcast check** (thread 34) are unit-tested against the seeded geometry and rows |
 | Booking concurrency, against the live database | 2026-08-17 (F13) | ✅ `scripts/probe-booking.mts`, **18/18**, run twice: capacity 1 with two simultaneous claims → one row; capacity 3 with five → seats 0,1,2; both `duplicate_booking` indexes; a cancelled seat reused; `capacity + 1` forced conflicts → `slot_full`; a failed booking leaving **no** audit event. Every probe row deleted |
 | A booking driven over HTTP | — | ❌ **not run.** No page calls the actions yet — F20 owns the map, F21 the booking flow |
+| Both lifecycles, against the live database | 2026-08-17 (F14) | ✅ `scripts/probe-workflow.mts`, **34/34**: every drone edge in order with one audit event each, a **self-built airframe with no serial number approved end to end**, renewal keeping the code, revocation suspending the Remote ID, and approval **refused** for a booking whose zone closed after the request. `actorRole` survived promoting the reviewer to admin. Every probe row deleted |
+| A decision driven over HTTP | — | ❌ **not run.** 19 server actions now exist and no page calls any of them |
+| Approval → QR → email, as one flow | — | ❌ **never run as one.** The action sends the event and F08's job was proven separately; Inngest was not running during F14's probe |
 | Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
-| `pnpm test` | 2026-08-17 (F12/F13) | ✅ **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm test` | 2026-08-17 (F14) | ✅ **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -266,6 +276,91 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 12 — Wave 5 · F14 Workflow State Machines & Audit Trail
+
+**Date:** 2026-08-17
+**Status:** ⚠️ done with deviations · **Wave 5 is now F15 alone.** Ran in the same context as Session 11, no `/clear` between.
+
+**The app now does something end to end.** A self-built drone with no serial number can be submitted, reviewed, approved, issued a Remote ID and a QR, expired, renewed with the same code, revoked and reinstated — and every one of those is a row, an audit event and a notification that commit together or not at all.
+
+**Built:**
+- `src/lib/workflow/transitions.ts` — **the table is complete**: 9 drone edges and 8 booking edges, the four system ones unchanged. Plus `actorKindsFor`, `actorMayDrive` and `reasonIsSufficient`, all pure.
+- `src/lib/workflow/apply.ts` — **the role branch F08 left as `null`**. `lockRow` now returns the owner alongside the status, so `owner` is resolved from the locked row rather than from anything the caller says about itself.
+- `src/lib/workflow/drone.ts` — submit / resubmit / renew / approve / reject / revoke / reinstate, with the guards a table cannot express.
+- `src/lib/workflow/booking.ts` — approve (which **re-runs `evaluateAirspace`**) / auto-approve / reject / cancel-by-pilot / cancel-by-authority / check-in.
+- `src/lib/workflow/rules.ts` — **pure**: `registrationExpiryFrom`, `pilotMayCancel`. Plus `rules.test.ts` (9) and `transitions.test.ts` (21). Suite now **509 across 19 files**.
+- `src/lib/actions/drone.ts` (7 actions) and six more in `src/lib/actions/booking.ts`, closing Open Thread 39.
+- `src/lib/airspace/query.ts` grew `buildContextForBooking(tx, bookingId)` — the approval re-check, read **through the approving transaction**.
+- `countRecentNoShows` / `autoApproveEligible` in `src/lib/data/pilot.ts`; `review.decide` in `LIMITS`; three notification keys (catalogue **546**).
+- `scripts/probe-workflow.mts` — the throwaway that drove all of it against the live database. Kept and re-runnable.
+
+**Deviations, each with its reason:**
+- **An actor holds several kinds at once**, and an edge needs only one of them to match. F14's spec implies a single "who"; a reviewer cancelling **their own** booking is both `reviewer` and `owner`, and collapsing to a single highest kind would lock staff out of using the app as pilots — which is the population this product is for. An admin implicitly holds `reviewer` too, so no edge has to list both.
+- **`reasonMinLength` is declared on the edge, not checked at the call site.** A rejection reason that slipped through unvalidated is a blank line in the regulator's trail, and there are five edges that need one.
+- **The reason check runs *before* the edge-legality check**, so a reviewer who typed "no" is told to write a reason rather than told the transition is invalid. Two very different things to be told, and only one of them true.
+- **An admin may approve their own drone.** Staff-as-pilot means the kinds overlap; blocking self-approval would deadlock this build outright, where the only admin is also the only account. Recorded as a decision, not an oversight — **F22 should add the four-eyes rule** if it wants one.
+- **`autoApproveBooking` is a real transition inside the creation transaction**, not an `approved` value handed to the insert. An automatic approval is still a decision and belongs in the trail with an actor and a timestamp.
+- **The auto-approve test is two conditions**: the zone's `autoApprove` **and** the pilot's no-show record. F14's table lists them on one row; they are read from different places, so the action composes them.
+- **`checkInBooking` is not a transition and does not pretend to be one.** It writes `checkedInAt` and an audit event, and changes no status — which is what leaves `booking-closeout` (F08) something to decide hours later.
+- **No notification on `booking.cancelled_by_pilot`.** The pilot cancelled it and is looking at the result.
+- **`registrationExpiryFrom` and `pilotMayCancel` live in a pure `rules.ts`**, not in `drone.ts`/`booking.ts`. Found the same way F09 found it: the first version sat behind `server-only` and no unit test could import the arithmetic that decides when a registration lapses. Same split as `rate-limit/rules.ts` and `airspace/evaluate.ts`.
+- **`actorKindsFor` moved from `apply.ts` to `transitions.ts`** for exactly that reason — it decides who may do what, which makes it the half that most needs testing without a database.
+- **Actions open their own transaction** (`db.transaction(...)`) to compose several workflow writes. Consistent with F11's `revealIdentityAction`, which already did this; the *queries* still go through `src/lib/data/*`.
+- **`buildContextForBooking` takes an executor, not a session.** A reviewer approving somebody else's booking has no session that owns those rows, and fabricating one would be an unauthenticated door in the module rule 8 protects — the same call F08 made for `src/lib/inngest/queries.ts`. It also has to read *inside* the approving transaction, or the re-check races the write it guards.
+- **The approval re-check feeds in no availability and no busy slots.** The booking already holds its seat; handing its own row back to the engine would have it refuse itself with `slot_full` and `duplicate_booking`. Capacity was decided by the unique index at claim time and no later decision can take it away.
+- **No zod, still.** Recorded as deferred rather than forgotten for the third session running: the inputs here are ids and two bounded strings, and `reasonMinLength` is enforced in the table where every edge can see it.
+
+**Verified — against the live database.** `scripts/probe-workflow.mts`, **34/34**, with a probe pilot, reviewer and admin, the seeded `RUH-P-03` (auto-approve) and `RUH-P-07` (not), and a real published closure:
+
+| Criterion | Result |
+|---|---|
+| Submitting with no profile / no photograph | OK — `profile_incomplete`, `photo_required` |
+| A **commercial** airframe with no serial | OK — `serial_required` |
+| A **self-built** airframe with no serial | OK — **submits**. This is the product, and it is now tested end to end |
+| A pilot approving their own drone | OK — `invalid_transition` |
+| Rejecting with a 2-character reason | OK — `reason_required` |
+| Every refusal above | OK — status still `pending`, **1** audit event total, nothing written |
+| A 20+ character rejection, then resubmission | OK — `rejectionCount` 0→1, row's reason cleared, **the old reason still in the trail** |
+| Approving | OK — Remote ID `AJN-PZJA-JTS3` issued, `registrationIssuedAt` set, expiry **exactly three years on** |
+| Expire → renew → re-approve | OK — **the same code**, back to `active` |
+| A reviewer revoking | OK — refused. An admin revoking | OK — Remote ID `suspended`, code unchanged |
+| Reinstating | OK — `active`, same code, suspension reason cleared |
+| The whole trail | OK — **9 audit events, one per transition, in order**: submitted → rejected → resubmitted → approved → expired → renewal_submitted → approved → revoked → reinstated |
+| The system edge | OK — `actorIsSystem: true`, `actorUserId: null` |
+| `actorRole` at the time | OK — and **promoting the reviewer to admin afterwards did not rewrite their old event**, which still says `reviewer` |
+| No secrets in the trail | OK — no document number, no token, in any `before`/`after`/`reason` |
+| A booking in an auto-approve zone | OK — lands `approved`, trail reads `booking.requested → booking.auto_approved` |
+| A booking in a normal zone | OK — lands `pending` |
+| **Approving a booking whose zone closed after the request** | OK — **refused** with `zone_closed_window`. Withdraw the closure and the same approval succeeds |
+| `decisionSnapshot` at approval | OK — stored, with `geometryVersion` |
+| Check-in | OK — `checkedInAt` set, status still `approved`; somebody else checking in is refused |
+| A pilot cancelling inside two hours | OK — `cancel_too_late`; an **authority** cancelling the same booking succeeds; the pilot cancelling two days out succeeds |
+| A refused decision | OK — no status change, **no audit event, no notification** |
+| Three no-shows in 90 days | OK — auto-approve off; at **91 days it is back on** with nothing reset |
+| `audit.ts` update/delete path | OK — the module has neither |
+
+- **Rule 11 was probed, not assumed**: a `.set({ status: … })` in `src/lib/data/` errors, and the four workflow files lint clean.
+- **Seven mutations run, all seven caught**: an admin no longer inheriting `reviewer`; a null actor id matching a null owner; the reason not being trimmed; a reviewer allowed to revoke; the registration counted in 365-day years; the cancel window becoming exclusive; and the system being handed the `owner` kind.
+- **The three-year check in the probe is self-referential** — it compares the stored column against the same function that wrote it. `rules.test.ts` is what actually pins the meaning, against written-out dates: 2026-08-17 → 2029-08-17, and the naive `3 × 365 × 86_400_000` lands on 2029-08-**16**, one leap day short.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (546), `pnpm test` (509), `pnpm build` — all green.
+- **Every probe row deleted afterwards.** `audit_event` and `notification` are back to **0**; the owner account and the 12 seeded zones are untouched.
+
+**Not verified:**
+- **No page calls any of this.** Thirteen new server actions, none driven over HTTP — F18 owns the registration UI and F22 the review queues. Same standing gap as F07's, F09's, F11's and F13's actions, and it is now the largest one in the build.
+- **No email was sent by any of it.** `approveDroneAction` sends `drone/approved` and the F08 job renders the QR and mails the pilot, but Inngest was not running during this probe and no key exists — so "a reviewer approves and the pilot gets an email with a QR" is proven in two halves that have never been run as one.
+- **`droneApprovedEvent` and `droneRevokedEvent` are sent from the actions, and the actions were never called.** The event payloads are typed, and the jobs were exercised by F08 against hand-triggered events; the seam between them is structural.
+- **Nothing rendered.** No Arabic, no browser, no console check. Open threads 11 and 20 stand untouched.
+- **Concurrency on a decision.** Two reviewers approving the same drone simultaneously was not staged; the argument is `select … for update` plus `already_applied`, the same one F08 made.
+
+**Next session should know (F15, and Wave 6):**
+- **F15 owns the notification read surfaces.** Every writer already exists and every row stores `type` + `params` — including `zoneAr`/`zoneEn` pairs, which the renderer must collapse to the catalogue's single `{zone}`.
+- **Three notification types have no read surface yet**: `droneRevoked`, `droneReinstated`, `bookingRejected` were added this session.
+- **F18 calls `submitDroneAction`**, and must call `deleteDroneFiles` before deleting a drone (F07's note still stands).
+- **F22 calls the six decision actions** and should decide whether it wants a four-eyes rule — an admin can currently approve their own registration, which is deliberate and documented.
+- **`booking.auto_approved` fires inside `createBookingWithSeat`.** If F21 wants a "your booking is confirmed" screen, `createBookingAction` already returns `approved: boolean`.
 
 ---
 

@@ -6,6 +6,7 @@ import { db, type DbExecutor } from "@/lib/db";
 import { booking } from "@/lib/db/schema";
 import { SEAT_HOLDING_STATUSES } from "@/lib/data/booking";
 import { uniqueViolationConstraint } from "@/lib/remote-id/issue";
+import { autoApproveBooking } from "@/lib/workflow/booking";
 import type { AirspaceDecision } from "@/lib/airspace/types";
 
 /**
@@ -52,6 +53,14 @@ export type CreateBookingInput = {
   decisionSnapshot: AirspaceDecision;
   actor: Actor;
   /**
+   * Set when the zone auto-approves **and** this pilot is still eligible for
+   * the fast path. The approval then happens in **this** transaction, as a real
+   * transition with an actor and an audit event — never as an `approved` value
+   * slipped into the insert, which would put a status in the database that
+   * nothing in the trail accounts for.
+   */
+  autoApprove?: { zoneNameAr: string; zoneNameEn: string };
+  /**
    * The seat picker, injectable **only so the retry ceiling can be executed**.
    * Every caller in the app uses the default; a probe hands in one that keeps
    * returning a taken seat, which is the only way to reach the `capacity + 1`
@@ -66,7 +75,7 @@ export type CreateBookingInput = {
 };
 
 export type CreateBookingResult =
-  | { ok: true; bookingId: string; seatIndex: number }
+  | { ok: true; bookingId: string; seatIndex: number; approved: boolean }
   /** Every seat is held. The caller answers with alternatives, never an error. */
   | { ok: false; reason: "slot_full" }
   /**
@@ -175,7 +184,24 @@ async function claim(
       },
     });
 
-    return { ok: true, bookingId, seatIndex };
+    /**
+     * Auto-approval rides inside the same transaction as the claim. If it
+     * fails, the booking fails with it — a seat held by a booking whose
+     * approval rolled back is a seat nobody can see and nobody can use.
+     */
+    let approved = false;
+    if (input.autoApprove) {
+      const decided = await autoApproveBooking(tx, {
+        bookingId,
+        actor: input.actor,
+        decision: input.decisionSnapshot,
+        zoneNameAr: input.autoApprove.zoneNameAr,
+        zoneNameEn: input.autoApprove.zoneNameEn,
+      });
+      approved = decided.ok;
+    }
+
+    return { ok: true, bookingId, seatIndex, approved };
   }
 
   /**

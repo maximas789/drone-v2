@@ -16,17 +16,27 @@ import type {
   Reason as AirspaceReason,
   Slot,
 } from "@/lib/airspace/types";
+import type { Actor } from "@/lib/audit";
 import { getSession } from "@/lib/auth-guards";
 import { createBookingWithSeat } from "@/lib/booking/create";
+import { db } from "@/lib/db";
 import {
   deriveSlots,
   findAlternativeSlots,
   slotStates,
 } from "@/lib/booking/slots";
-import { listSlotUsage } from "@/lib/data/booking";
+import { getBookingById, listSlotUsage } from "@/lib/data/booking";
 import { getRemoteIdForDrone } from "@/lib/data/drone";
+import { autoApproveEligible } from "@/lib/data/pilot";
 import { enforceLimit } from "@/lib/rate-limit";
-import { roleOf } from "@/lib/session";
+import { isReviewer, roleOf, type Session } from "@/lib/session";
+import {
+  approveBooking,
+  cancelBookingByAuthority,
+  cancelBookingByPilot,
+  checkInBooking,
+  rejectBooking,
+} from "@/lib/workflow/booking";
 
 /**
  * The booking surface. `listSlots` fills the picker; `createBooking` claims a
@@ -35,14 +45,11 @@ import { roleOf } from "@/lib/session";
  * The guard is repeated in each **on purpose**: an action is an ordinary POST
  * to a URL, and whatever layout guarded the page it was rendered on never runs.
  *
- * **`cancelBooking` and `checkInBooking` are not here.** Both are status
- * changes, and rule 11 puts every status change behind `applyTransition` — but
- * `transitions.ts` holds only the four *system* edges, and `apply.ts` maps only
- * the `"system"` actor. Adding the human edges and the role branch is F14's
- * central deliverable, and half-building it here is exactly the drift that
- * would give the app two state machines. Cancelling still frees a seat the
- * moment the status changes, because the unique index is partial — that is a
- * property of the schema, not of the missing action.
+ * **F14 completed this file.** F13 shipped only `listSlots` and `createBooking`,
+ * because cancelling, checking in and deciding are all status changes and
+ * `transitions.ts` held nothing but the four system edges. It now holds every
+ * human edge, and `apply.ts` resolves `owner` from the locked row — so the rest
+ * of the lifecycle lives here.
  */
 
 const MAX_ALTITUDE_M = 10_000;
@@ -132,6 +139,8 @@ export type CreateBookingActionInput = {
 export type BookingCreated = {
   bookingId: string;
   seatIndex: number;
+  /** True when the zone auto-approves and the pilot is still eligible for it. */
+  approved: boolean;
   decision: AirspaceDecision;
 };
 
@@ -232,6 +241,20 @@ export async function createBookingAction(
   const remoteId = await getRemoteIdForDrone(session, input.droneId);
   if (!remoteId) return { ok: false, reasons: [{ code: "no_remote_id" }] };
 
+  /**
+   * Two conditions, both required. The **zone** says no human is needed here;
+   * the **pilot** has not repeatedly taken a slot and failed to turn up. A zone
+   * that trusts everybody plus a pilot who no-shows weekly is how capacity gets
+   * burned by nobody flying.
+   *
+   * `needs_review` from the engine already means `autoApprove: false`, so the
+   * decision's own status is the zone half of this test.
+   */
+  const eligible =
+    decision.status === "allowed" &&
+    zone.autoApprove &&
+    (await autoApproveEligible(session, session.user.id, now));
+
   const claimed = await createBookingWithSeat({
     pilotUserId: session.user.id,
     droneId: input.droneId,
@@ -244,11 +267,10 @@ export async function createBookingAction(
     purposeNote: input.purposeNote?.trim().slice(0, MAX_TEXT_LENGTH) || null,
     plannedAltitudeM: altitude,
     decisionSnapshot: decision,
-    actor: {
-      userId: session.user.id,
-      role: roleOf(session),
-      isSystem: false,
-    },
+    actor: actorFrom(session),
+    autoApprove: eligible
+      ? { zoneNameAr: zone.nameAr, zoneNameEn: zone.nameEn }
+      : undefined,
   });
 
   if (!claimed.ok) {
@@ -279,9 +301,180 @@ export async function createBookingAction(
     data: {
       bookingId: claimed.bookingId,
       seatIndex: claimed.seatIndex,
+      approved: claimed.approved,
       decision,
     },
   };
+}
+
+// --- the rest of the lifecycle -------------------------------------------
+
+const MAX_REASON_LENGTH = 2_000;
+
+/**
+ * The pilot cancelling their own slot. Refused inside the last two hours — a
+ * cancellation ten minutes before the window is a no-show with better manners,
+ * and somebody else could have flown.
+ */
+export async function cancelBookingAction(
+  bookingId: string,
+  reason?: string | null,
+): Promise<ActionResult<{ status: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("booking.create", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  // Not yours, or not there — one answer, so a refusal cannot be used to work
+  // out which. Ownership is re-checked against the locked row by `apply.ts`.
+  if (!(await getBookingById(session, bookingId))) return refuse("not_found");
+
+  const outcome = await db.transaction((tx) =>
+    cancelBookingByPilot(tx, {
+      bookingId,
+      actor: actorFrom(session),
+      reason: reason?.slice(0, MAX_REASON_LENGTH) ?? null,
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePath("/[locale]/bookings", "page");
+  return { ok: true, data: { status: outcome.to } };
+}
+
+/**
+ * Check-in. **Sets `checkedInAt` and changes no status** — the closeout job
+ * reads that column hours later to decide `completed` versus `no_show`.
+ */
+export async function checkInBookingAction(
+  bookingId: string,
+): Promise<ActionResult<{ checkedInAt: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("booking.create", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  if (!(await getBookingById(session, bookingId))) return refuse("not_found");
+
+  const outcome = await db.transaction((tx) =>
+    checkInBooking(tx, { bookingId, actor: actorFrom(session) }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePath("/[locale]/bookings", "page");
+  return { ok: true, data: { checkedInAt: outcome.checkedInAt.toISOString() } };
+}
+
+/**
+ * A reviewer approving a request — which **re-runs `evaluateAirspace`** inside
+ * the approving transaction. A booking whose zone closed after the request was
+ * made is refused with the reasons that changed, not waved through.
+ */
+export async function approveBookingAction(
+  bookingId: string,
+): Promise<ActionResult<{ status: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("review.decide", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const outcome = await db.transaction((tx) =>
+    approveBooking(tx, { bookingId, actor: actorFrom(session) }),
+  );
+
+  if (!outcome.ok) {
+    // The airspace answer is worth more than the refusal code alone: it says
+    // *what changed* since the pilot asked.
+    return outcome.reason === "no_longer_authorised" && outcome.reasons
+      ? { ok: false, reasons: outcome.reasons }
+      : refuse(outcome.reason);
+  }
+
+  revalidatePath("/[locale]/admin", "page");
+  return { ok: true, data: { status: outcome.to } };
+}
+
+/** A reviewer refusing one. Reason required, at least 20 characters. */
+export async function rejectBookingAction(
+  bookingId: string,
+  reason: string,
+): Promise<ActionResult<{ status: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("review.decide", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const outcome = await db.transaction((tx) =>
+    rejectBooking(tx, {
+      bookingId,
+      actor: actorFrom(session),
+      reason: reason.slice(0, MAX_REASON_LENGTH),
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePath("/[locale]/admin", "page");
+  return { ok: true, data: { status: outcome.to } };
+}
+
+/** An authority taking a slot away, at any time, with a reason. */
+export async function cancelBookingByAuthorityAction(
+  bookingId: string,
+  reason: string,
+): Promise<ActionResult<{ status: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("review.decide", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const outcome = await db.transaction((tx) =>
+    cancelBookingByAuthority(tx, {
+      bookingId,
+      actor: actorFrom(session),
+      reason: reason.slice(0, MAX_REASON_LENGTH),
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePath("/[locale]/admin", "page");
+  revalidatePath("/[locale]/bookings", "page");
+  return { ok: true, data: { status: outcome.to } };
+}
+
+/**
+ * The role is captured **at the time of the act**. A reviewer later promoted to
+ * admin must not retroactively appear to have acted as one.
+ */
+function actorFrom(session: Session): Actor {
+  return { userId: session.user.id, role: roleOf(session), isSystem: false };
 }
 
 /**

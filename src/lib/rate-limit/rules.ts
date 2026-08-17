@@ -76,6 +76,14 @@ export const LIMITS = {
   "airspace.check": [{ window: MINUTE, max: 60 }],
   /** A reveal is a serious act. A burst of them is a signal, not traffic. */
   "identity.reveal": [{ window: HOUR, max: 20 }],
+  /**
+   * Not in F09's table — added by F14, which built the decision actions.
+   *
+   * Generous, because a reviewer working down a morning's queue is normal
+   * traffic and the limit exists for the other case: a compromised staff
+   * account approving everything in sight before anybody notices.
+   */
+  "review.decide": [{ window: MINUTE, max: 30 }],
   "admin.lookup": [{ window: MINUTE, max: 60 }],
   /**
    * Not in F09's table — added because it is the one server action that exists

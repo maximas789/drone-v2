@@ -1,5 +1,17 @@
 import "server-only";
 
+import { and, eq, gte, isNotNull, lte } from "drizzle-orm";
+import type { DbExecutor } from "@/lib/db";
+import {
+  booking,
+  drone,
+  pilotProfile,
+  remoteId,
+  remoteIdDeclaration,
+  zone,
+  zoneClosure,
+  zoneHour,
+} from "@/lib/db/schema";
 import {
   countMyBookingsInWindow,
   listMyBookedSlotStarts,
@@ -214,6 +226,135 @@ export async function pilotContextFor(session: Session): Promise<PilotContext> {
   return {
     profileComplete: Boolean(profile?.completedAt),
     identityVerified: Boolean(profile?.verifiedAt),
+  };
+}
+
+/**
+ * The context for re-evaluating a booking **at approval time**, read through
+ * the approving transaction.
+ *
+ * Two things make this different from every other builder here, and both are
+ * deliberate:
+ *
+ * 1. **It takes an executor, not a session.** A reviewer approving somebody
+ *    else's booking has no session that owns those rows, and fabricating one
+ *    would be an unauthenticated door in the module rule 8 exists to protect.
+ *    Same reasoning as F08's `src/lib/inngest/queries.ts`. It reads only; every
+ *    write still goes through `src/lib/workflow/`.
+ * 2. **It reads inside the transaction that is about to write.** Reading the
+ *    zone's hours over a different connection while holding the booking row
+ *    locked would re-introduce exactly the race the re-check exists to close.
+ *
+ * Re-running the engine here is not redundant. Hours may have changed, a
+ * closure may have been published, or the registration may have expired since
+ * the pilot asked — approving without re-checking authorises a flight against
+ * facts that are no longer true.
+ */
+export async function buildContextForBooking(
+  tx: DbExecutor,
+  bookingId: string,
+): Promise<{
+  context: AirspaceContext;
+  booking: {
+    id: string;
+    pilotUserId: string;
+    droneId: string;
+    zoneId: string;
+    slotStart: Date;
+    slotEnd: Date;
+  } | null;
+  zone: ZoneRule | null;
+}> {
+  const row = await tx.query.booking.findFirst({
+    where: eq(booking.id, bookingId),
+  });
+  if (!row) return { context: { zones: [] }, booking: null, zone: null };
+
+  const { start, end } = riyadhDayBounds(riyadhYmd(row.slotStart));
+
+  const [zoneRow] = await tx
+    .select()
+    .from(zone)
+    .where(eq(zone.id, row.zoneId))
+    .limit(1);
+  if (!zoneRow) return { context: { zones: [] }, booking: row, zone: null };
+
+  const hours = await tx
+    .select()
+    .from(zoneHour)
+    .where(eq(zoneHour.zoneId, zoneRow.id));
+  const closures = await tx
+    .select()
+    .from(zoneClosure)
+    .where(
+      and(
+        eq(zoneClosure.zoneId, zoneRow.id),
+        isNotNull(zoneClosure.publishedAt),
+        lte(zoneClosure.startsAt, end),
+        gte(zoneClosure.endsAt, start),
+      ),
+    );
+
+  const rule = toZoneRule(zoneRow, hours, closures);
+
+  const [droneRow] = await tx
+    .select()
+    .from(drone)
+    .where(eq(drone.id, row.droneId))
+    .limit(1);
+  const [remoteIdRow] = await tx
+    .select()
+    .from(remoteId)
+    .where(eq(remoteId.droneId, row.droneId))
+    .limit(1);
+  const declarations = remoteIdRow
+    ? await tx
+        .select()
+        .from(remoteIdDeclaration)
+        .where(eq(remoteIdDeclaration.remoteIdId, remoteIdRow.id))
+    : [];
+  const [profile] = await tx
+    .select()
+    .from(pilotProfile)
+    .where(eq(pilotProfile.userId, row.pilotUserId))
+    .limit(1);
+
+  return {
+    booking: row,
+    zone: rule,
+    context: {
+      zones: [rule],
+      pilot: {
+        profileComplete: Boolean(profile?.completedAt),
+        identityVerified: Boolean(profile?.verifiedAt),
+      },
+      aircraft: droneRow
+        ? {
+            droneId: droneRow.id,
+            status: droneRow.status,
+            buildType: droneRow.buildType as BuildTypeValue,
+            weightClass: droneRow.weightClass as WeightClassValue,
+            registrationExpiresAt: iso(droneRow.registrationExpiresAt),
+            remoteIdStatus: remoteIdRow?.status ?? null,
+            declarations: declarations.map(
+              (declaration): DeclarationWindow => ({
+                verifiedAt: iso(declaration.verifiedAt),
+                rejectedAt: iso(declaration.rejectedAt),
+                supersededAt: iso(declaration.supersededAt),
+                validFrom: iso(declaration.validFrom),
+                validUntil: iso(declaration.validUntil),
+              }),
+            ),
+          }
+        : null,
+      /**
+       * **No availability, no busy slots, no daily count.** This booking
+       * already holds its seat — feeding its own row back in would have it
+       * refuse itself with `slot_full` and `duplicate_booking`. Capacity was
+       * decided by the unique index when the seat was claimed, and no later
+       * decision can take it away.
+       */
+    },
   };
 }
 

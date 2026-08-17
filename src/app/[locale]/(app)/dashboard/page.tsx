@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth-guards";
+import { getMyProfile } from "@/lib/data/pilot";
 import { toLocale } from "@/lib/locale";
 import { isReviewer, roleOf } from "@/lib/session";
 
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
   const session = await requireUser(locale);
   const t = await getTranslations();
   const role = roleOf(session);
+  const profile = await getMyProfile(session);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
@@ -54,6 +56,23 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">
           <Badge variant="secondary">{t(`roles.${role}`)}</Badge>
+          {/**
+           * F17 gave the profile a page, so there is finally somewhere to send
+           * a pilot. Incomplete goes to the wizard with a `?next=` back to the
+           * details page; complete goes straight to the details.
+           */}
+          <ButtonLink
+            variant="outline"
+            href={
+              profile?.completedAt
+                ? "/settings/profile"
+                : "/profile/complete?next=/settings/profile"
+            }
+          >
+            {profile?.completedAt
+              ? t("nav.profile")
+              : t("profile.completeItNow")}
+          </ButtonLink>
           {isReviewer(session) ? (
             <ButtonLink variant="outline" href="/admin">
               {t("nav.admin")}
@@ -61,6 +80,10 @@ export default async function DashboardPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {profile?.completedAt ? null : (
+        <p className="border-s-2 ps-3 text-sm">{t("profile.incompleteBanner")}</p>
+      )}
 
       <p className="text-muted-foreground text-sm">
         {t("dashboard.placeholder")}

@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | ⬜ Not started |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Session 14).** F17 done with deviations; F16, F18–F21 not started. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -104,13 +104,12 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | # | Thread | Raised in | Blocks |
 |---|---|---|---|
 | 1 | `.env` values the user must supply: `RESEND_API_KEY`, `BLOB_READ_WRITE_TOKEN`, Inngest keys. All optional — the app must work without them, and as of F07/F08 it demonstrably does: local storage driver, terminal email, `isDev` Inngest. The cost is that the **production** driver of each is unexecuted code. | Planning | Nothing; degraded paths are specified and exercised |
-| 2 | `ID_HASH_PEPPER` and `RATE_LIMIT_PEPPER` must be generated once and never regenerated — changing the pepper orphans every existing hash. `.env` currently holds only `POSTGRES_URL` — no pepper has been generated yet, so F09/F17 are the ones that create them. | Planning | F17, F09 |
+| 2 | ~~`ID_HASH_PEPPER`~~ and ~~`RATE_LIMIT_PEPPER`~~ — **both generated, both in `.env`** (F09 and Session 14). Kept as a standing warning, not a task: **neither can ever be rotated.** `RATE_LIMIT_PEPPER` orphans every `audit_event.ipHash`; `ID_HASH_PEPPER` orphans every `pilot_profile.id_document_hash`, and since that column is UNIQUE, "one person, one profile" silently stops holding for everybody who registered before the change. | Planning | Nothing — but never regenerate |
 | 3 | Something else on this machine already occupies **port 3000** (it serves a next-intl app that 307s to `/ar` — not this project). `pnpm dev` fell through to 3001. Any URL, QR or `APP_URL` written assuming 3000 will point at the wrong app. | F01 | F19, F29 |
 | 4 | **`next/root-params` does not work in Server Actions or Route Handlers.** `src/i18n/request.ts` honours an explicit `locale` first, so any action needing translated text must call `getTranslations({ locale, ... })` with the locale passed in (e.g. bound into the action). An action that calls bare `getTranslations()` will throw at runtime, not at build. | F02 | F14, F18, F21, F22 — every wave with server actions |
 | 11 | **Nothing in `pnpm lint` / `typecheck` / `build` / `test` catches a rendering defect.** F15 is the second proof: a duplicated locale switcher and sign-out button rendered on `/dashboard` with all five checks green, and was found by opening the page. Earlier: Base UI's `nativeButton` warning had been firing on F02's home page since Wave 1 and every check stayed green; the user found it by opening the page. **F06 opened three pages in Chrome and found them clean**, so the thread is no longer untouched — but it is still a manual pass with no automation behind it, and every other route is unopened. F31's gate needs a real browser pass, and F20/F23 (MapLibre, terra-draw) are the likeliest to hit this again. | F05 | F31, and every UI wave |
 | 12 | **`BETTER_AUTH_URL` must equal the origin the app is actually served from**, or every auth POST is refused with `INVALID_ORIGIN` — sign-in included. Found by serving the production build on a different port. It is the same class of failure as the `APP_URL` QR trap and fails just as silently in a browser. F29's system page should check it. | F05 | Deployment, F29 |
 | 16 | **A dev-mode 404 embeds a stack trace naming the guard** (`requireReviewer`, absolute file path) in its RSC payload; the production build does not. So the "404, not a stack trace" criterion is **only meaningful against `next start`**. F31 must run its route checks against a production serve, never `next dev`. | F05 | F31 |
-| 13 | **`requirePilotProfile` redirects to `/profile/complete`, which does not exist yet** (F17 builds it). Nothing calls the guard today, so nothing 404s; F17 must build that page or the first caller sends pilots into a dead end. | F05 | F17 |
 | 14 | **`drone.owner_user_id` and `booking.pilot_user_id` are `ON DELETE RESTRICT`**, so deleting an account that holds registered aircraft or bookings is refused by the database — while `deleteUser` is enabled in `src/lib/auth.ts`. Deliberate: a registration record is not personal data to take away. **F28 owns the consequence** and must offer a real path (revoke, or transfer) instead of a raw delete that errors. | F05 | F28 |
 | 35 | **`drone_report` has no triage columns and no reviewer queue.** Reports are written, audited and listed on `/admin` newest-first, but there is no "handled" state, no assignment and no way to close one. Deliberate — an enum member nothing writes is a lie about what the app does — so **F22 owns adding whatever its queue needs**. | F11 | F22 |
 | 36 | **`viewerLevelFor` was never exercised with a reviewer who is also the drone's owner.** Staff wins by the order of the checks, so such a person sees the staff branch and their own reveal control; no row like that has ever existed. Worth a deliberate case when F22 gives reviewers aircraft. | F11 | F22, F31 |
@@ -133,11 +132,13 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
 | 37 | **A booking has no launch point, so no-fly overlays are not resolved at booking time.** `createBookingAction` evaluates with `AirspaceQuery.zoneId` because the booking form picks a zone, not a coordinate, and `booking` has no lat/lng column. A permitted zone overlapping a no-fly zone would therefore be bookable at the overlap — the *map* resolves it (point query), the booking does not. The seeded `RUH-P-01` and `RUH-NF-KKIA` touch in a ~50 m sliver, so this is not hypothetical. **Either F23 refuses to publish an overlapping permitted zone, or F21 sends the launch point and the schema grows a column for it.** | F12/F13 | F21, F23 |
 | 38 | **The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.** A zone with `nightAllowed: false` therefore refuses its own first slot for part of the year — the engine is right (you may not fly before sunrise) but the hours and the rule disagree, and F21's picker will show slots that are always refused. `slotStates` has no `night` state to grey them with, deliberately: F13's state table has five members and inventing a sixth here would put sun maths in the slot grid. **F21 or F23 owns the reconciliation.** | F12/F13 | F21, F23 |
-| 40 | **None of F12/F13/F14's server actions has been driven over HTTP** — **19** of them now. No page calls any: F18 owns registration, F20 the map, F21 booking, F22 the queues. Tested and probed, never posted at with a real session cookie. The largest standing gap in the build. | F12/F13/F14 | F18, F20, F21, F22, F31 |
+| 40 | **Most server actions have still never been driven over HTTP** — 21 exist. **Session 14 broke the drought**: F17's two were driven from a real browser session *and* POSTed at directly with no cookie (both refused `unauthorized`). The other 19 remain untouched — F18 owns registration, F20 the map, F21 booking, F22 the queues. Still the largest standing gap. | F12/F13/F14 | F18, F20, F21, F22, F31 |
 | 41 | **"A reviewer approves and the pilot gets an email with a QR" has never run as one flow.** `approveDroneAction` sends `drone/approved`; F08's `qr-render` job renders and mails. Both halves are proven — the job against hand-triggered events, the action against the database — but Inngest was not running during F14's probe and no Resend key exists, so the seam between them is structural. | F14 | F31 |
 | 42 | **An admin can approve their own drone.** Staff hold `owner` and `admin` at once, deliberately, so that staff can use the app as pilots; the cost is no segregation of duties on a decision. It also cannot be blocked in this build, where the only admin is the only account. **F22 owns a four-eyes rule** if it wants one. | F14 | F22 |
 | 43 | **`notification.emailLogId` is wired on the approval path only.** `linkNotificationEmail` matches on `(userId, entityId)` and `qr-render` calls it after sending. The expiry sweep, the booking reminders and the closure fan-out all send email beside a notification and do not link it, so F29's "why didn't that email arrive?" answers for approvals and shrugs for the rest. | F15 | F29 |
 | 44 | **375 px works through a same-origin iframe, and only that way.** `resize_window` reports success and leaves the viewport at 1440 — six attempts across five sessions. The technique that works: inject an `iframe` 375 px wide pointing at the page, whose media queries evaluate at its own width, then measure `scrollWidth` vs `clientWidth` inside it. **F31's gate must use this**, not the tool. | F15 | F31, every UI wave |
+| 45 | **A reviewer has no way to reveal a pilot's identity document.** F11's `revealIdentityAction` keys on a **Remote ID code** and resolves through `getRemoteIdRecordByCode`, so a reviewer opening a *pilot profile* — which need not have a drone at all — has nothing to call. F17 built no reviewer surface by design. **F22 must either widen that action to take a profile id or add a sibling**, and whichever it does, the audit event must still be written *before* the value is returned. | F17 | F22 |
+| 46 | **`<input type="date">` is unusable in this app.** Chrome renders it from the **browser's** locale and ignores `lang` on the element and on `<html>` — proven by setting both. Under an Arabic Chrome it prints `٠٤/٠٥/٢٠١٢` and a reversed `ةنس/رهش/موي` placeholder, which is rule 6 broken through a surface `format.ts` cannot reach. `DateOfBirthInput` (three selects) is the pattern. **Native `required` is banned for the same class of reason**: it cancels the submit and speaks the browser's language, so the app's bilingual refusal never runs. Both found by opening the page. | F17 | F18, F21, F23, F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -223,10 +224,10 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-17 (F15) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
-| `pnpm lint` | 2026-08-17 (F15) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
-| `pnpm build` | 2026-08-17 (F15) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
-| `pnpm i18n:check` | 2026-08-17 (F15) | ✅ **556 keys**, ar/en in sync |
+| `pnpm exec tsc --noEmit` | 2026-08-17 (F17) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-17 (F17) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
+| `pnpm build` | 2026-08-17 (F17) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build; F17's `/[locale]/profile/complete` and `/[locale]/settings/profile` build **dynamic** |
+| `pnpm i18n:check` | 2026-08-17 (F17) | ✅ **632 keys**, ar/en in sync (556 at F15) |
 | `pnpm db:up` + `db:migrate` | 2026-08-17 (F11) | ✅ `0004_broken_the_initiative` applied — `remote_id_scan`, `drone_report`, `remote_id_viewer_level`. **SQL read in full**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.** |
 | Remote ID codec, issuance, declarations | 2026-08-17 (F10) | ✅ against the live database — 100 000-code alphabet and duplicate checks, forced collision, five-collision throw, renewal keeping the code, suspension/reactivation, the module-claim transfer. See the session entry |
 | Scan page + JSON twin at four viewer levels | 2026-08-17 (F11) | ✅ over HTTP — anonymous **12 keys**, owner 28, reviewer 29; the full national ID appears in no payload at any level |
@@ -237,7 +238,7 @@ What has actually been **run**, not what was written. F31 reads this.
 | A decision driven over HTTP | — | ❌ **not run.** 19 server actions now exist and no page calls any of them |
 | Approval → QR → email, as one flow | — | ❌ **never run as one.** The action sends the event and F08's job was proven separately; Inngest was not running during F14's probe |
 | Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
-| `pnpm test` | 2026-08-17 (F15) | ✅ **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm test` | 2026-08-17 (F17) | ✅ **568 passed, 25 files** (48 new: the Saudi ID checksum, the mobile normaliser, the profile validators, the open-redirect guard, and a **source scan** asserting the mask exists in one file and no page renders a raw document number; **12 mutations run, all 12 caught** — one initially "survived" and turned out to be a mis-aimed mutation, not a gap). Earlier: **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -249,9 +250,12 @@ What has actually been **run**, not what was written. F31 reads this.
 | Email — real delivery | — | ❌ **not run.** Needs a Resend account; `providerMessageId` has never held a real value. |
 | Rate limiting — layer 2 | 2026-08-16 (F09) | ✅ against the live database: burst, daily, two-scope isolation, IP independence, no raw IPs, the generous map limit, and the sweep. Every probe row deleted after. |
 | Rate limiting — layer 1 | 2026-08-16 (F09) | ✅ 5 sign-up attempts through, **6th and 7th HTTP 429**. Run with a 1-char password so no account was created (`user` still 0), counters deleted afterwards. |
-| Rate limiting — direct action POST | — | ❌ **still not run.** The owner has an account now, but the test needs their session cookie and that is not something to lift out of their browser. |
+| Rate limiting — direct action POST | — | ❌ **still not run.** F17 proved a *signed-out* direct POST is refused, but tripping a limit through one still needs the owner's session cookie, which is not something to lift out of their browser. |
 | Sign-up sends its verification email | 2026-08-16 (F09 session) | ✅ **after a fix.** It did not, until the owner's real sign-up exposed it — see the Session 7 addendum. |
 | Owner account | 2026-08-17 | ✅ one user, `admin`, `preferred_locale = ar`. Three probe accounts were created and deleted while chasing the bug above; `user` is back to that one row, `email_log` and `rate_limit` emptied, the 12 seeded zones untouched. **Re-confirmed after F10/F11:** every probe row from that session deleted too — `drone`, `remote_id`, `remote_id_scan`, `drone_report`, `pilot_profile`, `audit_event` and `email_log` all back to 0. |
+| F17 profile flow, in Chrome + against the live database | 2026-08-17 (F17) | ✅ wizard end to end in Arabic, the `?next=` return journey, the duplicate-document refusal against a probe account, `verifiedAt` cleared by an identity change, the rejection banner, the owner seeing `•••••4967`, and the audit trail carrying only the mask. Console clean. Every probe row deleted |
+| **A server action POSTed directly, no session** | 2026-08-17 (F17) | ✅ **first time in this build.** Both F17 actions answered `{"ok":false, reasons:[{code:"unauthorized"}]}`. Closes half of thread 40 and the whole of F09's "direct action POST" gap for these two |
+| 375 px, Arabic, via the iframe | 2026-08-17 (F17) | ✅ `scrollWidth === clientWidth`, no overflowing element, the three date selects on one row. `resize_window` not used — thread 44 |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
@@ -283,6 +287,93 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 14 — Wave 6 · F17 Pilot Profile
+
+**Date:** 2026-08-17
+**Status:** ⚠️ done with deviations · **Open thread 13 is closed** — `/profile/complete` exists.
+
+**The session that finally posted at a server action.** Four real defects were found by opening the page, three of them invisible to every check this repo runs, and two of them were caused by the *browser* rendering something the app does not control.
+
+**Built:**
+- `src/lib/validation/` — `saudi-id.ts`, `mobile.ts`, `profile.ts`. **All three pure**, same split as `airspace/evaluate.ts` and `rate-limit/rules.ts`, so the wizard runs the identical checks the server runs. Tests: `saudi-id.test.ts`, `mobile.test.ts`, `profile.test.ts`, `id-exposure.test.ts`, plus `src/lib/url.test.ts`. Suite now **568 across 25 files**.
+- `src/lib/id-hash.ts` — `sha256(ID_HASH_PEPPER + number)`, mirroring `ip-hash.ts` and throwing rather than falling back.
+- `src/lib/actions/profile.ts` — `saveIdentityAction`, `saveContactAction`. `profile.save` added to `LIMITS`.
+- `src/lib/url.ts` grew `isInternalPath`; `requirePilotProfile(locale, next?)` now builds `?next=`.
+- `/[locale]/(app)/profile/complete` and `/[locale]/(app)/settings/profile`.
+- `src/components/profile/` — `wizard`, `step-name`, `step-identity`, `step-contact`, `field`, `masked-id`, `verification-status`, `profile-editor`, `date-of-birth-input`. Plus `src/components/ui/select.tsx` (a native `<select>`).
+- `format.ts` grew `formatMonthName` and `formatYear`. Catalogue **632 keys** (+76).
+- The dashboard links to the profile and shows the incomplete banner.
+
+**`ID_HASH_PEPPER` is generated and in `.env`** — thread 2's F17 half is closed. `.env.example` already held the placeholder. **It can never be rotated.**
+
+**Deviations, each with its reason:**
+- **Steps 1 and 2 are saved as one write.** `id_document_number` and `id_document_hash` are NOT NULL, so a row holding a name and no document cannot exist — and loosening those columns so a wizard could save half an identity would weaken a regulator-facing record for the sake of a form. Three panes, two writes. The UI only claims a step is saved where it is.
+- **`0501234567` is normalised, not rejected.** F17's criterion lists it as rejected; the criterion is about the *stored* format, which is still `+9665…`. Refusing the way almost every Saudi pilot writes their own number would fail them for being right. `+14155551234` is still refused and is **never** rewritten into a Saudi number. Feature file corrected.
+- **The identity number is normalised from Arabic-Indic and Persian digits.** An Arabic-first app whose ID field refuses `٠١٢` would be absurd. Load-bearing, not cosmetic: `id_document_hash` is UNIQUE over the normaliser's output, so two spellings that normalised differently would be two profiles for one person.
+- **The document type is checked against the number, not derived from it.** A mistyped first digit would otherwise silently rewrite the claim the pilot made about their own document.
+- **`gcc_id` gets a shape check and no checksum.** The app does not know another state's check digit and inventing one would refuse real documents on a guess.
+- **The stored document number is never sent to the browser** — the wizard and the edit form both open empty. That is what makes "no screen displays a full national ID" a property rather than a promise, and it is why the wizard has no Back button into pane 2 for a returning pilot.
+- **The audit trail stores the number masked**, in `before` and `after` alike. `audit.ts` says never a full national ID, and a trail carrying one would be a second copy with no reveal control in front of it and no delete path behind it.
+- **Writes live in the action, reads in `src/lib/data/pilot.ts`.** Same split F11's `revealIdentityAction` already made — the row and its audit event must commit together, and `audit()` takes the executor.
+- **Tests are colocated** (`src/lib/validation/saudi-id.test.ts`), not in `__tests__/` as the feature file says. Every other test in the repo is colocated; the log wins.
+- **No memorised "real" ID numbers in the tests.** Vectors are built by `saudiIdCheckDigit` and the *properties* are asserted — unique check digit, any single mistyped digit caught, adjacent transpositions caught. A pasted number is either a wrong recollection that pins the bug, or a real person's identity in the repo for ever. One case is worked longhand so the algorithm is pinned by something other than itself.
+- **`id-exposure.test.ts` scans the source**, the way F15's `render.test.ts` does: `•••••` must appear in exactly one file, and `idDocumentNumber` may appear under `src/app` only as `""` or as a `MaskedId` argument. F17 asked for a grep; a grep somebody ran once is a claim about that day.
+- **The rejection loop is split** — F17 renders the pilot's side (banner, reviewer's reason, and correcting the identity clears `rejectedAt` and re-queues), F22 writes it. Decided up front with the user rather than discovered half-built.
+
+**Four defects found by opening the page. None was caught by `typecheck`, `lint`, `build` or 568 tests:**
+1. **The native date input rendered `٠٤/٠٥/٢٠١٢`** — Arabic-Indic digits in the one field that becomes part of an identity record, and a reversed `ةنس/رهش/موي` placeholder. **Chrome renders `type="date"` from the browser's own locale and ignores `lang` on the element and on `<html>` alike** — proven by setting both and watching nothing change. Replaced with `DateOfBirthInput`, three native selects whose numerals go through `formatYear`/`formatNumber` and whose months go through `formatMonthName`. **This is a browser surface `format.ts` cannot reach; F18 and F21 must not reintroduce `type="date"`.**
+2. **The date component forgot its own selections.** It derived its three parts from the composed `YYYY-MM-DD`, and a partial date is the empty string — so choosing a day cleared it, choosing a month cleared it again, and the year could never complete a date. The selects looked filled and the form insisted the field was empty. Now held in local state.
+3. **Native `required` cancelled the submit** and showed the browser's own popup in the browser's language, so the app's bilingual refusals never ran. Every field now carries `aria-required`.
+4. **A dead `_RETIRED_NATIVE_DATE_INPUT` constant** left by a clumsy edit — caught by lint, unlike the other three.
+
+**Verified — over HTTP, in Chrome, against the live database:**
+
+| Criterion | Result |
+|---|---|
+| Wrong checksum | OK — `id_checksum`, distinct from a format problem |
+| A `1` number declared as an Iqama | OK — `id_type_mismatch` |
+| Nine and eleven digits | OK — `id_format` (unit) |
+| An Arabic-Indic ID and mobile | OK — `٠٥٠١٢٣٤٥٦٧` stored as `+966501234567` |
+| Under 18 | OK — refused, and 18 today is accepted (unit) |
+| Latin name in the Arabic field, and the reverse | OK — both flagged at once |
+| `+14155551234` | OK — refused, not rewritten |
+| **The duplicate document** | OK — a probe account held it; the owner got *"هذه الوثيقة مسجّلة مسبقاً"* and **nothing about who holds it**. Row unchanged, audit count unchanged — the transaction rolled back |
+| The mask, for the **owner** | OK — `•••••4967`, with the hint saying "including to you" |
+| The mask in the **audit trail** | OK — `•••••0008` in `before` and `after` |
+| `completedAt` | OK — set only when the contact half landed; trail reads created → contact_updated → completed |
+| Changing the ID number | OK — warned first, gated behind an acknowledgement, `verifiedAt` **and** `verifiedByUserId` cleared, `verification_cleared` written with reason `identity_document_changed` |
+| Changing it while **rejected** | OK — `rejectedAt` and `rejectionReason` cleared, back in the queue |
+| The rejection banner | OK — badge, date, the reviewer's own words, and the way back in |
+| `?next=` | OK — dashboard → wizard → **back to `/settings/profile`** |
+| Already complete at `/profile/complete` | OK — redirected rather than re-asking |
+| A returning half-finished pilot | OK — lands on pane 3, not pane 1 |
+| **Both actions POSTed directly, no cookie** | OK — `{"ok":false,…"unauthorized"}` from both. **The first server action in this build ever driven over raw HTTP** |
+| Arabic RTL and English LTR | OK — Arabic name RTL and English name LTR inside both pages |
+| Dates | OK — `12 أبريل 1995`, `17 أغسطس 2026`: Gregorian, Latin numerals, Arabic month names |
+| **375 px, Arabic** | OK — via the iframe (thread 44), `scrollWidth === clientWidth`, no overflowing element, the three date selects on one row. Screenshotted |
+| **Console** | OK — 3 messages, all React DevTools / `[HMR]`. Zero errors, zero warnings |
+
+- **12 mutations run, 12 caught** — including a checksum that doubles the wrong positions, a dropped tens-carry, the Arabic-Indic fold removed, the Riyadh cutoff read from the server's timezone, an exclusive age check, completeness dropping a field, `validateIdentity` returning only the first problem, the open-redirect guard losing its `//` check, a page rendering the raw number, and a second masker. One mutation initially "survived" and was **wrong**: it patched a branch the input never reaches. Re-aimed, it was caught.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (632), `pnpm test` (568), `pnpm build` — all green; both routes build dynamic.
+- **Every probe row deleted.** `pilot_profile`, `audit_event` and `rate_limit_bucket` back to **0**; the probe account gone; the owner account and the 12 seeded zones untouched. **No migration was needed** — F03 already created the table.
+
+**Not verified:**
+- **`/drones/new` does not exist** (F18), so that exact criterion could not be run. The mechanism was proven against `/settings/profile`, which is a real shipped caller of `requirePilotProfile(locale, next)` — F18 gets the second.
+- **"Pilot B cannot read pilot A's profile (404)" was not staged as a request.** There is no route that names another pilot's profile and no action that takes a user id — both act on the session's own row — so the isolation is structural rather than a check that ran. **F22 builds the surface where a reviewer reads somebody else's profile, and that is where this needs a real test.**
+- **The reveal control is not built.** F11's `revealIdentityAction` keys on a **Remote ID code**, not a profile id, so a reviewer opening a pilot profile has nothing to call — see the new thread 45. F17 has no reviewer surface at all, by the scoping decision.
+- **`verifiedAt` and `rejectedAt` were seeded by hand.** No reviewer wrote either; F22 owns that.
+- **The owner's profile was deleted after testing**, so the app has no pilot profile at all right now. It was filled with a *fabricated* identity number and leaving that on their real account would be a lie in the one record this feature exists to keep honest.
+- **No screen reader**, and **English at 375 px** was not checked — only Arabic, the harder direction.
+
+**Next session should know:**
+- **Never use `<input type="date">`.** Chrome renders it from the browser's locale and ignores every language hint the page can give. `DateOfBirthInput` is the pattern; `formatMonthName` and `formatYear` are in `format.ts` for it.
+- **Never use the native `required` on a form field.** It cancels the submit and speaks the browser's language, not the reader's.
+- **F18 calls `requirePilotProfile(locale, "/drones/new")`** and gets the return journey for free.
+- **`maskIdDocument` is still the only masker**, and `id-exposure.test.ts` now fails if a second one appears or if a page renders the raw column.
+- **The wizard and the settings page share `StepName`/`StepIdentity`/`StepContact`.** A field added to one appears in both, which is the point.
 
 ---
 

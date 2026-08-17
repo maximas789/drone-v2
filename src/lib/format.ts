@@ -169,6 +169,38 @@ export function riyadhWeekday(date: Date): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
 
 // --- Numbers and units ----------------------------------------------------
 
+/**
+ * `مارس` / `March` — a standalone month name.
+ *
+ * For a date assembled from three separate controls, where there is no instant
+ * to format yet because the person has only chosen the month so far. F17's date
+ * of birth needs it: a native `type="date"` input renders from the **browser's**
+ * locale, not the page's, so on a Chrome set to Arabic it prints `٠٤/٠٥/٢٠١٢`
+ * whatever the markup says — Arabic-Indic digits in a field that becomes part of
+ * a regulator-facing record. Building the control ourselves is the only way the
+ * rule this module exists to enforce reaches it.
+ *
+ * The year is arbitrary and never rendered; only the month is read out of it.
+ * Noon UTC so the +3 civil day cannot slip to the previous month.
+ */
+export function formatMonthName(month: number, locale: Locale): string {
+  return dateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, month - 1, 15, 12)),
+  );
+}
+
+/**
+ * `1995`, never `1,995`.
+ *
+ * A year is a label, not a quantity, so it takes no thousands separator —
+ * `formatNumber` would group it. Separate from `formatNumber` rather than a flag
+ * on it, because "is this a year" is a question the call site can answer and the
+ * formatter cannot.
+ */
+export function formatYear(year: number, locale: Locale): string {
+  return numberFormat(locale, { useGrouping: false }).format(year);
+}
+
 export function formatNumber(value: number, locale: Locale): string {
   return numberFormat(locale, { maximumFractionDigits: 2 }).format(value);
 }

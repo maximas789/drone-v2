@@ -44,6 +44,20 @@ export const LIMITS = {
   ],
   /** Stops queue flooding. */
   "drone.submit": [{ window: HOUR, max: 5 }],
+  /**
+   * Not in F09's table — added by F17, which built the profile actions.
+   *
+   * The reason is **not** flooding: it is that a duplicate identity number is
+   * refused by a unique index, so this action is the one place in the app where
+   * a caller can ask "is this national ID already registered?" one number at a
+   * time. The answer is deliberately vague, but a limit is what stops it being
+   * enumerable at all. Generous enough that somebody correcting a typo, then
+   * their date of birth, then their mobile never notices it.
+   */
+  "profile.save": [
+    { window: MINUTE, max: 5 },
+    { window: HOUR, max: 30 },
+  ],
   /** Storage cost. */
   "drone.photo": [{ window: HOUR, max: 20 }],
   /** Matches `drone.photo` — the same bytes arrive either way. */

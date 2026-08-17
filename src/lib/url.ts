@@ -21,6 +21,31 @@ export function absoluteUrl(path: string): string {
 }
 
 /**
+ * Whether a `?next=` may be redirected to. **Pure**, so the guard that builds
+ * the parameter and the page that consumes it share one definition of
+ * "internal" — two of them is how one ends up wrong.
+ *
+ * **An open redirect is the hazard.** `?next=https://evil.example` on a URL the
+ * app itself hands out is a phishing primitive: the victim checks the domain,
+ * sees ours, and lands somewhere else. Only a path is accepted, and `//host`
+ * and `/\host` are rejected because a browser reads both as protocol-relative
+ * and would leave the site entirely.
+ *
+ * A locale prefix is rejected too: next-intl's `Link` and `redirect` add one, so
+ * `/ar/drones/new` would become `/ar/ar/drones/new` and 404. Callers name the
+ * unprefixed route, as every other stored `href` in this codebase does — F15
+ * deleted `localeHref` and wrote a test for exactly this.
+ */
+export function isInternalPath(candidate: string): boolean {
+  return (
+    candidate.startsWith("/") &&
+    !candidate.startsWith("//") &&
+    !candidate.startsWith("/\\") &&
+    !/^\/(ar|en)(\/|$)/.test(candidate)
+  );
+}
+
+/**
  * The locale-prefixed form. Routing is `localePrefix: "always"`, so a link
  * emailed without the prefix costs the reader a redirect at best and lands
  * them in the wrong language at worst.

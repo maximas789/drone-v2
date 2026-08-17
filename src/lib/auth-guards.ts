@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { getMyProfile } from "@/lib/data/pilot";
 import type { Locale } from "@/lib/locale";
 import { isAdmin, isReviewer, type Session } from "@/lib/session";
+import { isInternalPath } from "@/lib/url";
 
 /**
  * **The security boundary.**
@@ -58,11 +59,24 @@ export async function requireUser(locale: Locale): Promise<Session> {
  * unverified profile may use the app and see where it stands. Only booking
  * requires human verification, and that refusal is F12's `identity_unverified`,
  * raised at the decision rather than at the door.
+ *
+ * **`next` is passed in by the caller, not discovered.** A server component
+ * cannot read its own pathname in this Next — there is no request-scoped path
+ * available to a layout or a page — so the page that needs a profile names
+ * itself, and the wizard sends the pilot back there when they are done. Omitting
+ * it is fine: they land on the dashboard instead, which is a worse experience
+ * and not a broken one.
  */
-export async function requirePilotProfile(locale: Locale) {
+export async function requirePilotProfile(locale: Locale, next?: string) {
   const session = await requireUser(locale);
   const profile = await getMyProfile(session);
-  if (!profile?.completedAt) redirectTo("/profile/complete", locale);
+  if (!profile?.completedAt) {
+    const safe = next && isInternalPath(next) ? next : null;
+    redirectTo(
+      safe ? `/profile/complete?next=${encodeURIComponent(safe)}` : "/profile/complete",
+      locale,
+    );
+  }
   return { session, profile };
 }
 

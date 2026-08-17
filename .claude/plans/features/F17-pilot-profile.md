@@ -22,7 +22,7 @@ Collect the identity a regulator needs before a drone can be submitted for regis
 | `idDocumentNumber` | 10 digits. **Saudi National ID / Iqama checksum validated** (Luhn-style, `1` prefix = citizen, `2` = resident) |
 | `idDocumentHash` | `sha256(ID_HASH_PEPPER + number)`, unique |
 | `dateOfBirth` | Gregorian; must be ≥ 18 years ago |
-| `mobileE164` | `/^\+9665\d{8}$/` |
+| `mobileE164` | Stored as `/^\+9665\d{8}$/`. **`05…` and `00966…` are normalised into it**, not rejected — see Corrections. |
 | `addressCityId` | FK to `city` |
 | `addressLine` | Optional |
 | `emergencyContact` | Optional, same mobile format |
@@ -47,7 +47,7 @@ The verification that matters is **reviewer verification at approval time**: a r
 
 ### The wizard — `/[locale]/profile/complete`
 
-Three steps, saving progress at each so a half-finished profile survives a closed tab:
+Three panes, **two writes** — steps 1 and 2 are saved together, because `id_document_number` and `id_document_hash` are NOT NULL and a row holding a name with no document cannot exist. A half-finished profile survives a closed tab from the identity step onwards:
 
 1. **Name** — Arabic and English.
 2. **Identity** — document type, number, date of birth.
@@ -69,14 +69,19 @@ The Arabic name field sets `dir="rtl"` and `lang="ar"` on the input itself, and 
 ## Files
 
 ```
-src/lib/actions/profile.ts             savePilotProfile, updateProfile
+src/lib/actions/profile.ts             saveIdentityAction, saveContactAction
 src/lib/validation/saudi-id.ts         checksum + type detection
 src/lib/validation/mobile.ts
+src/lib/validation/profile.ts          names, date of birth, completeness
+src/lib/id-hash.ts                     sha256(ID_HASH_PEPPER + number)
 src/lib/data/pilot.ts
 src/app/[locale]/(app)/profile/complete/page.tsx
 src/app/[locale]/(app)/settings/profile/page.tsx
-src/components/profile/{wizard,step-name,step-identity,step-contact,masked-id}.tsx
-src/lib/validation/__tests__/saudi-id.test.ts
+src/components/profile/{wizard,step-name,step-identity,step-contact,
+                        field,masked-id,verification-status,
+                        profile-editor,date-of-birth-input}.tsx
+src/components/ui/select.tsx
+src/lib/validation/*.test.ts           colocated, as every other test in the repo
 ```
 
 ## Acceptance criteria
@@ -102,3 +107,17 @@ src/lib/validation/__tests__/saudi-id.test.ts
 - [ ] The wizard renders correctly in Arabic RTL at 375 px; the date picker shows Gregorian dates with Latin numerals.
 - [ ] Pilot B cannot read or edit pilot A's profile (404).
 - [ ] `pnpm test` passes the Saudi ID checksum suite; `tsc`, `lint`, `build` pass.
+
+
+---
+
+## Corrections after the build (Session 14)
+
+The build log is the truth; these are the places this file was wrong.
+
+- **`0501234567` is accepted, not rejected.** The criterion below was about the *stored* format, which is still `+9665…`. Refusing the way almost every Saudi pilot writes their own number would fail them for being right. `+14155551234` is still refused, and is never rewritten into a Saudi number.
+- **Steps 1 and 2 are one write.** See above — the schema forbids the half-row a per-step save would need.
+- **There is no `type="date"` picker.** Chrome renders a native date input from the **browser's** locale and ignores `lang` on the element and on `<html>`, so under an Arabic Chrome it prints Arabic-Indic digits into an identity record. `DateOfBirthInput` is three selects whose numerals and month names go through `format.ts`. The criterion's *intent* — Gregorian, Latin numerals — holds; the picker does not exist.
+- **Tests are colocated**, not under `__tests__/`.
+- **The reveal control is F22's.** F17 builds no reviewer surface at all: the pilot sees the mask, and a reviewer reading somebody else's profile is a screen F22 owns. F11's `revealIdentityAction` keys on a Remote ID code and cannot serve a profile — open thread 45.
+- **The pilot's side of a rejection is F17's; the reviewer's side is F22's.** Decided with the user before any code was written.

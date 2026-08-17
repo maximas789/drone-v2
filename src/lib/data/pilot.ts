@@ -12,6 +12,33 @@ export async function getMyProfile(session: Session) {
 }
 
 /**
+ * The profile plus the city it names, for the pages that render one.
+ *
+ * The join is here rather than in the page because the city is stored as an id
+ * and displayed as a bilingual pair — a page that fetched the profile and then
+ * looked the city up itself would be a second place that knows how a profile is
+ * assembled.
+ *
+ * **The row comes back whole, including `idDocumentNumber`.** Masking is not
+ * this layer's job: `maskIdDocument` is the one projection (F11), and putting a
+ * second one here would be exactly the drift that function exists to prevent.
+ * What this layer guarantees is *whose* row it is.
+ */
+export async function getMyProfileWithCity(session: Session) {
+  const profile = await getMyProfile(session);
+  if (!profile) return null;
+
+  const cityRow = profile.addressCityId
+    ? await db.query.city.findFirst({
+        where: eq(city.id, profile.addressCityId),
+        columns: { id: true, nameAr: true, nameEn: true },
+      })
+    : null;
+
+  return { ...profile, city: cityRow ?? null };
+}
+
+/**
  * A booking requires a profile that is both complete and **verified by a
  * human**. Identity is never verified automatically, and nothing in this
  * codebase may imply otherwise.

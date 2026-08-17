@@ -10,7 +10,13 @@ Turn a zone's operating hours into bookable slots, and make sure two pilots raci
 
 ### Slots are derived, not stored
 
-`deriveSlots(zone, hours, closures, ymd): Slot[]` — a pure function in `src/lib/booking/slots.ts`. Only **bookings and closures** are rows.
+`deriveSlots(zone, hours, ymd): DerivedSlot[]` — a pure function in
+`src/lib/booking/slots.ts`. Only **bookings and closures** are rows.
+
+**Closures are not a derivation parameter.** They decide a slot's *state*, not
+whether it exists, so they belong to `slotStates` — a closed slot still has to
+render, greyed, or the picker silently loses hours with nothing to explain the
+gap.
 
 Three reasons:
 1. A zone's hours change, and pre-generated rows go stale silently — the worst failure mode, because nothing errors.
@@ -34,6 +40,11 @@ A zone with two windows on a Friday produces two independent grids — the secon
 | `closed` | Inside a published `zone_closure` |
 | `past` | `slotStart` before now, or inside `minLeadMinutes` |
 | `blocked` | Pilot already has a booking at this instant, or is at `maxSlotsPerPilotPerDay` |
+
+Precedence, from the top: **`past` > `closed` > `blocked` > `full`**. `blocked`
+sits above `full` deliberately — telling a pilot a slot is full when the
+obstacle is their own existing booking sends them hunting for another zone
+instead of looking at their own diary.
 
 Availability for a day is one grouped query merged into the derived grid:
 
@@ -62,10 +73,15 @@ create unique index booking_seat_uniq
 1. `evaluateAirspace` — everything except capacity.
 2. `select seat_index …` for that zone and slot; pick the lowest free integer in `0 … capacity-1`.
 3. Insert with that `seatIndex`.
-4. On Postgres `23505` against `booking_seat_uniq` → recompute and retry, bounded at `capacity + 1` attempts, then return `slot_full`.
+4. On Postgres `23505` against `booking_seat_uniq` → recompute and retry, bounded at `capacity + 1` attempts, then return `slot_full`. **Each insert is a savepoint** — a unique violation aborts the whole Postgres transaction, so a bare retry answers "current transaction is aborted" instead of claiming the next seat. The seat picker is **injectable** so this ceiling can actually be executed; every caller in the app uses the default. (Same reasoning as F10's injectable `generate`.)
 5. On `23505` against the per-drone or per-pilot index → return `duplicate_booking`. **A different message, not a retry** — retrying would loop forever, since the conflict isn't going to clear.
 
-Steps 2–4 sit in **one transaction** with the audit write and the notification write, so a failed booking leaves no orphan trail.
+Steps 2–4 sit in **one transaction** with the audit write, so a failed booking
+leaves no orphan trail.
+
+**No notification is written on creation.** The pilot is looking at the answer
+on screen, and a row telling somebody what they have just done is the noise F08
+already refused for `booking-closeout`. F14's decision is the news.
 
 **Rejected alternatives, one line each.** `SELECT … FOR UPDATE` on the zone row serialises every booking for that zone across *all* slots and deadlocks against an admin editing zone hours. `SERIALIZABLE` needs the same retry loop plus a `40001` handler, and taxes unrelated writes on Neon.
 
@@ -92,11 +108,22 @@ Every boundary is Riyadh-local. A slot at 06:00 Riyadh is `03:00Z`. The day grid
 ## Files
 
 ```
-src/lib/booking/slots.ts            deriveSlots, slotStates, findAlternativeSlots
+src/lib/booking/slots.ts            deriveSlots, slotStates, findAlternativeSlots, isOnGrid
 src/lib/booking/create.ts           the transactional seat-claim
-src/lib/actions/booking.ts          listSlots, createBooking, cancelBooking, checkInBooking
-src/lib/booking/__tests__/{slots,concurrency}.test.ts
+src/lib/actions/booking.ts          listSlotsAction, createBookingAction
+src/lib/booking/slots.test.ts       derivation and states
+scripts/probe-booking.mts           the concurrency half, against the live database
 ```
+
+**`cancelBooking` and `checkInBooking` are F14's.** Both are status changes, and
+rule 11 puts every one behind `applyTransition` — whose table holds only the
+four *system* edges, and whose `apply.ts` maps only the `"system"` actor.
+Building the human edges here would have left the app with two state machines.
+
+**Concurrency is not unit-tested, and cannot be.** "Two pilots racing for the
+last seat produce one booking and one graceful refusal" is a claim about
+Postgres, its partial unique index and read-committed snapshots.
+`scripts/probe-booking.mts` drives it against the live database instead.
 
 ## Acceptance criteria
 
@@ -111,6 +138,9 @@ src/lib/booking/__tests__/{slots,concurrency}.test.ts
 - [ ] A day's availability is fetched in **one** query, not one per slot.
 
 **Concurrency**
+All ten concurrency criteria below were verified by `scripts/probe-booking.mts`
+against the live database, run twice. See the Session 11 build-log entry.
+
 - [ ] `booking_seat_uniq` exists with the `where status in ('pending','approved')` clause.
 - [ ] Capacity 1: **two simultaneous** `createBooking` calls produce exactly **one** booking row; the loser gets `slot_full`.
 - [ ] Capacity 3: five simultaneous calls produce exactly **three** rows with `seatIndex` 0, 1, 2 — no gaps, no duplicates.
@@ -122,7 +152,9 @@ src/lib/booking/__tests__/{slots,concurrency}.test.ts
 - [ ] A failed booking leaves **no** audit event and **no** notification — confirm both tables are unchanged.
 - [ ] Forcing `capacity + 1` consecutive conflicts returns `slot_full` rather than looping.
 
-**UI**
+**UI — deferred to [F21](./F21-booking-flow.md), which builds the picker.**
+These describe a surface F13 does not create; the data behind them is here and
+tested, and the rendering is F21's to satisfy.
 - [ ] The date strip and slot picker render correctly in Arabic RTL, with Latin numerals and Gregorian dates.
 - [ ] A losing booking greys the slot in place and shows alternatives as buttons — no page reload, no lost form state.
 - [ ] `pnpm test` passes the slots and concurrency suites; `tsc`, `lint`, `build` pass.

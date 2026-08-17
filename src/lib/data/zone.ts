@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, gte, lte, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, lte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { zone, zoneClosure, zoneHour } from "@/lib/db/schema";
 import { isReviewer, type Session } from "@/lib/session";
@@ -73,6 +73,73 @@ export async function listClosures(
   return db.query.zoneClosure.findMany({
     where: and(
       eq(zoneClosure.zoneId, zoneId),
+      lte(zoneClosure.startsAt, to),
+      gte(zoneClosure.endsAt, from),
+    ),
+    orderBy: [asc(zoneClosure.startsAt)],
+  });
+}
+
+/**
+ * The **bbox pre-filter** behind every authorization decision (F12).
+ *
+ * ```sql
+ * where min_lat <= :lat and max_lat >= :lat
+ *   and min_lng <= :lng and max_lng >= :lng
+ *   and status = 'active'
+ * ```
+ *
+ * Rectangles only — this over-selects on purpose and says nothing about
+ * containment. `src/lib/airspace/geometry.ts` decides that, in TypeScript, in
+ * the one place that also runs in the browser. There is no PostGIS here and no
+ * second point-in-polygon in SQL to drift from it.
+ */
+export async function listZonesContainingPoint(
+  _session: Session | null,
+  point: { lng: number; lat: number },
+) {
+  return db.query.zone.findMany({
+    where: and(
+      eq(zone.status, "active"),
+      lte(zone.minLat, point.lat),
+      gte(zone.maxLat, point.lat),
+      lte(zone.minLng, point.lng),
+      gte(zone.maxLng, point.lng),
+    ),
+    orderBy: [asc(zone.code)],
+  });
+}
+
+/** Hours for a set of zones, in one query rather than one per zone. */
+export async function listHoursForZones(
+  _session: Session | null,
+  zoneIds: readonly string[],
+) {
+  if (zoneIds.length === 0) return [];
+  return db.query.zoneHour.findMany({
+    where: inArray(zoneHour.zoneId, [...zoneIds]),
+    orderBy: [asc(zoneHour.weekday), asc(zoneHour.opensMinute)],
+  });
+}
+
+/**
+ * Published closures for a set of zones overlapping `[from, to)`.
+ *
+ * **Published only.** A draft closure is a reviewer's working note, and
+ * refusing a booking on the strength of one would be enforcing a rule nobody
+ * has announced.
+ */
+export async function listClosuresForZones(
+  _session: Session | null,
+  zoneIds: readonly string[],
+  from: Date,
+  to: Date,
+) {
+  if (zoneIds.length === 0) return [];
+  return db.query.zoneClosure.findMany({
+    where: and(
+      inArray(zoneClosure.zoneId, [...zoneIds]),
+      isNotNull(zoneClosure.publishedAt),
       lte(zoneClosure.startsAt, to),
       gte(zoneClosure.endsAt, from),
     ),

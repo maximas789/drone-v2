@@ -428,6 +428,7 @@
       "build_type_not_permitted": "نوع تصنيع الطائرة غير مسموح في هذه المنطقة.",
       "weight_class_not_permitted": "فئة وزن الطائرة غير مسموحة في هذه المنطقة.",
       "pilot_profile_incomplete": "ملفك الشخصي غير مكتمل.",
+      "identity_unverified": "لم يُتحقق من هويتك بعد. المراجعة يقوم بها مختص.",
       "rate_limited": "عدد المحاولات كبير. حاول بعد قليل."
     },
     "fixes": {
@@ -456,6 +457,7 @@
       "build_type_not_permitted": "اختر منطقة تسمح بهذا النوع من التصنيع.",
       "weight_class_not_permitted": "اختر منطقة تسمح بهذه الفئة، أو طائرة أخف.",
       "pilot_profile_incomplete": "أكمل بياناتك ووثيقة هويتك.",
+      "identity_unverified": "انتظر مراجعة وثيقة هويتك. سنبلغك عند اكتمالها.",
       "rate_limited": "انتظر قليلاً ثم أعد المحاولة."
     }
   },

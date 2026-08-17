@@ -30,7 +30,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 2 — Database | F03, F04 | ⚠️ Done with deviations (Sessions 3–4) |
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
-| 5 — Domain core | F10–F15 | 🟨 **F10 + F11 done with deviations (Session 10).** F12–F15 not started. |
+| 5 — Domain core | F10–F15 | 🟨 **F10–F13 done with deviations (Sessions 10–11).** F14 + F15 not started. |
 | 6 — Pilot experience | F16–F21 | ⬜ Not started |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
@@ -113,11 +113,9 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 16 | **A dev-mode 404 embeds a stack trace naming the guard** (`requireReviewer`, absolute file path) in its RSC payload; the production build does not. So the "404, not a stack trace" criterion is **only meaningful against `next start`**. F31 must run its route checks against a production serve, never `next dev`. | F05 | F31 |
 | 13 | **`requirePilotProfile` redirects to `/profile/complete`, which does not exist yet** (F17 builds it). Nothing calls the guard today, so nothing 404s; F17 must build that page or the first caller sends pilots into a dead end. | F05 | F17 |
 | 14 | **`drone.owner_user_id` and `booking.pilot_user_id` are `ON DELETE RESTRICT`**, so deleting an account that holds registered aircraft or bookings is refused by the database — while `deleteUser` is enabled in `src/lib/auth.ts`. Deliberate: a registration record is not personal data to take away. **F28 owns the consequence** and must offer a real path (revoke, or transfer) instead of a raw delete that errors. | F05 | F28 |
-| 34 | **`remote_id.broadcastCapable` is a snapshot taken at write time.** It is recomputed from the declaration rows on every declare/verify/reject/supersede, but a declaration whose `validUntil` passes overnight leaves the flag stale until the next write, and nothing sweeps it. **F12 must evaluate the declaration's own validity window** for a future slot rather than trusting the boolean. | F10 | F12 |
 | 35 | **`drone_report` has no triage columns and no reviewer queue.** Reports are written, audited and listed on `/admin` newest-first, but there is no "handled" state, no assignment and no way to close one. Deliberate — an enum member nothing writes is a lie about what the app does — so **F22 owns adding whatever its queue needs**. | F11 | F22 |
 | 36 | **`viewerLevelFor` was never exercised with a reviewer who is also the drone's owner.** Staff wins by the order of the checks, so such a person sees the staff branch and their own reveal control; no row like that has ever existed. Worth a deliberate case when F22 gives reviewers aircraft. | F11 | F22, F31 |
 | 15 | **`role` reaches the app as `string \| null`, not a union.** Better Auth types an `additionalField` declared as a list of literals as a plain `string`. `roleOf()` in `src/lib/session.ts` narrows it and **fails closed** — anything unrecognised is treated as `pilot`. Never read `session.user.role` directly; use `roleOf` / `isReviewer` / `isAdmin`. | F05 | Every wave that branches on role |
-| 9 | **F12 owes the KKIA annulus its containment assertion** — a point inside the hole must not be contained by the polygon. F04 asserted only the structure, because writing a second `pointInPolygon` outside `src/lib/airspace/` is the decay the plan warns about. | F04 | F12 |
 | 10 | **Nothing has checked the seeded polygons for self-intersection**, and no one has seen them on a map. F20 is the first render. | F04 | F20 |
 | 17 | **`emailConfigured` is baked in at build time on the SSG auth pages.** `/[locale]/forgot-password` and `/verify-email` are prerendered, so the "no provider configured" notice reflects `RESEND_API_KEY` as it was during `next build`, not as it is at runtime. Setting the key on the host without rebuilding leaves the wrong sentence on the page. Same class as the `APP_URL` QR trap. | F06 | F29 (should check it), deployment |
 | 18 | **Nothing consumes `email_log` in the UI yet.** The rows are written and are the answer to "why didn't that email arrive?", but there is no screen that shows them. F29's system/ops page owes that. No Resend **webhook** was built either, so `delivered`/`bounced`/`complained` never arrive — deliberate: the endpoint needs a public URL and a signing secret. | F06 | F29 |
@@ -134,6 +132,10 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 31 | **Blob objects are stored `access: 'public'`.** Nothing in the app emits a blob URL — `fileUrlFor` returns `/api/files/…` and that route checks ownership — but a URL that escaped by other means would resolve, for ever, including after the row is deleted. `access: 'private'` is the fix; it was not taken because there is no store to prove it against. **F27's privacy page must not claim otherwise**, and it only matters once a token is set. | F07 | F27, deployment |
 | 32 | **The upload delete/reorder *actions* were never driven over HTTP** — only their data layer was, plus the reviewer refusal path in the browser. The guard-then-rate-limit prologue is the same three lines F09 verified elsewhere, but this specific pair has not been posted at directly. Same gap as F09's own "direct action POST". | F07 | F31 |
 | 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
+| 37 | **A booking has no launch point, so no-fly overlays are not resolved at booking time.** `createBookingAction` evaluates with `AirspaceQuery.zoneId` because the booking form picks a zone, not a coordinate, and `booking` has no lat/lng column. A permitted zone overlapping a no-fly zone would therefore be bookable at the overlap — the *map* resolves it (point query), the booking does not. The seeded `RUH-P-01` and `RUH-NF-KKIA` touch in a ~50 m sliver, so this is not hypothetical. **Either F23 refuses to publish an overlapping permitted zone, or F21 sends the launch point and the schema grows a column for it.** | F12/F13 | F21, F23 |
+| 38 | **The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.** A zone with `nightAllowed: false` therefore refuses its own first slot for part of the year — the engine is right (you may not fly before sunrise) but the hours and the rule disagree, and F21's picker will show slots that are always refused. `slotStates` has no `night` state to grey them with, deliberately: F13's state table has five members and inventing a sixth here would put sun maths in the slot grid. **F21 or F23 owns the reconciliation.** | F12/F13 | F21, F23 |
+| 39 | **`cancelBooking` and `checkInBooking` do not exist.** Both are status changes and rule 11 puts them behind `applyTransition`, whose table holds only the four system edges. **F14 owns them**, and `src/lib/actions/booking.ts` carries a comment where they go. Cancelling frees a seat regardless — that is the partial index — and the probe proves it with raw SQL. | F13 | F14 |
+| 40 | **None of F12/F13's server actions has been driven over HTTP.** No page calls them: F20 owns the map and F21 the booking flow. Tested and probed, never posted at with a real session cookie. Same standing gap as F07's, F09's and F11's actions. | F12/F13 | F20, F21, F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -144,6 +146,14 @@ Choices not in the plan, or that changed it. Each needs a reason a future sessio
 
 | Date | Decision | Why | Plan updated? |
 |---|---|---|---|
+| 2026-08-17 | **`time.ts` does Riyadh civil time as arithmetic, not through `Intl`** — and `time.test.ts` cross-checks it against `format.ts` on every day of a year. | A slot start must be byte-identical in a browser and on the server, or `booking_seat_uniq` protects nothing. `Intl` is the right answer for what a person reads and the wrong one for what an index compares. The cross-check is what turns "Saudi Arabia has no DST" from an assumption into a test. | Feature file updated |
+| 2026-08-17 | **Real sunrise/sunset by the solar equation**, rather than a fixed night window. | Riyadh sunset runs from 17:07 in December to 18:44 in June. A fixed window is wrong by over an hour twice a year, and a zone that forbids night flight has to mean the actual sky. Verified to ±10 minutes against published times. | Feature file updated |
+| 2026-08-17 | **The engine speaks ISO strings, never `Date`.** | The map fetches its context as JSON; the server builds it from rows. A `Date` survives one of those round trips and not the other, and the entire point of the module is that the two cannot disagree. | Feature file updated |
+| 2026-08-17 | **`AirspaceQuery.zoneId`** — evaluate against a named zone, not only by containment. | The booking form picks a zone, a date and a slot. It does not pick a coordinate, and `booking` has no column for one. `point` still wins when both are given. The cost is that overlays are unresolved at booking time — Open Thread 37. | Feature file updated |
+| 2026-08-17 | **Closures decide a slot's state, not whether it exists** — so `deriveSlots` does not take them and `slotStates` does. | A closed slot must still render, greyed. Dropping it from derivation would make the picker silently lose hours with nothing to explain the gap. | Feature file updated |
+| 2026-08-17 | **`blocked` outranks `full` in the slot-state table.** | Telling a pilot a slot is full when the real obstacle is their own existing booking sends them hunting for another zone instead of looking at their own diary. | Feature file updated |
+| 2026-08-17 | **No notification when a booking is created.** | The pilot is looking at the answer on screen. A row telling somebody what they have just done is the noise F08 already refused for `booking-closeout`; F14's decision is the news. | Feature file updated |
+| 2026-08-17 | **`identity_unverified` added as a 27th reason code.** | `requirePilotProfile` already promised it by name. Merging it into `pilot_profile_incomplete` would tell somebody who filled in every field correctly to go back and complete the form. | Feature file updated |
 | 2026-08-17 | `issueRemoteId` retries inside a **savepoint**, and the 23505 check **walks the error's cause chain**. | A unique violation aborts the whole Postgres transaction, so a bare retry answers "current transaction is aborted" instead of a second code. And drizzle wraps the driver error: `DrizzleQueryError.code` is undefined, the `PostgresError` is its `cause`. The first version read `code` off the top level, matched nothing and rethrew every collision — the retry loop never ran. Both found by forcing a collision. | Feature file updated |
 | 2026-08-17 | `networkCapable: true` is written **at issue**, while the column default stays `false`. | Ajniha implements Network Remote ID itself, so an issued row has earned the claim — but a row created by any other route has not, and a capability the app cannot deliver is a lie in a regulator-facing record. | Feature file updated |
 | 2026-08-17 | `getRemoteIdRecordByCode` returns the **whole** record to any caller, signed out included. | The one deliberate exception to what rule 8 usually means, and it is why F11 works: scoping in the data layer would put a second masking rule beside `redactRemoteId`, and two places deciding what a bystander may see is precisely the drift the single function exists to prevent. Bookings and the scan log *are* scoped there, because those are questions the redactor cannot answer. | Feature file updated |
@@ -201,15 +211,18 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-17 (F10/F11) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
-| `pnpm lint` | 2026-08-17 (F10/F11) | ✅ clean — includes **rule 11**, added in F08 |
-| `pnpm build` | 2026-08-17 (F10/F11) | ✅ `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
-| `pnpm i18n:check` | 2026-08-17 (F10/F11) | ✅ **541 keys**, ar/en in sync |
+| `pnpm exec tsc --noEmit` | 2026-08-17 (F12/F13) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-17 (F12/F13) | ✅ clean — includes **rule 11** (F08) and the **airspace purity rule**, which F12 probed rather than assumed: all four bans fire on `evaluate.ts` |
+| `pnpm build` | 2026-08-17 (F12/F13) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build |
+| `pnpm i18n:check` | 2026-08-17 (F12/F13) | ✅ **543 keys**, ar/en in sync |
 | `pnpm db:up` + `db:migrate` | 2026-08-17 (F11) | ✅ `0004_broken_the_initiative` applied — `remote_id_scan`, `drone_report`, `remote_id_viewer_level`. **SQL read in full**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.** |
 | Remote ID codec, issuance, declarations | 2026-08-17 (F10) | ✅ against the live database — 100 000-code alphabet and duplicate checks, forced collision, five-collision throw, renewal keeping the code, suspension/reactivation, the module-claim transfer. See the session entry |
 | Scan page + JSON twin at four viewer levels | 2026-08-17 (F11) | ✅ over HTTP — anonymous **12 keys**, owner 28, reviewer 29; the full national ID appears in no payload at any level |
+| Airspace engine, against the live database | 2026-08-17 (F12) | ✅ bbox pre-filter over the real Riyadh polygons, carve-out beating the restricted base, a no-fly point, an over-ceiling refusal and the daily cap. The **KKIA annulus containment assertion** (thread 9) and the **declaration-window broadcast check** (thread 34) are unit-tested against the seeded geometry and rows |
+| Booking concurrency, against the live database | 2026-08-17 (F13) | ✅ `scripts/probe-booking.mts`, **18/18**, run twice: capacity 1 with two simultaneous claims → one row; capacity 3 with five → seats 0,1,2; both `duplicate_booking` indexes; a cancelled seat reused; `capacity + 1` forced conflicts → `slot_full`; a failed booking leaving **no** audit event. Every probe row deleted |
+| A booking driven over HTTP | — | ❌ **not run.** No page calls the actions yet — F20 owns the map, F21 the booking flow |
 | Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
-| `pnpm test` | 2026-08-17 (F10/F11) | ✅ **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm test` | 2026-08-17 (F12/F13) | ✅ **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -230,7 +243,7 @@ What has actually been **run**, not what was written. F31 reads this.
 | Production serve (`next start`) | 2026-08-16 (F06) | ✅ on port **3210** — `/ar` 200, auth pages 200, `/ar/dev/emails` and `/en/dev/emails` **404** with no stack trace. (F05's guard checks were the earlier run.) |
 | Uploads, end to end | 2026-08-16 (F07) | ✅ over HTTP with three probe accounts: type sniffing, size ceiling, cross-pilot 404, locked target, delete removing row **and** bytes, traversal refused. See the session entry. |
 | Vercel Blob driver | — | ❌ **never executed.** No token, no store. |
-| Browser console clean | 2026-08-17 (F11) | ⚠️ **partial.** `/ar/rid/{code}` and `/ar/admin` join them: zero errors, zero warnings, through a reveal and a report submission. Earlier (F07): the dropzone page joined F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
+| Browser console clean | 2026-08-17 (F11) | ⚠️ **partial.** F12/F13 rendered nothing, so this is unchanged — `src/components/airspace/decision-reasons.tsx` has never been opened in a browser. `/ar/rid/{code}` and `/ar/admin` join them: zero errors, zero warnings, through a reveal and a report submission. Earlier (F07): the dropzone page joined F06's three: zero errors, zero warnings. Every other route is still unopened. Earlier (F06): `/ar/dev/emails`, `/ar/forgot-password`, `/ar/verify-email` opened in Chrome: zero errors, zero warnings — only React DevTools' notice and `[HMR] connected`. Every other route is still unopened. |
 | Rendered Arabic, in a browser | 2026-08-16 (F06) | ✅ first time in this build. All 11 email templates × 2 locales seen. Letter joins correct, right-aligned, `AJN-4F2K-91XZ` reads LTR under its Arabic label, `15 مارس 2029` / `30 يوماً` Gregorian and Latin. |
 | App with keys removed | — | — |
 | End-to-end walkthrough (Arabic) | — | — |
@@ -253,6 +266,90 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 11 — Wave 5 · F12 Airspace Authorization Engine · F13 Slot Derivation & Booking Concurrency
+
+**Date:** 2026-08-17
+**Status:** ⚠️ done with deviations · **Wave 5 is now F14–F15.** Built as a pair, as instructed — and the pairing paid for itself twice: `evaluate.ts` calls `findAlternativeSlots` for `zone_closed_now`, and `createBookingAction` calls `evaluateAirspace` for everything except capacity. Built apart, those two seams would have been two different notions of "is this bookable".
+
+**Built:**
+- `src/lib/airspace/` — `types.ts`, `geometry.ts`, `time.ts`, `evaluate.ts` (**all four pure**), `query.ts` (server-only), `index.ts`. Tests: `geometry.test.ts` (15), `time.test.ts` (15), `evaluate.test.ts` (40), `precedence.test.ts` (12), `reasons.test.ts` (5).
+- `src/lib/booking/` — `slots.ts` (**pure**: `deriveSlots`, `slotStates`, `findAlternativeSlots`, `isOnGrid`, `isClosed`) and `create.ts` (the transactional seat claim). `slots.test.ts` (19).
+- `src/lib/actions/airspace.ts` (`checkAirspaceAction`) and `src/lib/actions/booking.ts` (`listSlotsAction`, `createBookingAction`).
+- `src/app/api/zones/geojson/route.ts` — bbox-filtered, publicly cached, returns **the exact `ZoneRule[]` the engine consumes**.
+- `src/components/airspace/decision-reasons.tsx` — the one place a refusal becomes a sentence, plus `formatReasonParams`.
+- Data layer: `listZonesContainingPoint`, `listHoursForZones`, `listClosuresForZones` (zone); `listSlotUsage`, `listMyBookedSlotStarts` (booking).
+- **Two catalogue keys**, `airspace.reasons.identity_unverified` and its fix (catalogue **543**).
+- `scripts/probe-booking.mts` — the throwaway that drove F13's concurrency against the live database. Kept and **re-runnable**; it deletes its own rows on the way in and on the way out.
+
+**Suite: 479 across 17 files** (was 373 across 11).
+
+**Deviations, each with its reason:**
+- **`identity_unverified` is a 27th reason code**, beyond F12's list. `requirePilotProfile` already promised it in a comment ("that refusal is F12's `identity_unverified`"). Folding it into `pilot_profile_incomplete` would tell somebody who filled in every field correctly that their profile is incomplete, and send them back to a form with nothing left to do.
+- **Every instant in the engine is an ISO string, never a `Date`.** The map fetches its context as JSON and the server builds it from rows; a `Date` survives one of those and not the other. Conversion happens at the edges only.
+- **`AirspaceQuery` gained `zoneId`** — evaluate against a named zone rather than by containment. The booking form picks a zone, a date and a slot; it does not pick a coordinate, and `booking` has no lat/lng column to put one in. `point` still wins when both are given. **The cost is real and is Open Thread 37.**
+- **`time.ts` does Riyadh as arithmetic**, not through `Intl`, so it is byte-identical in a browser and on a server — which is what makes `booking_seat_uniq` mean anything. `time.test.ts` cross-checks it against `format.ts` (the real IANA zone) on **every day of a year**, so the fixed-offset assumption fails loudly rather than silently.
+- **Real sunrise/sunset, by the standard solar equation**, rather than a fixed night window. Riyadh sunset runs 17:07 in December to 18:44 in June; a fixed window would be wrong by over an hour twice a year, and a zone that forbids night flight has to mean the actual sky. Verified against published times to ±10 minutes.
+- **`deriveSlots(zone, hours, ymd)` — closures are not a parameter.** They decide a slot's *state*, not whether it exists. A closed slot still has to render, greyed, or the picker silently loses hours and nobody can tell why. F13's spec signature had them on derivation.
+- **Slot-state precedence is `past > closed > blocked > full`.** `blocked` above `full` on purpose: telling a pilot a slot is full when the obstacle is their own existing booking sends them hunting for another zone instead of looking at their own diary.
+- **`createBookingWithSeat` takes an injectable `pickSeat`.** Same precedent and same reason as F10's injectable `generate`: the `capacity + 1` exit is unreachable by staging a race, and a retry ceiling nobody has executed is a ceiling that does not work. Every caller in the app uses the default.
+- **No notification on booking creation.** The pilot is looking at the answer on screen; a row telling somebody what they have just done is the noise F08 already refused for closeout. F14's decision is the news. **This weakens F13's "a failed booking leaves no notification" to a half-check** — see Not verified.
+- **`cancelBooking` and `checkInBooking` were not built.** Both are status changes; rule 11 puts every one behind `applyTransition`, and `transitions.ts` holds only the four *system* edges while `apply.ts` maps only the `"system"` actor. Adding the human edges and the role branch is **F14's central deliverable**, and half-building it here is exactly the drift that would leave the app with two state machines. Cancelling still frees a seat the instant the status changes — that is the partial index, not the missing action, and the probe proves it with raw SQL.
+- **Tests are colocated (`evaluate.test.ts`), not in `__tests__/`.** All eleven existing suites are colocated; `vitest.config.mts` includes `src/**/*.test.ts` either way.
+- **`query.ts` contains no SQL.** The ESLint rule exempts it from the db ban, but every read still goes through `src/lib/data/*`, session first — so rule 8's "ownership is answerable by reading one folder" survives. The exemption is now unused, which is the right kind of unused.
+- **`reasons.test.ts` asserts the catalogues against the code, in both directions.** `i18n:check` compares `ar` to `en`; it cannot know which codes the engine actually emits. A reason with no message renders as a raw `airspace.reasons.slot_full` to somebody who has just been refused.
+
+**Two corrections to F12's acceptance criteria — the spec was wrong, not the code:**
+- **"A point in central Riyadh outside every permitted zone → `outside_permitted_zone`" is wrong for the seeded airspace.** `RUH-R-CITY` is a default-deny base covering greater Riyadh (F04's own design note says so), so a city point in no carve-out is `inside_restricted_zone` — a more specific and more useful answer. `outside_permitted_zone` is what you get *beyond* the base. Both are now tested, and the feature file is corrected.
+- **"Swapping a coordinate pair to `[lat, lng]` is a type error" is not achievable** with `Position = readonly [lng: number, lat: number]`. Tuple element labels do not affect assignability, so `[24.7113, 46.6753]` is a perfectly good `Position` to the compiler. Branding it would mean casting every frozen literal in the F04 seed. The working defences are `assertWithinSaudiArabia` (F04's reversal detector) and a test asserting a reversed Riyadh pair lands in no zone — both now present. Feature file corrected to say what is actually enforced.
+
+**Verified — against the live database.** `scripts/probe-booking.mts`, six probe pilots with a profile and one airframe each, real seeded zones `RUH-P-03` and `RUH-P-07`, run **twice** (it is idempotent):
+
+| Criterion | Result |
+|---|---|
+| `booking_seat_uniq` exists, partial | OK — `(zone_id, slot_start, seat_index) WHERE status = ANY (ARRAY['pending','approved'])`, read from `pg_indexes` |
+| Capacity 1 · **two simultaneous** claims | OK — exactly **one** booking row, one winner |
+| The loser | OK — `slot_full` as a **value**, no exception thrown |
+| The loser's alternatives | OK — **3** slots, all `available`, none of them the slot that just filled |
+| Cancelling frees the seat | OK — status flipped, seat **0** reused by the next booking |
+| Capacity 3 · **five simultaneous** claims | OK — **3** rows, seats `[0,1,2]`, no gaps, no duplicates; the other two `slot_full` |
+| Same pilot, same instant, another zone | OK — `duplicate_booking`, **not** retried (`booking_pilot_slot_uniq`) |
+| Same drone, same instant, another pilot | OK — `duplicate_booking` (`booking_drone_slot_uniq`) |
+| A **failed** booking's trail | OK — `audit_event` 17→17, `notification` 0→0 |
+| `capacity + 1` consecutive conflicts | OK — **4 attempts**, then `slot_full`. Forced with an injected seat picker that always returns a held seat |
+| `buildDayContext` against live rows | OK — 14 windows and 0 closures hydrated from `zone_hour` / `zone_closure` |
+| The day grid reflects a real seat | OK — 8 slots, the booked one reads `taken=1` |
+| A clean booking into seeded `RUH-P-03` | OK — `allowed`, `geometryVersion > 0`, no reasons |
+| 500 m over an 80 m ceiling | OK — `above_ceiling` |
+| The bbox pre-filter over real polygons | OK — 2 candidates for King Salman Park, and the **carve-out wins**: `RUH-P-04` |
+| A point over the Ministry of Defence | OK — `inside_no_fly_zone`, `RUH-NF-MOD` |
+| A pilot at `maxSlotsPerPilotPerDay` | OK — `max_slots_per_day` |
+
+- **The ESLint purity rule was probed, not assumed.** All four bans (`@/lib/db`, `server-only`, `next-intl`, `react`) fire on `evaluate.ts` and the file is clean again after reverting.
+- **Eight mutations run, all eight caught**: the half-open ray cast made inclusive (breaks the shared-edge test), interior rings ignored (breaks the KKIA annulus), the slot grid emitting a partial tail, a superseded declaration still counting as broadcast-capable, the Riyadh offset applied the wrong way (9 failures), `full` outranking `blocked`, the registration checked at booking time instead of at flight end, and `no_fly` no longer terminal (4 failures).
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (**543**), `pnpm test` (**479**), `pnpm build` — all green. `/api/zones/geojson` builds as a dynamic route.
+- **Every probe row deleted afterwards**, and the database is back to baseline: `user` 1 (the owner), `zone` 12, `zone_closure` 2, and `drone` / `remote_id` / `booking` / `audit_event` / `notification` / `pilot_profile` / `email_log` all **0**.
+
+**Two open threads closed:**
+- **Thread 9 — the KKIA annulus.** `geometry.test.ts` now asserts against the real seeded polygon that the excluded core is **not** contained, and `precedence.test.ts` asserts that a point in the core falls through to the restricted base rather than to `inside_no_fly_zone`. F04 deferred this rather than write a second `pointInPolygon`; there is now exactly one, and this is it.
+- **Thread 34 — `broadcastCapable` is a write-time snapshot.** The engine never reads the boolean. `AircraftContext` carries the **declaration rows**, and `broadcastCapableAt(declarations, slotStart)` evaluates each one's own window against the instant of the flight. Tested both ways: a module valid today and expiring tonight is capable now and **not** capable for tomorrow's slot.
+
+**Not verified:**
+- **No page calls any of this.** F20 owns the map and F21 the booking flow, so `checkAirspaceAction`, `listSlotsAction` and `createBookingAction` have been driven only from tests and the probe — never over HTTP, and never with a real session cookie. Same standing gap as F07's and F11's actions.
+- **`decision-reasons.tsx` has never been rendered in a browser.** It is the component both F20 and F21 will use, and its Arabic has not been seen. Open Thread 11's territory.
+- **F13's UI criteria** — the date strip and slot picker in Arabic RTL, the losing booking greying the slot in place — belong to a picker that does not exist yet. They are F21's to satisfy, not claimed here.
+- **"A failed booking leaves no notification" is only half a check**, because the success path writes none either. The audit half *is* meaningful and passed.
+- **A point the map shows green being accepted by `createBooking`** is structural, not observed: both call `evaluateAirspace` and there is no second implementation, but no map exists to show anything yet.
+- **375 px, a sixth time.** Nothing was rendered this session, so the thread stands untouched rather than retried.
+
+**Next session should know (F14, F15):**
+- **F14 owns the human edges.** Add them to `src/lib/workflow/transitions.ts` and add the role branch in `apply.ts` where `actorKind` is currently `actor.isSystem ? "system" : null`. `booking.cancelled` and `booking.checked_in` are among them, and `src/lib/actions/booking.ts` has a comment marking where the two missing actions go.
+- **`createBookingAction` writes `booking.requested` to the audit trail and creates a `pending` row.** F14's approval is what turns `autoApprove` into an actual decision — the engine returns `needs_review` but nothing acts on it yet.
+- **`decisionSnapshot` is already populated** with the full `AirspaceDecision`, `geometryVersion` included. F14 should not rewrite it at approval; it is the record of what was true when the pilot asked.
+- **`evaluateAirspace` is the only implementation of "is this bookable".** F20's map must import it directly and evaluate locally against `/api/zones/geojson`; do not add a second check, and do not have the map call the server on every click.
+- **Numbers in reason params are raw numbers.** Render them through `formatReasonParams` (or `DecisionReasons`), never straight into `t()` — ICU formats a bare numeric argument itself and emits Arabic-Indic digits under `ar` (Open Thread 22).
 
 ---
 

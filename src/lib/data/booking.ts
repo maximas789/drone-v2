@@ -67,6 +67,69 @@ export async function listTakenSeats(
   return rows.map((row) => row.seatIndex);
 }
 
+/**
+ * **Availability for a whole day view, in one query.** Never one per slot.
+ *
+ * ```sql
+ * select slot_start, count(*) from booking
+ * where zone_id = $1 and slot_start >= $2 and slot_start < $3
+ *   and status in ('pending','approved')
+ * group by slot_start;
+ * ```
+ *
+ * A slot with no row is free — absence is the common case, and materialising a
+ * row for it is what the whole "slots are derived, not stored" decision avoids.
+ */
+export async function listSlotUsage(
+  _session: Session | null,
+  zoneId: string,
+  from: Date,
+  to: Date,
+): Promise<{ slotStart: string; taken: number }[]> {
+  const rows = await db
+    .select({ slotStart: booking.slotStart, taken: count() })
+    .from(booking)
+    .where(
+      and(
+        eq(booking.zoneId, zoneId),
+        gte(booking.slotStart, from),
+        lt(booking.slotStart, to),
+        inArray(booking.status, [...SEAT_HOLDING_STATUSES]),
+      ),
+    )
+    .groupBy(booking.slotStart);
+
+  // ISO strings, because that is what the pure engine and the map both speak.
+  return rows.map((row) => ({
+    slotStart: row.slotStart.toISOString(),
+    taken: row.taken,
+  }));
+}
+
+/**
+ * The instants this pilot already holds a seat at, **in any zone**. What turns
+ * into `duplicate_booking` — a pilot cannot be in two places at once, and the
+ * `booking_pilot_slot_uniq` index says so at the database as well.
+ */
+export async function listMyBookedSlotStarts(
+  session: Session,
+  from: Date,
+  to: Date,
+): Promise<string[]> {
+  const rows = await db
+    .select({ slotStart: booking.slotStart })
+    .from(booking)
+    .where(
+      and(
+        eq(booking.pilotUserId, session.user.id),
+        gte(booking.slotStart, from),
+        lt(booking.slotStart, to),
+        inArray(booking.status, [...SEAT_HOLDING_STATUSES]),
+      ),
+    );
+  return rows.map((row) => row.slotStart.toISOString());
+}
+
 /** Enforces `zone.maxSlotsPerPilotPerDay`. Riyadh civil day, passed in. */
 export async function countMyBookingsInWindow(
   session: Session,

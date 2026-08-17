@@ -428,6 +428,7 @@
       "build_type_not_permitted": "This build type is not permitted in this zone.",
       "weight_class_not_permitted": "This weight class is not permitted in this zone.",
       "pilot_profile_incomplete": "Your profile is incomplete.",
+      "identity_unverified": "Your identity has not been verified yet. A reviewer checks it.",
       "rate_limited": "Too many attempts. Try again shortly."
     },
     "fixes": {
@@ -456,6 +457,7 @@
       "build_type_not_permitted": "Choose a zone that allows this build type.",
       "weight_class_not_permitted": "Choose a zone that allows this class, or a lighter aircraft.",
       "pilot_profile_incomplete": "Complete your details and identity document.",
+      "identity_unverified": "Wait for your identity document to be reviewed. We'll let you know.",
       "rate_limited": "Wait a moment and try again."
     }
   },

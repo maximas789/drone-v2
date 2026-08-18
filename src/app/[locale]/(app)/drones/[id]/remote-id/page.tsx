@@ -4,6 +4,7 @@ import { locale as localeParam } from "next/root-params";
 import { DeclaredModules } from "@/components/remote-id/declared-modules";
 import { IdCard } from "@/components/remote-id/id-card";
 import { PrivacyExplainer } from "@/components/remote-id/privacy-explainer";
+import { ButtonLink } from "@/components/ui/button-link";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/auth-guards";
 import { getMyDroneDetail } from "@/lib/data/drone";
@@ -97,11 +98,24 @@ export default async function RemoteIdCardPage({
       />
 
       <DeclaredModules
+        droneId={drone.id}
         declarations={declarations}
         broadcastCapable={remoteId.broadcastCapable}
         networkCapable={remoteId.networkCapable}
         locale={locale}
       />
+
+      {/**
+       * The print view, and the only route to a printable artefact. It is a
+       * link rather than a `window.print()` on this page, because what gets
+       * printed is a wallet card and a sticker sheet — not this screen.
+       */}
+      <div className="flex flex-col items-start gap-2">
+        <ButtonLink variant="outline" href={`/drones/${drone.id}/remote-id/print`}>
+          {t("openPrintView")}
+        </ButtonLink>
+        <p className="text-muted-foreground text-xs">{t("openPrintViewHint")}</p>
+      </div>
 
       <PrivacyExplainer code={remoteId.code} />
 

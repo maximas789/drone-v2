@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { DeclareModuleForm } from "@/components/remote-id/declare-module-form";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
@@ -17,16 +18,18 @@ import type { Locale } from "@/lib/locale";
  * the card answers "what is broadcasting now", and a list mixing the two would
  * read as several modules being live at once.
  *
- * The **form** that adds one is F19b's, and is deliberately not stubbed here:
- * an empty state promising a control that does not exist is the same lie as an
- * empty Billing tab.
+ * The form that adds one is `DeclareModuleForm`, rendered underneath. It is a
+ * client component and this is not, so the list stays a server render off the
+ * owner-scoped reader.
  */
 export function DeclaredModules({
+  droneId,
   declarations,
   broadcastCapable,
   networkCapable,
   locale,
 }: {
+  droneId: string;
   declarations: Array<{
     id: string;
     kind: string;
@@ -109,6 +112,8 @@ export function DeclaredModules({
           ))}
         </ul>
       )}
+
+      <DeclareModuleForm droneId={droneId} locale={locale} />
     </section>
   );
 }

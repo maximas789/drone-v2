@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–17).** F17 and **F18** done; **F19a done** — the card, the QR and its retry, tap-to-copy, the privacy explainer. **F19b** (print view, downloads, declared-modules form), F16, F20 and F21 not started. |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–18).** F17, **F18** and **F19** done — F19a the card, QR, tap-to-copy and privacy explainer; F19b the print view, the downloads and the declared-modules form. **F16, F20 and F21 not started.** |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -128,8 +128,8 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 28 | **`job.rerunOfRunId` and the `cancelling` status are never written.** The SDK supplies neither: F29 must write `cancelling` when it sends a cancel, and `rerunOfRunId` on the new run when it initiates a re-run. `cancelled` *is* written, by `run-cancelled.ts`. | F08 | F29 |
 | 30 | **The Vercel Blob driver has never run.** No token and no store on this machine, so `src/lib/storage/blob.ts` is unexecuted: the `put`/`head`/`del` calls were written from the installed `.d.ts`. The first deploy with a token is the first execution, and `addRandomSuffix: false` + `allowOverwrite: true` are the two options a wrong guess would show up in (a mismatched pathname makes `deleteFile` miss, which is an orphaned blob, which is a privacy leak). | F07 | Deployment, F29 |
 | 31 | **Blob objects are stored `access: 'public'`.** Nothing in the app emits a blob URL — `fileUrlFor` returns `/api/files/…` and that route checks ownership — but a URL that escaped by other means would resolve, for ever, including after the row is deleted. `access: 'private'` is the fix; it was not taken because there is no store to prove it against. **F27's privacy page must not claim otherwise**, and it only matters once a token is set. | F07 | F27, deployment |
-| 32 | **The upload delete/reorder *actions* were never driven over HTTP** — only their data layer was, plus the reviewer refusal path in the browser. The guard-then-rate-limit prologue is the same three lines F09 verified elsewhere, but this specific pair has not been posted at directly. Same gap as F09's own "direct action POST". | F07 | F31 |
-| 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
+| 32 | **The upload delete/reorder *actions* were never driven over HTTP** — only their data layer was, plus the reviewer refusal path in the browser. **F19b closed the other half of F07's gap**: a real PDF was put on the dropzone's file input and travelled the whole route — sniffed, stored, row updated, audit written — so `POST /api/upload` and `FileDropzone` are both exercised for the first time. The delete and reorder actions themselves are still unposted. | F07 | F31 |
+| 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. **Nothing has still been uploaded from a real phone** — F19b's upload was a PDF from disk. Either the table grows a sniffer or the copy has to say so. | F07 | F18, F31 |
 | 37 | **A booking has no launch point, so no-fly overlays are not resolved at booking time.** `createBookingAction` evaluates with `AirspaceQuery.zoneId` because the booking form picks a zone, not a coordinate, and `booking` has no lat/lng column. A permitted zone overlapping a no-fly zone would therefore be bookable at the overlap — the *map* resolves it (point query), the booking does not. The seeded `RUH-P-01` and `RUH-NF-KKIA` touch in a ~50 m sliver, so this is not hypothetical. **Either F23 refuses to publish an overlapping permitted zone, or F21 sends the launch point and the schema grows a column for it.** | F12/F13 | F21, F23 |
 | 38 | **The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.** A zone with `nightAllowed: false` therefore refuses its own first slot for part of the year — the engine is right (you may not fly before sunrise) but the hours and the rule disagree, and F21's picker will show slots that are always refused. `slotStates` has no `night` state to grey them with, deliberately: F13's state table has five members and inventing a sixth here would put sun maths in the slot grid. **F21 or F23 owns the reconciliation.** | F12/F13 | F21, F23 |
 | 40 | **Most server actions have still never been driven over HTTP** — 22 exist. **Sessions 14–16 broke the drought.** F17's two were POSTed at signed-out; F18a POSTed four **with a real session cookie**; **F18b added `deleteDroneAction`, `resubmitDroneAction` and `renewDroneAction`** — `not_deletable` for `pending` and `approved`, `not_editable` for both, `{"ok":true}` for editing a `rejected` drone, and renewal and resubmission driven from the browser. **The seven pilot-facing drone actions are now exercised over real HTTP.** **F19a added `regenerateQrAction`** — posted directly from the owner's session (`not_approved` for draft/pending/revoked, `not_found` for a nonexistent id), from a *second pilot's* session (`not_found` for another owner's aircraft), and driven to its rate limit (refused on the 11th call in an hour). The remaining gap is the **decision** actions — `approveDroneAction`, `rejectDroneAction`, `revokeDroneAction`, `reinstateDroneAction` — plus booking and map: **F22 the queues**, F20 the map, F21 booking. | F12/F13/F14 | F20, F21, F22, F31 |
@@ -140,6 +140,8 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 45 | **A reviewer has no way to reveal a pilot's identity document.** F11's `revealIdentityAction` keys on a **Remote ID code** and resolves through `getRemoteIdRecordByCode`, so a reviewer opening a *pilot profile* — which need not have a drone at all — has nothing to call. F17 built no reviewer surface by design. **F22 must either widen that action to take a profile id or add a sibling**, and whichever it does, the audit event must still be written *before* the value is returned. | F17 | F22 |
 | 46 | **`<input type="date">` is unusable in this app.** Chrome renders it from the **browser's** locale and ignores `lang` on the element and on `<html>` — proven by setting both. Under an Arabic Chrome it prints `٠٤/٠٥/٢٠١٢` and a reversed `ةنس/رهش/موي` placeholder, which is rule 6 broken through a surface `format.ts` cannot reach. `DateOfBirthInput` (three selects) is the pattern. **Native `required` is banned for the same class of reason**: it cancels the submit and speaks the browser's language, so the app's bilingual refusal never runs. Both found by opening the page. | F17 | F18, F21, F23, F31 |
 | 47 | **No QR has ever been printed, and none has been scanned by a real phone camera.** F19a proved what the image *encodes* — the stored PNG is byte-identical to a fresh encode of the `/ar/rid/{code}` URL, with a differing control — and that the target resolves. Neither says a camera can read a **20 mm printed** symbol at ~15 cm, which is the criterion F19 actually states and the thing a field inspector does. It needs paper and a phone, so no amount of code can close it. **F19b owns the print view**; whoever builds it should print one sheet and try, or say plainly that it is unverified. | F19a | F19b, F31 |
+| 48 | **The print dialog has never been opened, and the printed palette is untestable today.** `window.print()` blocks the page on a native dialog the browser tooling cannot dismiss, so the Print button is wired and unexercised; the `@page` rule, the chrome-hiding selectors and the millimetre sizes were verified from the CSSOM and by measurement instead. Separately, *"printed output uses the light palette even in dark mode"* is **vacuous right now**: nothing in this app ever applies the `.dark` class — there is no theme toggle. **Re-check both when F28 ships one**, and note the printed surfaces also use explicit `bg-white` / `text-black` rather than theme tokens. | F19b | F28, F31 |
+| 49 | **A declaration's `validFrom` / `validUntil`, `verifiedAt` and `rejectedAt` are written by nobody.** F19b's form deliberately does not collect them — a pilot typing a certificate's validity before anyone has read the certificate would put an unchecked claim on the card beside the verified ones. So the card renders only the *unverified* state, and `moduleVerified` / `moduleRejected` have catalogue keys that have never been shown. **F22 owns all four.** | F19b | F22 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -301,6 +303,80 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 18 — Wave 6 · F19b Print View, Downloads and Declared Modules
+
+**Date:** 2026-08-18
+**Status:** ⚠️ done with deviations · **F19 is complete.** Ran straight on from Session 17 without a `/clear`, at the user's request.
+
+**The headline is a bug that had been sitting in the tree since Wave 4: F07's declaration-document upload was unreachable code.** `getDeclarationForUpload` gated on `acceptsUploads` — `isDroneEditable`, which is `draft | rejected` — but a `remote_id_declaration` references `remote_id`, and `remote_id` is minted **inside the approval transition**. The two conditions cannot both hold for any row that has ever existed, so the kind rule, the storage prefix, the data helper and the route branch all sat behind a condition nothing could satisfy. Found by reading `getDeclarationForUpload` before writing the form, which is the only reason it was found at all.
+
+**Built:**
+
+- `/[locale]/(app)/drones/[id]/remote-id/print` — wallet card and a 50/30/20 mm sticker sheet.
+- `src/app/print.css` — `@page`, chrome hidden, millimetres on screen as well as in print.
+- `src/components/remote-id/` — `declare-module-form`, `print-button`.
+- `declareModuleAction` in `src/lib/actions/remote-id.ts`, and a `declaration.create` limit (10/hour).
+- `src/lib/validation/declaration.ts` + tests — the pure kind list and validator.
+- `acceptsDeclarations` / `DECLARABLE_DRONE_STATUSES` in `src/lib/validation/drone.ts`.
+- Download QR PNG, through the owner-checked file route.
+- 26 catalogue keys (**818**).
+
+**Deviations, each with its reason:**
+
+- **The declaration gate is `approved` only, and deliberately disjoint from the editable list.** A test asserts the two never overlap and says why, so a later session cannot helpfully collapse them back into one predicate and silently re-break the path.
+- **`listDroneFilePathnames` now collects declaration documents, superseded ones included.** It did not, and `remote_id_declaration` cascades away with the drone — taking every `docPath` with it and leaving the PDF in storage with nothing able to name it. That is the orphaned-blob privacy leak of thread 31, not merely waste. It was harmless while no `docPath` could be written; **fixing the gate is what created the exposure**, so closing it belongs to this session.
+- **The form does not collect `validFrom` / `validUntil`.** They describe when a *certificate* is valid, and a pilot typing them before anyone has read the certificate would put an unchecked claim on the card beside the verified ones. **F22's reviewer sets them.** The columns stay nullable and pilot-unwritten — named here so the next session does not read them as dead.
+- **Declaring supersedes; it never edits.** Supersede runs **before** the insert, or re-declaring the same module collides with the row it is replacing — the partial unique index is `(kind, module_serial) where superseded_at is null`. Proven both ways.
+- **A declaration must identify the module** — manufacturer, serial or certificate reference, at least one. A row carrying only a kind asserts a module exists without saying which.
+- **No notification, but always an audit event.** The only person to tell is the one who pressed the button; the reviewer-facing side is F22's queue. A declaration is a regulator-facing claim, so the trail gets it regardless.
+- **The proposal notice prints on the artefact**, not only on the page that made it. A card in a wallet outlives the browser tab.
+
+**Three defects found by opening the page**, with `typecheck` and `lint` green throughout:
+
+1. **`DECLARATION_KINDS.map is not a function`** — a runtime `TypeError` on first render of the form. `src/lib/actions/remote-id.ts` is `"use server"`, and such a module may export **only async functions**: Next wraps every export as a server reference, so the array arrived in the browser as a callable proxy. The types said `readonly string[]` the whole way. Moved to `src/lib/validation/declaration.ts`, which is where the validator belonged anyway — the fix made the rule testable, and it now has 10 tests and 6 killed mutants.
+2. **The empty-form refusal rendered twice** — once at the field and once at the foot of the form, reading as two different problems. `declaration_empty` and `declaration_too_long` are about the *combination* of three fields, so they are form-level; only `declaration_kind_required` and `module_serial_claimed` belong to an input.
+3. **The duplicate-serial refusal threw instead of refusing.** Drizzle wraps driver errors, so postgres.js's `code`/`constraint_name` sit on `.cause`, not on the error — the top-level check found nothing, the `catch` re-threw, and a legitimate refusal came back as a server error. It now walks the cause chain **and matches the constraint by name**, so a future unique index on that table is never reported to a pilot as "that serial is already declared".
+
+**Verified — in Chrome, over HTTP, against the live database:**
+
+| Criterion | Result |
+|---|---|
+| **A declaration added with a PDF, shown as pending** | OK — **the first time this path has ever executed.** Row written, `verifiedAt` null, badge *بانتظار التوثيق* |
+| **The PDF went through the real dropzone** | OK — a genuine PDF put on the file input, stored at `declarations/{id}/{uuid}.pdf`. **F07's dropzone had never taken a file in any session** |
+| Audit trail | OK — `remote_id.module_declared`, then `declaration.document_uploaded` |
+| **Superseding** | OK — three declarations on one aircraft, exactly one active, the card renders only that one and no superseded row leaks |
+| **Re-declaring the same serial on the same aircraft** | OK — succeeds; supersede-before-insert means it does not collide with itself |
+| **The same serial on a second aircraft** | OK — `module_serial_claimed`. One module broadcasts one identity |
+| An unknown kind, a drone that is not mine | OK — `declaration_kind_required`, `not_found` |
+| The empty form | OK — the app's own Arabic refusal, once, with `aria-invalid` on the field. No native `required` anywhere (thread 46) |
+| **Print view** | OK — wallet card and sticker sheet, Arabic and English |
+| **Physical sizes** | OK — measured: 189 / 113 / 76 px for 50 / 30 / 20 mm and 324 px for 85.6 mm, each exactly the 96 dpi conversion |
+| Print rules loaded | OK — the `@media print` block and its `@page` rule are in the CSSOM; the hide selectors match 1 `header`, 1 `nav` and 7 `.print-hidden` elements |
+| The proposal notice | OK — on the wallet card and the sticker sheet themselves |
+| **375 px, Arabic** | OK — card and both print views via the iframe (thread 44): `scrollWidth === clientWidth`, no overflowing element |
+| **Console** | OK — zero errors, zero warnings |
+| **Mutation testing** | 6 mutants against `validateDeclaration`, **6 killed** — the ceiling, the empty check, its `&&`, the trim, the every-field loop, and the inverted kind check |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (818), `pnpm test` (**608**), `pnpm build` — all green. Both `/remote-id` and `/remote-id/print` build **dynamic**.
+
+**Not verified:**
+
+- **Nothing has been printed.** No paper and no phone camera, so *"a printed 20 mm QR scans from ~15 cm"* stays **unverified** — F19 explicitly allows naming it rather than claiming it. **Thread 47.**
+- **"Printed output uses the light palette even in dark mode" is currently vacuous.** Nothing in this app ever applies `.dark` — there is no theme toggle. The print override and the explicit `bg-white` / `text-black` on the printed surfaces are written for when one arrives; **re-check when F28 ships a toggle.**
+- **The print dialog itself was never opened.** `window.print()` blocks the page on a native dialog, which the browser tooling cannot dismiss — so the button is wired and unexercised. The rules it depends on were verified from the CSSOM instead.
+- **No reviewer has verified a declaration**, because `verifiedAt` is F22's to write. The *unverified* state is the one that renders today; `moduleVerified` and `moduleRejected` have catalogue keys and have never been shown.
+
+**Next session should know:**
+
+- **F19 is done. F16, F20 and F21 remain in Wave 6.**
+- **`acceptsDeclarations` (approved) and `isDroneEditable` (draft, rejected) are different questions and must stay disjoint.** A test says so. Collapsing them makes the declaration upload unreachable again.
+- **`DECLARATION_KINDS` and `validateDeclaration` live in `src/lib/validation/declaration.ts`.** Never export a constant from a `"use server"` module — it reaches the browser as a callable proxy and every static check stays green.
+- **F22 owns `verifiedAt`, `rejectedAt` and the validity window** on a declaration. The pilot writes none of them.
+- **Probe data is still seeded**, now including declarations and one uploaded PDF. `scripts/probe-drone-states.mts clean` sweeps it, and the sweep now takes declaration documents with it.
+- **The profile's ID number is still fabricated** (`1055512345`) — unchanged, and the user's to resolve.
 
 ---
 

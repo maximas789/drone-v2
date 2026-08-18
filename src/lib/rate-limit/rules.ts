@@ -131,6 +131,14 @@ export const LIMITS = {
    * pilot needs and far less than a loop would want.
    */
   "remote_id.qr_render": [{ window: HOUR, max: 10 }],
+  /**
+   * Not in F09's table — added by F19b, which built the declaration form.
+   *
+   * Each one supersedes the last and costs a reviewer's attention, so this sits
+   * near `drone.submit` rather than near `drone.draft`: it is a submission, not
+   * a keystroke.
+   */
+  "declaration.create": [{ window: HOUR, max: 10 }],
 } as const satisfies Record<string, readonly RateLimitRule[]>;
 
 export type LimitedAction = keyof typeof LIMITS;

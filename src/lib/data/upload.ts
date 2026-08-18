@@ -5,7 +5,11 @@ import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { drone, dronePhoto, remoteId, remoteIdDeclaration } from "@/lib/db/schema";
 import { isReviewer, roleOf, type Session } from "@/lib/session";
-import { acceptsUploads, type PhotoKind } from "@/lib/storage/validate";
+import {
+  acceptsDeclarationUploads,
+  acceptsUploads,
+  type PhotoKind,
+} from "@/lib/storage/validate";
 
 /**
  * Ownership for everything file-shaped. Session first, without exception.
@@ -88,8 +92,15 @@ export async function getDeclarationForUpload(
   if (!row || row.ownerUserId !== session.user.id) {
     return { ok: false, reason: "not_found" };
   }
-  // A superseded declaration is history. History does not take new documents.
-  if (row.supersededAt || !acceptsUploads(row.status)) {
+  /**
+   * **`acceptsDeclarationUploads`, not `acceptsUploads`.** A declaration exists
+   * only on a drone that has a Remote ID, and a Remote ID is minted on
+   * approval — so the editable list (`draft`, `rejected`) could never contain
+   * this row's drone, and this branch refused every upload that ever reached
+   * it. A superseded declaration is history, and history does not take new
+   * documents either.
+   */
+  if (row.supersededAt || !acceptsDeclarationUploads(row.status)) {
     return { ok: false, reason: "not_editable", status: row.status };
   }
 
@@ -226,12 +237,38 @@ export async function listDroneFilePathnames(
     }),
     db.query.remoteId.findFirst({
       where: eq(remoteId.droneId, droneId),
-      columns: { qrPathname: true },
+      columns: { id: true, qrPathname: true },
     }),
   ]);
 
   const pathnames = photos.map((p) => p.pathname);
   if (rid?.qrPathname) pathnames.push(rid.qrPathname);
+
+  /**
+   * **Declaration documents too — including superseded ones.**
+   *
+   * `remote_id_declaration` cascades from `remote_id`, which cascades from
+   * `drone`, so the instant the aircraft goes every `docPath` the app knew goes
+   * with it: the PDF would stay in storage with nothing left in the database
+   * able to name it. That is the orphaned-blob privacy leak, not merely waste.
+   *
+   * It was harmless until F19b, because F07's declaration upload was gated on a
+   * status a drone with a Remote ID can never have, so no `docPath` was ever
+   * written. Fixing that gate is what made this reachable.
+   *
+   * Superseded rows are included deliberately — they are history the pilot can
+   * no longer see, and their documents are still theirs.
+   */
+  if (rid) {
+    const declarations = await db.query.remoteIdDeclaration.findMany({
+      where: eq(remoteIdDeclaration.remoteIdId, rid.id),
+      columns: { docPath: true },
+    });
+    for (const declaration of declarations) {
+      if (declaration.docPath) pathnames.push(declaration.docPath);
+    }
+  }
+
   return pathnames;
 }
 

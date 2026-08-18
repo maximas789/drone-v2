@@ -2,12 +2,18 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import { audit, type Actor } from "@/lib/audit";
 import { requireReviewer, getSession } from "@/lib/auth-guards";
 import { db, type DbExecutor } from "@/lib/db";
-import { drone, droneReport, remoteId, remoteIdScan } from "@/lib/db/schema";
+import {
+  drone,
+  droneReport,
+  remoteId,
+  remoteIdDeclaration,
+  remoteIdScan,
+} from "@/lib/db/schema";
 import { getRemoteIdRecordByCode } from "@/lib/data/remote-id";
 import { clientIpFrom, hashIp } from "@/lib/ip-hash";
 import { enforceLimit } from "@/lib/rate-limit";
@@ -15,6 +21,8 @@ import { storeQrForRemoteId } from "@/lib/qr/store";
 import { normalizeCode } from "@/lib/remote-id/codec";
 import { viewerLevelFor } from "@/lib/remote-id/resolve";
 import { roleOf } from "@/lib/session";
+import { validateDeclaration } from "@/lib/validation/declaration";
+import { acceptsDeclarations } from "@/lib/validation/drone";
 
 /**
  * The two acts that a scan page can trigger. Resolution itself is not here — it
@@ -360,4 +368,168 @@ export async function regenerateQrAction(
   revalidatePath(`/[locale]/drones/${droneId}/remote-id`, "page");
 
   return { ok: true, data: { pathname } };
+}
+
+export type DeclareModuleInput = {
+  droneId: string;
+  kind: string;
+  manufacturer?: string | null;
+  moduleSerial?: string | null;
+  docReference?: string | null;
+};
+
+/**
+ * Declare a Remote ID module against an approved registration.
+ *
+ * ```
+ * requireUser() → rateLimit(10/hr) → parse → owner, approved, has a Remote ID
+ *   → supersede the current declaration + insert the new one + audit,
+ *     in ONE transaction
+ *   → revalidatePath()
+ * ```
+ *
+ * **It supersedes rather than edits.** `remote_id_declaration` is a history
+ * table on purpose — the regulator's question is "what was broadcasting on 3
+ * March", which needs rows with validity windows, not a row the next correction
+ * overwrites. So declaring again marks the old row `supersededAt` and writes a
+ * new one; nothing is ever deleted and nothing is ever rewritten.
+ *
+ * **The new row is unverified, and that is the whole point of the state.** A
+ * pilot's claim about what their aircraft broadcasts is a claim until a human
+ * checks the document behind it. `verifiedAt` is null here and only F22 may set
+ * it — this action never writes it, whatever the input says, because the input
+ * cannot say it.
+ *
+ * **No notification.** The only person who would be told is the person who just
+ * pressed the button; the reviewer-facing side is F22's queue, which does not
+ * exist, and a notification row addressed to nobody is not a queue. The audit
+ * event is written either way — a declaration is a regulator-facing claim, and
+ * the trail is where it belongs.
+ */
+export async function declareModuleAction(
+  input: DeclareModuleInput,
+): Promise<ActionResult<{ declarationId: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("declaration.create", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const verdict = validateDeclaration(input);
+  if (!verdict.ok) return refuse(...verdict.codes);
+  const { kind, manufacturer, moduleSerial, docReference } = verdict.fields;
+
+  const droneRow = await db.query.drone.findFirst({
+    where: eq(drone.id, input.droneId),
+    columns: { id: true, ownerUserId: true, status: true },
+  });
+  if (!droneRow || droneRow.ownerUserId !== session.user.id) return refuse("not_found");
+  if (!acceptsDeclarations(droneRow.status)) return refuse("not_approved");
+
+  const rid = await db.query.remoteId.findFirst({
+    where: eq(remoteId.droneId, input.droneId),
+    columns: { id: true },
+  });
+  if (!rid) return refuse("not_found");
+
+  try {
+    const declarationId = await db.transaction(async (tx) => {
+      /**
+       * Supersede first, then insert. The partial unique index is on
+       * `(kind, module_serial) where superseded_at is null`, so re-declaring
+       * the *same* module would collide with the row it is replacing if the
+       * order were reversed.
+       */
+      await tx
+        .update(remoteIdDeclaration)
+        .set({ supersededAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(remoteIdDeclaration.remoteIdId, rid.id),
+            isNull(remoteIdDeclaration.supersededAt),
+          ),
+        );
+
+      const [row] = await tx
+        .insert(remoteIdDeclaration)
+        .values({
+          remoteIdId: rid.id,
+          kind,
+          manufacturer,
+          moduleSerial,
+          docReference,
+        })
+        .returning({ id: remoteIdDeclaration.id });
+
+      if (!row) throw new Error("remote_id_declaration insert returned no row");
+
+      await audit(tx, {
+        actor: {
+          userId: session.user.id,
+          role: roleOf(session),
+          isSystem: false,
+        },
+        entityType: "remote_id",
+        entityId: rid.id,
+        action: "remote_id.module_declared",
+        after: {
+          declarationId: row.id,
+          kind,
+          manufacturer,
+          moduleSerial,
+          docReference,
+        },
+      });
+
+      return row.id;
+    });
+
+    revalidatePath(`/[locale]/drones/${input.droneId}/remote-id`, "page");
+    return { ok: true, data: { declarationId } };
+  } catch (caught) {
+    /**
+     * The partial unique index refusing a module serial that another live
+     * declaration already claims. **A refusal, not a 500**: one physical module
+     * broadcasts one identity, so two aircraft claiming it is a real thing to
+     * say no to, and the pilot needs to read it rather than see a crash.
+     */
+    if (isModuleSerialTaken(caught)) return refuse("module_serial_claimed");
+    throw caught;
+  }
+}
+
+/**
+ * The partial unique index on `(kind, module_serial) where superseded_at is
+ * null`, refusing a serial another live declaration already holds.
+ *
+ * **Two things had to be right here, and the first one was not.** Drizzle wraps
+ * driver errors in a `DrizzleQueryError`, so the postgres.js error — the one
+ * carrying `code` and `constraint_name` — is on `.cause`, not on the error
+ * itself. Checking the top level found nothing, the `catch` re-threw, and the
+ * action answered a legitimate refusal with a server error. Found by declaring
+ * the same module serial on a second aircraft.
+ *
+ * And it matches **this constraint by name**, not merely `23505`. Any future
+ * unique index on this table would otherwise be reported to a pilot as "that
+ * serial is already declared", which would be a confident lie about a different
+ * problem.
+ */
+const ACTIVE_MODULE_CONSTRAINT = "remote_id_decl_active_module_uniq";
+
+function isModuleSerialTaken(caught: unknown): boolean {
+  for (let error: unknown = caught; error != null; error = (error as { cause?: unknown }).cause) {
+    if (typeof error !== "object") break;
+    const candidate = error as { code?: unknown; constraint_name?: unknown };
+    if (
+      candidate.code === "23505" &&
+      candidate.constraint_name === ACTIVE_MODULE_CONSTRAINT
+    ) {
+      return true;
+    }
+  }
+  return false;
 }

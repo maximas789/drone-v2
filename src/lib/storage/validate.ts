@@ -7,7 +7,7 @@
  * that has to keep working.
  */
 
-import { isDroneEditable } from "@/lib/validation/drone";
+import { acceptsDeclarations, isDroneEditable } from "@/lib/validation/drone";
 
 /** Every kind of file the app stores. `qr` is written by F08, never uploaded. */
 export const UPLOAD_KINDS = [
@@ -183,4 +183,13 @@ export { EDITABLE_DRONE_STATUSES } from "@/lib/validation/drone";
 
 export function acceptsUploads(status: string): boolean {
   return isDroneEditable(status);
+}
+
+/**
+ * The gate for a **declaration document**, which is not the gate for a
+ * photograph. Re-exported here so `data/upload.ts` asks one module about
+ * uploads; the rule itself lives in `validation/drone.ts` beside its sibling.
+ */
+export function acceptsDeclarationUploads(status: string): boolean {
+  return acceptsDeclarations(status);
 }

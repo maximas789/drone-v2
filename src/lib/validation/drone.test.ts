@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { acceptsUploads } from "@/lib/storage/validate";
 import {
+  acceptsDeclarationUploads,
+  acceptsUploads,
+} from "@/lib/storage/validate";
+import {
+  acceptsDeclarations,
+  DECLARABLE_DRONE_STATUSES,
+  EDITABLE_DRONE_STATUSES,
   isDroneEditable,
   NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
@@ -273,6 +279,54 @@ describe("validateDroneSpecs", () => {
     if (!result.ok) {
       expect(new Set(result.problems)).toEqual(
         new Set(["weight_required", "serial_required"]),
+      );
+    }
+  });
+});
+
+describe("acceptsDeclarations", () => {
+  it("admits approved, and nothing else", () => {
+    expect(acceptsDeclarations("approved")).toBe(true);
+    for (const status of ["draft", "pending", "rejected", "expired", "revoked"]) {
+      expect(acceptsDeclarations(status), status).toBe(false);
+    }
+  });
+
+  /**
+   * The regression this predicate exists for.
+   *
+   * A `remote_id_declaration` row hangs off `remote_id`, and `remote_id` is
+   * minted inside the approval transition — so a drone with anything to declare
+   * against is `approved` at the earliest. F07 gated the declaration-document
+   * upload on `acceptsUploads`, which is `draft` and `rejected`, and the two
+   * sets are **disjoint**: the whole upload path — kind rule, storage prefix,
+   * data helper, route branch — sat behind a condition no row could satisfy.
+   *
+   * If a later session collapses these two predicates back into one, this fails
+   * and says why.
+   */
+  it("is deliberately disjoint from the editable list", () => {
+    for (const status of DECLARABLE_DRONE_STATUSES) {
+      expect(isDroneEditable(status), status).toBe(false);
+      expect(acceptsUploads(status), status).toBe(false);
+    }
+    for (const status of EDITABLE_DRONE_STATUSES) {
+      expect(acceptsDeclarations(status), status).toBe(false);
+    }
+  });
+
+  it("is the same list `acceptsDeclarationUploads` enforces", () => {
+    for (const status of [
+      "draft",
+      "pending",
+      "approved",
+      "rejected",
+      "expired",
+      "revoked",
+      "nonsense",
+    ]) {
+      expect(acceptsDeclarationUploads(status), status).toBe(
+        acceptsDeclarations(status),
       );
     }
   });

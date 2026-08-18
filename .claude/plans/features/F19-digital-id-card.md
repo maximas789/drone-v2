@@ -151,3 +151,77 @@ so it is an owner-checked link to bytes that exist, not a new renderer.
 - **The card renders declared modules but does not add them.** The empty state
   says what is true — no external module is declared, and the Ajniha code is the
   aircraft's Remote ID — and promises no control, because F19b owns the form.
+
+---
+
+## Corrections after F19b (Session 18)
+
+**F19 is complete.** The print view, the downloads and the declared-modules form.
+
+### The declaration upload was unreachable code, and had been since F07
+
+`getDeclarationForUpload` gated on `acceptsUploads`, which is `isDroneEditable`,
+which is `draft | rejected`. But a `remote_id_declaration` row references
+`remote_id`, and `remote_id` is minted **inside the approval transition**. The
+two conditions cannot both hold for any row that has ever existed — so F07's
+whole declaration-document path (a kind rule, a storage prefix, a data helper,
+a route branch) sat behind a condition nothing could satisfy.
+
+The gate is now **`acceptsDeclarations`** — `approved` only — in
+`src/lib/validation/drone.ts` beside `isDroneEditable`, with a test asserting
+the two lists stay **disjoint** and saying why. F19b is the first time a
+declaration document has ever been uploaded in this build.
+
+### Consequences of making it reachable
+
+- **`listDroneFilePathnames` did not collect declaration documents.**
+  `remote_id_declaration` cascades away with the drone, taking every `docPath`
+  with it and leaving the PDF in storage with nothing able to name it — the
+  orphaned-blob leak, not merely waste. Harmless while no `docPath` could
+  exist; fixed here, superseded rows included.
+
+### Decisions
+
+- **The form does not collect `validFrom` / `validUntil`.** Those describe when
+  a *certificate* is valid, and a pilot typing them before anybody has read the
+  certificate would put an unchecked claim on the card beside the verified ones.
+  **F22's reviewer sets them when verifying.** The columns stay nullable and
+  pilot-unwritten.
+- **Declaring supersedes; it never edits.** The table is history on purpose, so
+  a new declaration marks the old row `supersededAt` and inserts a new one.
+  Supersede happens **before** the insert, or re-declaring the same module would
+  collide with the row it is replacing.
+- **A declaration must identify the module** — at least one of manufacturer,
+  serial or certificate reference. A row carrying only a kind asserts that a
+  module exists without saying which, which no reviewer can check.
+- **No notification.** The only person to tell is the one who pressed the
+  button; the reviewer-facing side is F22's queue. The audit event is written
+  regardless — a declaration is a regulator-facing claim.
+- **`DECLARATION_KINDS` lives in `src/lib/validation/declaration.ts`, not in the
+  action.** A `"use server"` module may export only async functions, so an array
+  exported from one reaches the browser as a callable proxy —
+  `DECLARATION_KINDS.map is not a function`, thrown at render with every static
+  check green.
+
+### The print view
+
+- `@page { size: A4; margin: 12mm }`, chrome hidden, sizes in **millimetres on
+  screen as well as in print** so the preview is the artefact.
+- The **proposal notice is on the printed artefact itself**, not only on the
+  page that made it. A card in a wallet outlives the browser tab and must never
+  be mistaken for a GACA-issued document.
+- **"Printed output uses the light palette even in dark mode" is currently
+  vacuous**: nothing in this app ever applies the `.dark` class — there is no
+  theme toggle yet. The print override is written for when one arrives, and the
+  printed surfaces additionally use explicit `bg-white` / `text-black` rather
+  than theme tokens. Re-check when a toggle ships (F28).
+- **Download QR PNG** is an owner-checked `/api/files/…` link with a `download`
+  attribute naming the file after the code. There is no card PNG — see the F19a
+  corrections above.
+
+### Still unverified
+
+- **Nothing has been printed.** No paper, no phone camera, so the criterion
+  *"a printed 20 mm QR scans from ~15 cm"* is **unverified**, as F19 permits it
+  to be named. Thread 47.
+

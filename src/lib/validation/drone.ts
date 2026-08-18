@@ -66,6 +66,32 @@ export function isDroneEditable(status: string): boolean {
   return (EDITABLE_DRONE_STATUSES as readonly string[]).includes(status);
 }
 
+/**
+ * Which registrations may take a **Remote ID module declaration** — a different
+ * question from `isDroneEditable`, and it has to be, because the two lists are
+ * disjoint by construction.
+ *
+ * A declaration hangs off `remote_id`, and `remote_id` is minted **inside the
+ * approval transition** (`applyTransition` → `issueRemoteId`). So a drone that
+ * has something to declare against is, at the earliest, `approved` — while the
+ * editable list is `draft` and `rejected`. Gating declarations on
+ * `acceptsUploads` therefore made the path unreachable: F07 built the whole
+ * declaration-document upload — a kind rule, a storage prefix, a data helper
+ * and a route branch — behind a condition no row can ever satisfy. Found in
+ * F19b by reading `getDeclarationForUpload` before writing the form.
+ *
+ * **`approved` only.** `expired` and `revoked` are registrations that have
+ * ended, and a new claim about what an aircraft is broadcasting is not a thing
+ * to accept against one; an expired registration is renewed first, which is a
+ * decision, not a form. `pending` is out for the same reason it is not
+ * editable — a reviewer must decide on what they saw.
+ */
+export const DECLARABLE_DRONE_STATUSES = ["approved"] as const;
+
+export function acceptsDeclarations(status: string): boolean {
+  return (DECLARABLE_DRONE_STATUSES as readonly string[]).includes(status);
+}
+
 // --- Weight ---------------------------------------------------------------
 
 /**

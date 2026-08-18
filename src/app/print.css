@@ -1,0 +1,135 @@
+/**
+ * The print stylesheet, imported by the Remote ID print view and by nothing
+ * else.
+ *
+ * **Everything a pilot prints has to survive leaving the app.** A QR that
+ * renders white-on-dark, a sticker whose margins the printer eats, or a page
+ * carrying the app's navigation into a sheet of stickers are all failures that
+ * only appear on paper — and paper is the one output nothing in this repo can
+ * check.
+ */
+
+@media print {
+  /**
+   * A4 with real margins. Without an explicit `@page`, browsers apply their own
+   * default (typically ~12.7 mm) and Chrome's headers and footers — the URL and
+   * the page number — print across the top and bottom of the sticker sheet.
+   */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  /**
+   * **Force white, whatever theme the app is in.** The tokens are redefined
+   * rather than the elements restyled, so every `bg-card` / `text-foreground`
+   * inside the printed surfaces comes out light without each one needing a
+   * print-only class. A dark-mode QR on white paper does not scan, and a pilot
+   * who happens to be in dark mode when they press print would never know why.
+   */
+  :root,
+  .dark {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --border: oklch(0.922 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /**
+   * The app's chrome, and every control that only makes sense on screen. A
+   * printed page has no Print button and no way back to the aircraft.
+   */
+  header,
+  nav,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /**
+   * Backgrounds and borders are dropped by default in print — the browser
+   * assumes they are decoration and saves ink. Here the white plate behind a
+   * QR and the cut lines around a sticker are the opposite of decoration.
+   */
+  .print-sheet,
+  .print-sheet * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /** A card cut in half across a page break is waste paper. */
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /**
+   * Physical sizes, in millimetres, because that is the unit the thing is
+   * measured in once it is on an airframe. 50 mm for a fixed-wing or a large
+   * quad, 30 mm for a mid-size, 20 mm for a small FPV frame where there is
+   * nowhere else to put it.
+   */
+  .qr-50 {
+    width: 50mm;
+    height: 50mm;
+  }
+
+  .qr-30 {
+    width: 30mm;
+    height: 30mm;
+  }
+
+  .qr-20 {
+    width: 20mm;
+    height: 20mm;
+  }
+
+  /** Roughly ID-1, the credit-card size a wallet is built around. */
+  .wallet-card {
+    width: 85.6mm;
+    min-height: 54mm;
+  }
+}
+
+/**
+ * On screen, the same surfaces are shown at their true physical size so that
+ * what the pilot sees is what comes out of the printer. `mm` is a real CSS unit
+ * on screen too — it just assumes 96 dpi, which is close enough to preview a
+ * sticker sheet and far better than showing 50 mm and 20 mm identically.
+ */
+@media screen {
+  .qr-50 {
+    width: 50mm;
+    height: 50mm;
+  }
+
+  .qr-30 {
+    width: 30mm;
+    height: 30mm;
+  }
+
+  .qr-20 {
+    width: 20mm;
+    height: 20mm;
+  }
+
+  .wallet-card {
+    width: 85.6mm;
+    min-height: 54mm;
+  }
+}

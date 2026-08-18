@@ -49,8 +49,12 @@ export function Field({
   problems,
   children,
 }: {
-  /** The catalogue namespace holding `errors.<code>` — `profile` or `drones`. */
-  namespace: "profile" | "drones";
+  /**
+   * The catalogue namespace holding `errors.<code>`. A nested path is fine —
+   * `remoteId.card` is where F19's declaration refusals live, beside the rest
+   * of that surface's strings rather than hoisted to a top-level namespace.
+   */
+  namespace: "profile" | "drones" | "remoteId.card";
   label: string;
   hint?: string;
   codes: readonly string[];

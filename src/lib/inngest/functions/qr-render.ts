@@ -1,10 +1,7 @@
-import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { remoteId } from "@/lib/db/schema";
 import { linkNotificationEmail } from "@/lib/data/notification";
 import { sendEmail } from "@/lib/email/send";
-import { qrPathnameFor, renderQrPng } from "@/lib/qr/render";
-import { putFile } from "@/lib/storage";
+import { storeQrForRemoteId } from "@/lib/qr/store";
 import { localeUrl } from "@/lib/url";
 import { inngest } from "../client";
 import { droneApprovedEvent } from "../events";
@@ -35,25 +32,18 @@ export const qrRender = inngest.createFunction(
         return { skipped: "no-remote-id" as const };
       }
 
-      const png = await renderQrPng(row.remoteIdCode);
       /**
-       * Same code, same pathname, overwritten in place. Re-running this must
-       * never mint a second file — a sticker already on an airframe points at
-       * the first one.
+       * **Shared with F19's retry**, which is the same act driven by a pilot
+       * looking at a card with no QR on it. Same code, same pathname,
+       * overwritten in place: re-running must never mint a second file, because
+       * a sticker already on an airframe points at the first one.
        */
-      const file = await putFile({
-        buffer: png,
-        filename: qrPathnameFor(row.remoteIdCode),
-        contentType: "image/png",
-        prefix: "qr",
+      const pathname = await storeQrForRemoteId({
+        remoteIdId: row.remoteIdId,
+        code: row.remoteIdCode,
       });
 
-      await db
-        .update(remoteId)
-        .set({ qrPathname: file.pathname, updatedAt: new Date() })
-        .where(eq(remoteId.id, row.remoteIdId));
-
-      return { skipped: null, pathname: file.pathname };
+      return { skipped: null, pathname };
     });
 
     if (stored.skipped) return { droneId, skipped: stored.skipped };
@@ -78,7 +68,7 @@ export const qrRender = inngest.createFunction(
            * loudly instead and retries once the column is right.
            */
           validUntil: mustHaveExpiry(row.registrationExpiresAt, droneId),
-          cardUrl: localeUrl(`/drones/${droneId}/card`, row.ownerLocale),
+          cardUrl: localeUrl(`/drones/${droneId}/remote-id`, row.ownerLocale),
         },
       });
 

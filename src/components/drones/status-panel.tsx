@@ -137,13 +137,25 @@ export function DroneStatusPanel({
             ) : null}
 
             {remoteIdCode ? (
-              <div className="flex flex-col items-start gap-2">
-                <ButtonLink variant="outline" href={`/rid/${remoteIdCode}`}>
-                  {t("viewPublicRecord")}
+              <div className="flex flex-col items-start gap-3">
+                {/**
+                 * The card leads, and the public record follows it. F18 showed
+                 * the code as text and linked only to `/rid/{code}`, because
+                 * F19 owned the card and it did not exist yet; it does now, and
+                 * it is where the QR, the printable sticker and the privacy
+                 * explainer live.
+                 */}
+                <ButtonLink href={`/drones/${drone.id}/remote-id`}>
+                  {t("viewCard")}
                 </ButtonLink>
-                <p className="text-muted-foreground text-xs">
-                  {t("viewPublicRecordHint")}
-                </p>
+                <div className="flex flex-col items-start gap-2">
+                  <ButtonLink variant="outline" href={`/rid/${remoteIdCode}`}>
+                    {t("viewPublicRecord")}
+                  </ButtonLink>
+                  <p className="text-muted-foreground text-xs">
+                    {t("viewPublicRecordHint")}
+                  </p>
+                </div>
               </div>
             ) : null}
           </div>

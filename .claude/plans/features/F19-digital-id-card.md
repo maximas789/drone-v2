@@ -92,3 +92,62 @@ src/lib/actions/remote-id.ts           regenerateQr (admin + owner)
 - [ ] The privacy explainer accurately describes what an anonymous scanner sees — cross-checked against [F11](./F11-remote-id-redaction.md)'s masking table.
 - [ ] The card is legible in Arabic RTL at 375 px — this is the primary viewport.
 - [ ] `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` pass.
+
+---
+
+## Corrections after F19a (Session 17)
+
+The build log is the truth; these are the places this file was wrong, or was
+changed by a decision taken with the user before building.
+
+**F19 is being built in two halves**, settled up front rather than mid-flight:
+
+- **F19a** — the card route, the QR display with its generating/retry state,
+  tap-to-copy, the privacy explainer, and owner-only access. *Done.*
+- **F19b** — the print view (wallet card and the 50/30/20 mm sticker sheet),
+  the downloads, and the declared-modules **form**. The card already *renders*
+  declared modules with their verification state; what F19b adds is the control
+  that creates one.
+
+### "Download card as a print-ready PNG" is cut
+
+Replaced by **"print the card, and save as PDF from the browser's own print
+dialog"** — F19b's print view is what delivers it.
+
+Nothing installed can rasterise styled Arabic server-side, so this was a choice
+between adding a dependency and cutting the feature, and it was taken with the
+user before the print stylesheet was written rather than discovered afterwards:
+
+- **satori has no HarfBuzz.** It does not do complex-script shaping, so Arabic
+  comes out with its letters unjoined — the same class of defect as calling
+  `setRTLTextPlugin()` wrongly, and one that would ship looking *almost* right.
+  It would also mean bundling an Arabic TTF and hoping.
+- **resvg or puppeteer** buys a native binary or a Chromium download for one
+  button.
+- The browser's print pipeline already shapes Arabic correctly, with the app's
+  real fonts, and produces **vector** output — which prints better than a
+  512 px PNG anyway. The thing the criterion actually wanted, a pilot ending up
+  with a printable file, is delivered better by the path that was already being
+  built.
+
+**Download QR PNG stays** (F19b): `qrcode` renders it and it is already stored,
+so it is an owner-checked link to bytes that exist, not a new renderer.
+
+### The rest
+
+- **The route is `/drones/[id]/remote-id`.** The approval email had been linking
+  to `/drones/{id}/card`, which was never a route — every approval email ever
+  sent pointed at a 404. Fixed in `qr-render.ts` and in the template's sample.
+- **The retry renders inline; it does not enqueue a job.** The *approval* render
+  stays an Inngest job, because nobody is watching it and a transient storage
+  failure has to retry itself. The retry is a person pressing a button, and
+  queueing that answers them with a spinner and no outcome — including when
+  Inngest is the thing that is down, which is exactly when a QR goes missing.
+  Both call one function, `storeQrForRemoteId`, so there is no second renderer.
+- **"An admin action exists to re-render every QR after `APP_URL` changes" is
+  not built.** `regenerateQrAction` is per-aircraft (owner or admin). The
+  fleet-wide sweep belongs with [F29](./F29-system-ops-page.md), which is where
+  the `APP_URL` check that would prompt it lives.
+- **The card renders declared modules but does not add them.** The empty state
+  says what is true — no external module is declared, and the Ajniha code is the
+  aircraft's Remote ID — and promises no control, because F19b owns the form.

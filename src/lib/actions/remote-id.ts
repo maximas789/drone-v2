@@ -1,15 +1,17 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { and, desc, eq } from "drizzle-orm";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import { audit, type Actor } from "@/lib/audit";
 import { requireReviewer, getSession } from "@/lib/auth-guards";
 import { db, type DbExecutor } from "@/lib/db";
-import { droneReport, remoteId, remoteIdScan } from "@/lib/db/schema";
+import { drone, droneReport, remoteId, remoteIdScan } from "@/lib/db/schema";
 import { getRemoteIdRecordByCode } from "@/lib/data/remote-id";
 import { clientIpFrom, hashIp } from "@/lib/ip-hash";
 import { enforceLimit } from "@/lib/rate-limit";
+import { storeQrForRemoteId } from "@/lib/qr/store";
 import { normalizeCode } from "@/lib/remote-id/codec";
 import { viewerLevelFor } from "@/lib/remote-id/resolve";
 import { roleOf } from "@/lib/session";
@@ -280,4 +282,82 @@ export async function reportDroneAction(
 function validCoordinate(value: unknown, bound: number): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return Math.abs(value) <= bound ? value : null;
+}
+
+/**
+ * Re-render the QR for one aircraft — the card's "generating…" retry.
+ *
+ * ```
+ * requireUser() → rateLimit(10/hr) → owner (or admin) → approved, with a code
+ *   → storeQrForRemoteId()  ← the SAME path the approval job runs
+ *   → revalidatePath()
+ * ```
+ *
+ * **Inline, not an Inngest event.** F19 specifies the *approval* render as a
+ * job, and it stays one: nobody is watching, so a transient storage failure has
+ * to retry itself. This is the other case — a person looking at a card with no
+ * QR on it, pressing a button. Queueing that would answer them with a spinner
+ * and no outcome, and it would answer them with *nothing at all* whenever
+ * Inngest is the thing that is down, which is precisely when a QR goes missing.
+ * Pressing it here either produces the image or produces a refusal they can
+ * read. It is not a second renderer: `storeQrForRemoteId` is one function with
+ * two callers.
+ *
+ * **Owner or admin**, and a reviewer is deliberately not enough: this writes to
+ * the pilot's registration and their airframe is what carries the result.
+ */
+export async function regenerateQrAction(
+  droneId: string,
+): Promise<ActionResult<{ pathname: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("remote_id.qr_render", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const row = await db.query.drone.findFirst({
+    where: eq(drone.id, droneId),
+    columns: { id: true, ownerUserId: true, status: true },
+  });
+
+  /**
+   * "Not yours" and "does not exist" answer identically, as everywhere else a
+   * drone id appears in a URL — distinguishing them lets anyone holding an id
+   * learn whether it is real.
+   */
+  if (!row) return refuse("not_found");
+  if (row.ownerUserId !== session.user.id && roleOf(session) !== "admin") {
+    return refuse("not_found");
+  }
+
+  // The QR resolves to a public record. A drone that is not approved has no
+  // record to resolve to, so there is nothing legitimate to render.
+  if (row.status !== "approved") return refuse("not_approved");
+
+  const rid = await db.query.remoteId.findFirst({
+    where: eq(remoteId.droneId, droneId),
+    columns: { id: true, code: true },
+  });
+  if (!rid) return refuse("not_found");
+
+  let pathname: string;
+  try {
+    pathname = await storeQrForRemoteId({ remoteIdId: rid.id, code: rid.code });
+  } catch (caught) {
+    /**
+     * Storage refused, or the encoder did. **A refusal, not a crash** — the
+     * pilot pressed a button and is owed an answer, and the answer is "not
+     * this time", which they can act on by pressing it again.
+     */
+    console.error("[remote-id] QR render failed for", rid.code, caught);
+    return refuse("qr_render_failed");
+  }
+
+  revalidatePath(`/[locale]/drones/${droneId}/remote-id`, "page");
+
+  return { ok: true, data: { pathname } };
 }

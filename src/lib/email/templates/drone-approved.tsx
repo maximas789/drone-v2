@@ -53,6 +53,6 @@ export const droneApproved = defineTemplate<DroneApprovedParams>({
     nickname: "الصقر",
     remoteIdCode: "AJN-4F2K-91XZ",
     validUntil: new Date("2029-03-15T09:00:00.000Z"),
-    cardUrl: localeUrl("/drones/sample/card"),
+    cardUrl: localeUrl("/drones/sample/remote-id"),
   },
 });

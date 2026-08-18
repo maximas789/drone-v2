@@ -299,6 +299,7 @@
     "approvedBody": "Your aircraft now has its own Remote ID — that is its registration identity.",
     "viewPublicRecord": "View the public record",
     "viewPublicRecordHint": "This is what somebody scanning your aircraft sees. It shows neither your name nor your details.",
+    "viewCard": "Remote ID card",
     "rejectedTitle": "Not approved",
     "rejectedOn": "On {date}",
     "rejectedNoReason": "No reason was recorded with this decision.",
@@ -431,7 +432,71 @@
       "reviewer": "Reviewer",
       "admin": "Admin"
     },
-    "revealLoggedDone": "This reveal has been written to the audit log against your name."
+    "revealLoggedDone": "This reveal has been written to the audit log against your name.",
+    "card": {
+      "issuer": "Ajniha · Drone Register",
+      "codeLabel": "Remote ID code",
+      "copyHint": "Tap the code to copy it",
+      "copied": "Code copied",
+      "copyFailed": "Could not copy. Read the code as written.",
+      "copyAria": "Copy Remote ID code {code}",
+      "issuedAt": "Issued",
+      "validUntil": "Valid until",
+      "owner": "Owner",
+      "notShareable": "This card is yours alone. Anyone opening its link on another account sees nothing.",
+      "qrAlt": "QR code for Remote ID {code}",
+      "qrHint": "Scan to open this aircraft's public record.",
+      "qrPendingTitle": "Generating QR code",
+      "qrPendingBody": "The code is generated right after your registration is approved. If it has not appeared, try again — the Remote ID itself does not change.",
+      "qrRetry": "Try again",
+      "qrGenerating": "Generating…",
+      "printWarning": "The QR embeds this site's address at the moment it was generated. If you print the sticker and the platform's address later changes, the code has to be generated again.",
+      "modulesTitle": "Declared Remote ID modules",
+      "modulesEmpty": "No external module is declared for this aircraft. The code above is its Remote ID.",
+      "moduleVerified": "Verified",
+      "modulePending": "Awaiting verification",
+      "moduleRejected": "Rejected",
+      "moduleDoc": "Reference: {reference}",
+      "moduleKinds": {
+        "faa_broadcast_module": "Broadcast module (FAA)",
+        "gaca_dri": "Direct Remote ID (GACA)",
+        "gaca_nri": "Network Remote ID (GACA)",
+        "other": "Other"
+      },
+      "privacyTitle": "What does a scanner see?",
+      "privacyIntro": "Before you print the sticker and put it on the airframe, this is what anyone who scans it sees without signing in.",
+      "privacyShownTitle": "Shown to everyone",
+      "privacyHiddenTitle": "Not shown",
+      "privacyShown": {
+        "code": "The Remote ID code",
+        "status": "Registration status",
+        "validUntil": "When the registration expires",
+        "kind": "Build type and weight class",
+        "city": "City of registration",
+        "flying": "Whether a flight is authorised right now — yes or no, never where",
+        "capability": "How the aircraft broadcasts its Remote ID"
+      },
+      "privacyHidden": {
+        "nickname": "The name you gave the aircraft",
+        "makeModel": "Manufacturer and model",
+        "serial": "The serial number, if it has one",
+        "photos": "Photographs of the aircraft",
+        "owner": "Your name",
+        "contact": "Your mobile number",
+        "id": "Your national ID or Iqama number",
+        "zone": "Which zone you are flying in",
+        "history": "Your booking history and declared modules"
+      },
+      "privacyReviewer": "An authorised reviewer can reveal the owner behind a code when they need to. It never happens automatically: the reviewer writes a reason, and the reveal is recorded against their name in the audit trail.",
+      "privacyOpenPublic": "Open the public record",
+      "privacyOpenPublicHint": "The same page a scanner reaches.",
+      "errors": {
+        "not_authenticated": "You need to sign in.",
+        "not_found": "That aircraft was not found.",
+        "not_approved": "A QR code is only generated once the registration is approved.",
+        "qr_render_failed": "The code could not be generated just now. Try again in a moment."
+      }
+    }
   },
   "zones": {
     "title": "Zones",

@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–16).** F17 done; **F18 complete** — F18a the wizard and list, F18b the detail page, edit, the six status screens, renewal and deletion. F16, F19–F21 not started. |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–17).** F17 and **F18** done; **F19a done** — the card, the QR and its retry, tap-to-copy, the privacy explainer. **F19b** (print view, downloads, declared-modules form), F16, F20 and F21 not started. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -132,13 +132,14 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
 | 37 | **A booking has no launch point, so no-fly overlays are not resolved at booking time.** `createBookingAction` evaluates with `AirspaceQuery.zoneId` because the booking form picks a zone, not a coordinate, and `booking` has no lat/lng column. A permitted zone overlapping a no-fly zone would therefore be bookable at the overlap — the *map* resolves it (point query), the booking does not. The seeded `RUH-P-01` and `RUH-NF-KKIA` touch in a ~50 m sliver, so this is not hypothetical. **Either F23 refuses to publish an overlapping permitted zone, or F21 sends the launch point and the schema grows a column for it.** | F12/F13 | F21, F23 |
 | 38 | **The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.** A zone with `nightAllowed: false` therefore refuses its own first slot for part of the year — the engine is right (you may not fly before sunrise) but the hours and the rule disagree, and F21's picker will show slots that are always refused. `slotStates` has no `night` state to grey them with, deliberately: F13's state table has five members and inventing a sixth here would put sun maths in the slot grid. **F21 or F23 owns the reconciliation.** | F12/F13 | F21, F23 |
-| 40 | **Most server actions have still never been driven over HTTP** — 22 exist. **Sessions 14–16 broke the drought.** F17's two were POSTed at signed-out; F18a POSTed four **with a real session cookie**; **F18b added `deleteDroneAction`, `resubmitDroneAction` and `renewDroneAction`** — `not_deletable` for `pending` and `approved`, `not_editable` for both, `{"ok":true}` for editing a `rejected` drone, and renewal and resubmission driven from the browser. **The seven pilot-facing drone actions are now exercised over real HTTP.** The remaining gap is the **decision** actions — `approveDroneAction`, `rejectDroneAction`, `revokeDroneAction`, `reinstateDroneAction` — plus booking and map: **F22 the queues**, F20 the map, F21 booking. | F12/F13/F14 | F20, F21, F22, F31 |
-| 41 | **"A reviewer approves and the pilot gets an email with a QR" has never run as one flow.** `approveDroneAction` sends `drone/approved`; F08's `qr-render` job renders and mails. Both halves are proven — the job against hand-triggered events, the action against the database — but Inngest was not running during F14's probe and no Resend key exists, so the seam between them is structural. | F14 | F31 |
+| 40 | **Most server actions have still never been driven over HTTP** — 22 exist. **Sessions 14–16 broke the drought.** F17's two were POSTed at signed-out; F18a POSTed four **with a real session cookie**; **F18b added `deleteDroneAction`, `resubmitDroneAction` and `renewDroneAction`** — `not_deletable` for `pending` and `approved`, `not_editable` for both, `{"ok":true}` for editing a `rejected` drone, and renewal and resubmission driven from the browser. **The seven pilot-facing drone actions are now exercised over real HTTP.** **F19a added `regenerateQrAction`** — posted directly from the owner's session (`not_approved` for draft/pending/revoked, `not_found` for a nonexistent id), from a *second pilot's* session (`not_found` for another owner's aircraft), and driven to its rate limit (refused on the 11th call in an hour). The remaining gap is the **decision** actions — `approveDroneAction`, `rejectDroneAction`, `revokeDroneAction`, `reinstateDroneAction` — plus booking and map: **F22 the queues**, F20 the map, F21 booking. | F12/F13/F14 | F20, F21, F22, F31 |
+| 41 | **"A reviewer approves and the pilot gets an email with a QR" has never run as one flow.** **F19a ran the second half for real**: a `drone/approved` event sent by hand at a live Inngest dev server drove `qr-render` end to end against real rows — render, store, `qrPathname` written, approval email attempted (`email_log`: `drone-approved`, `skipped`, no Resend key). It also found that the email's `cardUrl` had always pointed at `/drones/{id}/card`, **a route that never existed** — now `/remote-id`. What is still structural is the *first* half: `approveDroneAction` sends the event, and no approval has ever been driven through a UI, so action→event is the untested seam. | F14, F19a | F22 |
 | 42 | **An admin can approve their own drone.** Staff hold `owner` and `admin` at once, deliberately, so that staff can use the app as pilots; the cost is no segregation of duties on a decision. It also cannot be blocked in this build, where the only admin is the only account. **F22 owns a four-eyes rule** if it wants one. | F14 | F22 |
 | 43 | **`notification.emailLogId` is wired on the approval path only.** `linkNotificationEmail` matches on `(userId, entityId)` and `qr-render` calls it after sending. The expiry sweep, the booking reminders and the closure fan-out all send email beside a notification and do not link it, so F29's "why didn't that email arrive?" answers for approvals and shrugs for the rest. | F15 | F29 |
 | 44 | **375 px works through a same-origin iframe, and only that way.** `resize_window` reports success and leaves the viewport at 1440 — six attempts across five sessions. The technique that works: inject an `iframe` 375 px wide pointing at the page, whose media queries evaluate at its own width, then measure `scrollWidth` vs `clientWidth` inside it. **F31's gate must use this**, not the tool. | F15 | F31, every UI wave |
 | 45 | **A reviewer has no way to reveal a pilot's identity document.** F11's `revealIdentityAction` keys on a **Remote ID code** and resolves through `getRemoteIdRecordByCode`, so a reviewer opening a *pilot profile* — which need not have a drone at all — has nothing to call. F17 built no reviewer surface by design. **F22 must either widen that action to take a profile id or add a sibling**, and whichever it does, the audit event must still be written *before* the value is returned. | F17 | F22 |
 | 46 | **`<input type="date">` is unusable in this app.** Chrome renders it from the **browser's** locale and ignores `lang` on the element and on `<html>` — proven by setting both. Under an Arabic Chrome it prints `٠٤/٠٥/٢٠١٢` and a reversed `ةنس/رهش/موي` placeholder, which is rule 6 broken through a surface `format.ts` cannot reach. `DateOfBirthInput` (three selects) is the pattern. **Native `required` is banned for the same class of reason**: it cancels the submit and speaks the browser's language, so the app's bilingual refusal never runs. Both found by opening the page. | F17 | F18, F21, F23, F31 |
+| 47 | **No QR has ever been printed, and none has been scanned by a real phone camera.** F19a proved what the image *encodes* — the stored PNG is byte-identical to a fresh encode of the `/ar/rid/{code}` URL, with a differing control — and that the target resolves. Neither says a camera can read a **20 mm printed** symbol at ~15 cm, which is the criterion F19 actually states and the thing a field inspector does. It needs paper and a phone, so no amount of code can close it. **F19b owns the print view**; whoever builds it should print one sheet and try, or say plainly that it is unverified. | F19a | F19b, F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -300,6 +301,87 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 17 — Wave 6 · F19a Digital ID Card & QR (card, QR, copy, privacy)
+
+**Date:** 2026-08-18
+**Status:** ⚠️ done with deviations · **F19 is half done.** F19a is the card; F19b is the print view, the downloads and the declared-modules form.
+
+**The QR was rendered before any card code was written**, as the last session asked. `npx inngest-cli dev`, then a real `drone/approved` event per approved probe drone — so the job ran for real: render → store → `qrPathname` written → approval email attempted. The card was built against a real pathname from the first line, and the missing-QR state against a genuinely null one.
+
+**Two judgement calls settled with the user before building, not half-way:**
+
+1. **F19 is split.** F19a = card, QR, tap-to-copy, privacy explainer, access. F19b = print view, downloads, declared-modules form. F18 had to split mid-flight; this one was decided at the start.
+2. **"Download card as a print-ready PNG" is cut**, replaced by the print view's own Save-as-PDF. Nothing installed can rasterise styled Arabic server-side, and every candidate is worse than the browser: **satori has no HarfBuzz**, so Arabic renders with its letters unjoined — a defect that ships looking *almost* right — while resvg or puppeteer buys a native binary for one button. The browser's print pipeline shapes Arabic correctly with the app's real fonts and emits vector. **Download QR PNG stays** for F19b: those bytes already exist. Recorded in F19's file with the reasoning.
+
+**Built:**
+
+- `/[locale]/(app)/drones/[id]/remote-id` — owner-only, `approved`-only.
+- `src/components/remote-id/` — `id-card`, `qr-display`, `copy-code`, `declared-modules`, `privacy-explainer`.
+- `src/lib/qr/store.ts` — `storeQrForRemoteId`, **the one path that writes `qrPathname`**, now called by both F08's job and F19's retry.
+- `regenerateQrAction` in `src/lib/actions/remote-id.ts`, and a `remote_id.qr_render` limit (10/hour).
+- `src/lib/remote-id/privacy-fields.ts` + its test — the explainer's two columns, held against `redactRemoteId`'s real output.
+- 68 catalogue keys (**792**).
+
+**Deviations, each with its reason:**
+
+- **The approval email had been linking to `/drones/{id}/card`, which was never a route.** `qr-render.ts` built that URL and the template's sample repeated it, so every approval email ever sent pointed at a 404 — invisible, because no approval has been driven through a UI and no Resend key exists. Both now say `/remote-id`. Found by reading the job before writing the renderer, which is why the hand-off said to read it.
+- **The retry renders inline; it does not enqueue a job.** F19 specifies the *approval* render as a job and it stays one — nobody is watching, so a transient failure must retry itself. The retry is a person pressing a button, and queueing that answers them with a spinner and no outcome, including when Inngest is the thing that is down — which is exactly when a QR is missing. **Not a second renderer**: `storeQrForRemoteId` is one function with two callers, which is also how the job got *smaller* this session.
+- **`renderQrPng` was left exactly as F08 wrote it.** The hand-off warned that two renderers is the drift F11's single-projection rule exists to stop; the answer was to move the *storage* half out, not to write a new encoder.
+- **The fleet-wide "re-render every QR after `APP_URL` changes" admin action is not built.** `regenerateQrAction` is per-aircraft (owner or admin). The sweep belongs beside F29's `APP_URL` health check, which is the thing that would prompt it; building it here would put an admin control on a pilot's card.
+- **The card renders declared modules but cannot add one.** The empty state states a fact — no external module is declared, and the Ajniha code *is* the aircraft's Remote ID — and promises no control, because F19b owns the form. An empty state advertising a button that does not exist is the empty-Billing-tab lie.
+- **Superseded declarations are not rendered.** They are kept for the regulator's "what was broadcasting on 3 March"; the card answers "what is broadcasting now", and mixing the two reads as several live modules.
+- **A new kind of test: the privacy explainer is held against the projection, not against F11's feature file.** `privacy-fields.test.ts` compares the two rendered columns to `redactRemoteId`'s actual output in three directions — a field a bystander receives that the card does not describe, a field the card claims is public that is not, and a **new owner-only field** the "not shown" column never mentions. This is the one statement in the repo that can go silently false, because it is a promise about other people's data made to a pilot deciding whether to print a sticker.
+
+**One rendering defect found by opening the page**, with `typecheck`, `lint` and `build` green:
+
+1. **Pilot-authored strings on the card carried no `dir="auto"`** — nickname, manufacturer, model, owner name. Exactly F18b's defect 2 in a new place: on the English card an Arabic nickname is the one run whose direction is not the page's, and inherited direction mis-sets its punctuation. All now carry `dir="auto"` with `text-start`.
+
+*(The QR looked blank in the first screenshot and was not — the capture caught it mid-decode. Confirmed by drawing the element to a canvas: 1322 dark pixels of 4096. Recorded because "the image is missing" was the wrong conclusion and a screenshot was the reason for it.)*
+
+**Verified — in Chrome, over HTTP, against the live database:**
+
+| Criterion | Result |
+|---|---|
+| **A real QR, rendered by the real job, on screen** | OK — Arabic and English, served from `/api/files/qr/…` |
+| **What the QR encodes** | OK — the stored PNG is **byte-identical** to a fresh encode of `http://localhost:3001/ar/rid/AJN-2B8T-55WX`, with an `/en/` encode as a control that differs. So it encodes that URL and no other, at level H, 512 px |
+| Following the scan target | OK — `/ar/rid/AJN-2B8T-55WX` resolves to the right aircraft |
+| **The "generating…" state** | OK — against a genuinely null `qrPathname` with its blob deleted: dashed panel, no broken image, no blank space |
+| **The retry** | OK — pressed in the browser, the QR appeared |
+| **Idempotence** | OK — 10 renders of one code: same pathname, same bytes, still one file in `uploads/qr` |
+| Tap-to-copy | OK — the clipboard held `AJN-7Q4M-31KD` **with its dashes**; "تم نسخ الرمز" announced, then reverted |
+| Dates and numbers | OK — `18 أغسطس 2026`, `11 يوليو 2029`, `2,100 غرام` — Gregorian, Latin, both locales |
+| The serial row | OK — absent on every self-built airframe |
+| **The privacy explainer against the live anonymous payload** | OK — `/api/rid/{code}` signed out returns exactly the fields the "shown" column describes, and nothing the "hidden" column calls private |
+| **Card unreachable unless approved** | OK — draft, pending, rejected, expired and revoked all **404**, indistinguishable from a non-existent id, with no code or nickname in the body |
+| Signed out | OK — 307 to `/ar/sign-in` for every id, existing or not |
+| **Pilot B** | OK — 404 on the card, `not_found` from the action posted directly, and **404 on the QR image itself**. Probe account created over HTTP and deleted after |
+| **The action posted directly** | OK — `not_approved` for draft/pending/revoked, `not_found` for a nonexistent id, from the owner's own session |
+| **The new rate limit** | OK — fires on the 11th call in an hour with `retryAfterSeconds`; bucket cleared afterwards |
+| **375 px, Arabic** | OK — via the iframe (thread 44; `resize_window` not used). Card, generating state and English: `scrollWidth === clientWidth`, no overflowing element, code and QR both legible |
+| **Console** | OK — 23 messages, all DevTools / HMR / Fast Refresh. Zero errors, zero warnings |
+| **Mutation testing** | 3 mutants against the privacy guard, **3 killed**: a nickname leaked into `PublicFields` (caught twice, from both directions), a new undocumented owner-only field, and a deleted Arabic line |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (792), `pnpm test` (**595**), `pnpm build` — all green. `/[locale]/drones/[id]/remote-id` builds **dynamic**.
+- Probe rows left in place deliberately — F19b needs them. `pnpm exec tsx scripts/probe-drone-states.mts clean` sweeps them. The probe *account* was deleted; `user` is back to 1, still admin.
+
+**Not verified:**
+
+- **No QR has been scanned by a real phone**, and none has been printed. The byte-identity proof says what the image encodes; it does not say a camera can read it off paper at 20 mm. **F19b's print view is where that gets tested**, and it needs real paper.
+- **The `drone/approved` events were sent by hand** (`curl` at the dev server's `/e/` endpoint), not by `approveDroneAction`. Thread 41 moves but does not close: the **job** half now demonstrably runs end to end against real rows — render, store, write the pathname, attempt the email (`email_log` shows `drone-approved`, status `skipped`, no Resend key) — while the seam from the *action* that sends the event is still structural, because no approval has ever been driven through a UI. **F22.**
+- **`linkNotificationEmail` did nothing**, because the raw-SQL probe rows carry no notifications. Unchanged from F18b.
+- **No screen reader.** The `aria-live` copy confirmation and the `role="status"` generating panel were written for one and have never been heard by one.
+- **The blob driver still has not run** (threads 30 and 31). The QR is stored through the same `putFile` as everything else, so it inherits that gap exactly.
+
+**Next session should know:**
+
+- **F19b is next**: the print view, the downloads, and the declared-modules form. `/[locale]/drones/[id]/remote-id/print`, `src/app/print.css`, and a `Download QR PNG` link — **not** a card PNG; that is cut, and the reasoning is in F19's file.
+- **`storeQrForRemoteId` in `src/lib/qr/store.ts` is the only thing that may write `qrPathname`.** `render.ts` above it stays the pure encoder. Do not add a third caller that does its own `putFile`.
+- **`src/lib/remote-id/privacy-fields.ts` is the explainer's source of truth**, and its test fails if F11's projection changes. If it does fail, write the pilot-facing line — updating the map alone silently removes the promise.
+- **The probe drones are still seeded**, including one approved drone with a rendered QR (`AJN-7Q4M-31KD`) and one whose QR was deleted and re-rendered (`AJN-2B8T-55WX`).
+- **The profile's ID number is still fabricated** — `1055512345`, unchanged from Session 16. Left alone deliberately: the user said it is theirs to resolve, and every submit/resubmit/renew gate needs a complete profile.
 
 ---
 

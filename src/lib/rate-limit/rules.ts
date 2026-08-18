@@ -122,6 +122,15 @@ export const LIMITS = {
    * working down a list of users is normal traffic.
    */
   "user.role_set": [{ window: MINUTE, max: 20 }],
+  /**
+   * Not in F09's table — added by F19, which built the card's retry.
+   *
+   * Tight, because pressing it costs an image encode and a storage write, and
+   * the *legitimate* use is rare: a QR is rendered once on approval and the
+   * retry exists for the case where that failed. Ten an hour is more than any
+   * pilot needs and far less than a loop would want.
+   */
+  "remote_id.qr_render": [{ window: HOUR, max: 10 }],
 } as const satisfies Record<string, readonly RateLimitRule[]>;
 
 export type LimitedAction = keyof typeof LIMITS;

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { ZoneRow } from "@/components/airspace/zone-drawing";
-import { ZONE_FILL } from "@/components/airspace/zone-drawing";
+import { ZONE_FILL } from "@/lib/maps/zone-palette";
 import { formatAltitude, formatMinuteOfDay, formatWeekday } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 

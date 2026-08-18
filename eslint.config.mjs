@@ -320,6 +320,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    /**
+     * Vendored third-party bundles. `public/vendor/mapbox-gl-rtl-text.js` is a
+     * minified build copied verbatim out of `node_modules` by
+     * `pnpm vendor:rtl` — linting somebody else's minified output produces
+     * findings nobody can act on without forking the upstream package, and one
+     * of them (`no-this-alias`) is an error that would fail the build.
+     */
+    "public/vendor/**",
   ]),
 ]);
 

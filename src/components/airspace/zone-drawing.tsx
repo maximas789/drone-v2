@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import type { listActiveZones } from "@/lib/data/zone";
 import type { BoundingBox, Geometry } from "@/lib/geo";
 import { pathFor, projectionFor, unionBounds } from "@/lib/geo/project";
+import { DRAW_ORDER, ZONE_FILL } from "@/lib/maps/zone-palette";
 
 /**
  * The seeded airspace, drawn — **one implementation, two pages.**
@@ -25,15 +26,6 @@ import { pathFor, projectionFor, unionBounds } from "@/lib/geo/project";
  */
 
 export type ZoneRow = Awaited<ReturnType<typeof listActiveZones>>[number];
-
-/** Painted back to front, so the strictest rule is the one you see. */
-const DRAW_ORDER = ["restricted", "permitted", "no_fly"] as const;
-
-export const ZONE_FILL: Record<(typeof DRAW_ORDER)[number], string> = {
-  restricted: "var(--zone-restricted)",
-  permitted: "var(--zone-permitted)",
-  no_fly: "var(--zone-no-fly)",
-};
 
 export async function ZoneDrawing({ zones }: { zones: readonly ZoneRow[] }) {
   const t = await getTranslations("landing");

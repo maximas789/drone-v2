@@ -12,16 +12,14 @@ import { toLocale } from "@/lib/locale";
 /**
  * The published airspace, read-only.
  *
- * **This ships before [F20](../../../../../.claude/plans/features/F20-airspace-map.md),
- * deliberately** — settled with the user before building. F16 promises a public
- * zone page and F30 wants it indexable; waiting for the interactive map would
- * leave a 404 where a shared link lands, for the whole of the largest feature
- * left. The picture here is F16a's SVG and the list is real: codes, ceilings,
- * weight and build limits, and the full week of opening windows out of
- * `zone_hour`. **F20 replaces the picture and leaves the list alone.**
- *
- * There is deliberately no second MapLibre map on this page. One interactive
- * map, owned by F20.
+ * **Still the SVG, not MapLibre — see open thread 53.** F20a built the MapLibre
+ * map in `src/components/map/`, and it does not render: its GeoJSON source
+ * never finishes loading, which leaves the whole style permanently dirty so
+ * even the basemap stays blank. Reproduced identically against a production
+ * build, so it is not a dev-bundler artefact. Rather than ship a public page
+ * with an empty grey rectangle on it, this page keeps F16b's server-rendered
+ * SVG, which works. **`MapMount` is wired and one import away** — swapping it
+ * back in is the last step of that thread, not a rewrite.
  *
  * **No booking here.** A slot needs an account and an aircraft — the airspace
  * engine's answer depends on the drone's weight and build type, so a "book"

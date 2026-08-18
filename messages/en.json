@@ -795,7 +795,10 @@
     "bookingTitle": "Booking needs an account and a registered aircraft",
     "bookingBody": "Whether you may fly depends on your aircraft's weight and build type, not on the zone alone. That is why there is no booking button here: register your aircraft first, and the system will answer for each zone in turn.",
     "bookingCta": "Register your drone",
-    "howItWorksCta": "See how it works"
+    "howItWorksCta": "See how it works",
+    "mapLoading": "Loading the map…",
+    "mapLabel": "Map of flight zones in Riyadh",
+    "mapTileFailure": "The map background could not be loaded. The zones are drawn on a plain background instead; their boundaries and details are unaffected."
   },
   "map": {
     "title": "Airspace map",

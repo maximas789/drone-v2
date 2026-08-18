@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–20).** **F16, F17, F18 and F19 done.** **F20** (the interactive map) and **F21** (booking) remain, and F21 is blocked on F20. |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–21).** **F16, F17, F18 and F19 done.** **F20a is partial — the map does not render (thread 53)**; F20b and **F21** remain, and F21 is blocked on F20. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -144,6 +144,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 49 | **A declaration's `validFrom` / `validUntil`, `verifiedAt` and `rejectedAt` are written by nobody.** F19b's form deliberately does not collect them — a pilot typing a certificate's validity before anyone has read the certificate would put an unchecked claim on the card beside the verified ones. So the card renders only the *unverified* state, and `moduleVerified` / `moduleRejected` have catalogue keys that have never been shown. **F22 owns all four.** | F19b | F22 |
 | 50 | **`CLAUDE.md` says GACA registration *requires* a manufacturer serial number. GACA's own documents do not.** E-Book Volume 18, Table 1 makes the serial essential information for the **Specific Category only**; Note 3 asks for it in the Open Category *"if this information is available"* and says the displayed identifier is *"either the GACA registration certificate number or the UAS serial number"*. **The product is unaffected and the pitch is stronger for it** — `/remote-id` argues the accurate version, that the regulator already contemplates an authority-issued identifier standing in for a serial, and that from 1 January 2026 what must be *broadcast* under DRI is a registration number, not a factory marking. But `CLAUDE.md`'s opening paragraph still states the unverified version, and it is the file every session reads first. **The correction is the user's to make.** | F16b | `CLAUDE.md`, F26, F27, F30 |
 | 51 | **The three-year registration validity is uncited.** GACAR Part 48 could not be retrieved under any filename tried, and the three-year periods that *do* appear in Part 107 are the UAS Operator Certificate's duration (§ 107.131) and a record-retention rule — neither is a drone registration. `remoteId.validity` (*"Registration is valid for three years"*) is therefore **a product decision, not a regulatory fact**, and `/remote-id` deliberately does not present it as one. Anything that later attributes it to GACA needs Part 48 first. | F16b | F26, F27 |
+| 53 | **The MapLibre map renders nothing, and the cause is narrowed but not fixed.** All 8 zone layers are added and the basemap's own sources report `loaded: true` — but **our `ajniha-zones` GeoJSON source never reports loaded**, which keeps `style.loaded()` false forever, so MapLibre never completes a render pass and even the basemap stays blank. No `error` event fires. Replacing the data with a trivially valid one-polygon FeatureCollection does not help, so it is **not our GeoJSON**. Vector *tiles* parse fine in the same worker, which is what makes the worker's GeoJSON path the suspect. **Reproduced identically against `next build` + `next start`, so it is not a Turbopack-dev artefact.** Bypassing the RTL plugin flips `areTilesLoaded()` to true but does not fix the GeoJSON source, so there may be two issues stacked. Untried: `setWorkerUrl` pointed at MapLibre's own vendored `maplibre-gl-worker.mjs` (same trick as the RTL plugin), and `lazy: true` on the plugin. **`/zones` keeps F16b's SVG until this is fixed**; `MapMount` is wired and one import away. `window.__ajnihaMap` is a dev-only handle for probing the live map. | F20a | F20, F21, F23 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -305,6 +306,38 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 21 — Wave 6 · F20a Airspace Map (partial — **the map does not render**)
+
+**Date:** 2026-08-18
+**Status:** ⚠️ **incomplete.** The supporting work is done and tested; the MapLibre map itself is written, not mounted, and blocked on **open thread 53**.
+
+**Settled with the user before building:** F20 is split (F20a = the map and its layers; F20b = tap-to-evaluate, the status panel and the controls), and the *Book this zone* button waits for F21 rather than shipping as a disabled control pointing at a route that does not exist.
+
+**Done, and verified:**
+
+- **Open thread 10 is closed.** `src/lib/seed/self-intersection.test.ts` computes self-intersection over **every ring of all 12 seeded zones** using F12's own `segmentsIntersect`, so the check runs against the same primitive that decides containment. A bow-tie control and a plain-square control prove the detector actually detects. This could never be caught by looking: MapLibre and the SVG both happily fill a self-intersecting ring, while `pointInRing`'s even-odd ray cast disagrees with it — a permitted zone whose green covers ground the engine refuses.
+- **`src/lib/maps/`** — `config`, `rtl-plugin`, `color-resolve`, `layer-styles`, `zone-palette`, with 19 tests.
+- **`zone-palette.ts` is now the single source for the draw order and the `--zone-*` variables**, shared by the SVG renderer and the map. Two renderers exist deliberately: the landing page stays server-rendered SVG with **zero** JavaScript, because paying ~800 kB of map engine for a picture nobody interacts with is the wrong trade on the one page that has to load fast.
+- **The RTL text plugin is vendored, not CDN-loaded** (`pnpm vendor:rtl` → `public/vendor/`), with a test asserting the committed bytes match the installed package. Arabic is the primary locale; a third-party outage must not be able to disconnect its letterforms.
+
+**Three real bugs found by opening the page**, none of which any static check sees:
+
+1. **`oklch()` → `lab()`, not hex.** F20's design says resolve the token through a canvas `fillStyle` round-trip. Chrome now serialises `oklch()` as `lab(72.0461 18.396 61.7206)`, which MapLibre rejects exactly as firmly — *"color expected"* — so every zone layer failed to add. Fixed by **painting the colour to a 1×1 canvas and reading the pixel back**; bytes cannot drift with a browser's preferred serialisation.
+2. **An infinite fallback loop that froze the tab.** `map.isStyleLoaded()` is also false while the *fallback* style loads, so an error in that window re-entered `setStyle`, which errored, which re-entered. Now a one-shot flag plus an explicit `styleLoaded` latch.
+3. **Our own `addLayer` failures were arriving as "the basemap is down".** MapLibre routes style-validation errors through the same `error` event a dead tile host uses, so bug 1 tripped the tile fallback. Our work is now caught locally so the two kinds of failure stay apart.
+
+**A wrong diagnosis, corrected — worth recording because it cost the most time.** A worker probe showed the RTL plugin never calling `registerRTLTextPlugin`, and I concluded the current release (0.4.0) was incompatible with MapLibre and pinned back to 0.3.0 — **breaking rule 2 to do it**. The probe was wrong: it checked synchronously, and the plugin registers *after* instantiating WebAssembly, ~1.5 s later. Given time, **both release lines register fine**. The pin was reverted and the dependency is back on current stable. No version number remains in the tree.
+
+**Not done — open thread 53.** The map renders nothing. `/zones` therefore **keeps F16b's SVG**, which works; `MapMount` is wired and one import away.
+
+- ✅ `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (986), `pnpm test` (**643**), `pnpm build` — all green.
+- ✅ `/zones` re-verified after the revert: 12 SVG paths, 12 zone cards, no raw keys, no overflow.
+- ❌ **The MapLibre map is unverified against every one of F20's rendering criteria** — Arabic labels, the `coalesce` fallback, KKIA's hole, the tile-failure notice, 375 px. None of them can be checked until it draws.
+
+**Next session should know:** thread 53 is the whole of F20a's remaining work, and the diagnosis in it is precise — start there, not from scratch. `window.__ajnihaMap` is a dev-only handle on the live map object, which is what made the diagnosis possible.
 
 ---
 

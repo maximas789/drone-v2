@@ -48,6 +48,28 @@ const AMBIGUOUS: Record<string, string> = {
 };
 
 /**
+ * The code on the landing page's example card, and the **one code the generator
+ * may never mint**.
+ *
+ * F16 shows a real rendered card with a real, scannable QR rather than a
+ * picture of one — so that QR resolves somewhere. If it pointed at an ordinary
+ * code, then the day the generator happened to produce that value (1 in 2⁴⁰ per
+ * issue, and the app retries on collision so nothing would fail loudly) the
+ * public landing page would quietly start pointing at a stranger's aircraft.
+ * Reserving it costs one comparison in a loop that runs once per approval.
+ *
+ * Every symbol is in the Crockford alphabet, so it is a **valid** code that
+ * simply belongs to nobody: scanning it reaches F11's real scan page, which
+ * reports honestly that no registration holds it. That is the mechanism the
+ * landing page is demonstrating, and it stays true forever.
+ */
+export const RESERVED_CODES: readonly string[] = ["AJN-DEM0-CARD"];
+
+export function isReservedCode(code: string): boolean {
+  return RESERVED_CODES.includes(code);
+}
+
+/**
  * A fresh code. **Takes no arguments, and that is the design.**
  *
  * It is never derived from the drone's or the row's UUID: a derived code would

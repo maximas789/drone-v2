@@ -38,6 +38,7 @@
   },
   "nav": {
     "home": "Home",
+    "dashboard": "My dashboard",
     "howItWorks": "How it works",
     "map": "Map",
     "drones": "My drones",
@@ -64,7 +65,78 @@
     "remoteIdTitle": "Remote ID instead of a serial number",
     "remoteIdBody": "Remote ID is the direction regulation is already moving. Ajniha issues each aircraft a unique identifier that a field inspector can scan.",
     "accountabilityTitle": "Accountable without being exposed",
-    "accountabilityBody": "A field inspector scans the code and sees that the aircraft is registered and accountable — without seeing who owns it. Revealing identity is a restricted permission, and every reveal is logged."
+    "accountabilityBody": "A field inspector scans the code and sees that the aircraft is registered and accountable — without seeing who owns it. Revealing identity is a restricted permission, and every reveal is logged.",
+    "wordmarkLatin": "Ajniha",
+    "eyebrow": "A proposed initiative",
+    "beats": {
+      "rule": {
+        "title": "Registration asks for a serial number",
+        "body": "Drone registration today rests on a manufacturer's serial number, treated as the airframe's permanent identity."
+      },
+      "gap": {
+        "title": "Some aircraft have none",
+        "body": "A self-built or FPV aircraft is assembled from parts. There is no manufacturer, no serial number, and no field that can honestly be filled in."
+      },
+      "consequence": {
+        "title": "So there is nowhere to register, and nowhere to fly",
+        "body": "A pilot who cannot register cannot book, and has no sanctioned airspace. The aircraft does not disappear — it flies outside the system."
+      }
+    },
+    "cardIssuer": "Ajniha · Drone Register",
+    "cardExampleLabel": "Example card",
+    "cardCodeLabel": "Remote ID code",
+    "cardIssuedLabel": "Issued",
+    "cardValidUntilLabel": "Valid until",
+    "cardQrAlt": "QR code for an example Remote ID card",
+    "cardScanHint": "Scan it: you reach the same public verification page a field inspector does. This code is reserved for demonstration and belongs to no registered aircraft.",
+    "mapTitle": "Airspace, on a default-deny model",
+    "mapBody": "The city is restricted by default, with specific permitted areas carved out inside it and absolute no-fly zones layered on top. Flying starts with booking an area, not with take-off.",
+    "mapAlt": "Diagram of the airspace zones over Riyadh",
+    "zoneKinds": {
+      "permitted": "Permitted",
+      "restricted": "Restricted",
+      "no_fly": "No-fly"
+    },
+    "stepsTitle": "How it works",
+    "steps": {
+      "register": {
+        "title": "Register the aircraft",
+        "body": "Enter the airframe's specifications and photographs. For a self-built drone, the serial number field is not shown at all."
+      },
+      "remoteId": {
+        "title": "Receive your Remote ID",
+        "body": "Once approved, your aircraft is issued a Remote ID and a QR code to print and fix to the airframe."
+      },
+      "book": {
+        "title": "Book an area and a time",
+        "body": "Choose a permitted area and a slot. The platform checks altitude, weight and operating hours before it approves."
+      },
+      "fly": {
+        "title": "Fly within the booking",
+        "body": "Anyone who scans your aircraft sees a valid registration and an authorised flight — without seeing who you are."
+      }
+    },
+    "forGacaTitle": "For the regulator",
+    "forGacaBody": "The oversight side of the same system: decisions on the record, a log with no edit path, and a field verification tool.",
+    "forGaca": {
+      "queues": {
+        "title": "Review queues",
+        "body": "Registrations reach a human reviewer who approves, or refuses with a written reason the owner can read."
+      },
+      "compliance": {
+        "title": "Compliance indicators",
+        "body": "Registration, booking and report volumes, and rejection rates with their reasons."
+      },
+      "lookup": {
+        "title": "Field verification",
+        "body": "Scanning an aircraft's code returns its registration status at once. Revealing the owner is a restricted power, and every reveal is recorded."
+      },
+      "audit": {
+        "title": "Audit trail",
+        "body": "Every decision and every identity reveal is written to a log the product has no path to edit or delete."
+      }
+    },
+    "footerLine": "Ajniha — a proposed platform for drone registration and airspace booking."
   },
   "auth": {
     "signInTitle": "Sign in",

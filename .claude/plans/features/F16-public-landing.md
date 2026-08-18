@@ -81,3 +81,54 @@ src/app/globals.css                    (design tokens — the one place)
 - [ ] `layout.tsx` metadata is untouched — no title set in this feature.
 - [ ] No hard-coded hex colours in landing components; all reference CSS variables.
 - [ ] `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` pass.
+
+---
+
+## Corrections after F16a (Session 19)
+
+**F16 is being built in two halves**, settled with the user before building:
+
+- **F16a** — the design tokens, the site header and footer, and the landing
+  page itself. *Done.*
+- **F16b** — the three concept pages: `/how-it-works`, `/remote-id`, `/zones`.
+  `/remote-id` is a genuine research-and-writing job (the FAA broadcast model,
+  GACA's DRI/NRI mandate, sources linked) and deserves its own pass.
+
+### The map preview is an SVG, not MapLibre
+
+Decided before it was built. [F20](./F20-airspace-map.md) owns the interactive
+map; a second one here would mean **two implementations of the same picture** —
+the drift the single-projection rule exists to stop — plus a tile source, a
+`setRTLTextPlugin` call that must happen exactly once, and a client bundle on
+the one page that has to load fast.
+
+`src/lib/geo/project.ts` is a pure equirectangular projection with a `cos(lat)`
+correction. It cannot pan, cannot zoom and answers no airspace question; it
+draws the **real seeded rows** through `listActiveZones`. F20 replaces the
+picture, not the data.
+
+### The example card's code is reserved, permanently
+
+The landing QR is produced by F08's own encoder and resolves to F11's real scan
+page — but it encodes **`AJN-DEM0-CARD`**, which `RESERVED_CODES` in the codec
+forbids `issueRemoteId` from ever minting.
+
+Without that, the day the generator happened to produce that value the public
+landing page would quietly start pointing at a stranger's aircraft. The scan
+honestly reports `not_registered`, which is the mechanism being demonstrated,
+and the card is labelled an example on its face. **No demonstration registration
+was seeded** — a non-existent aircraft in a regulator-facing register is the
+kind of thing that is only ever discovered by the wrong person.
+
+### The rest
+
+- **The footer ships no navigation.** Every candidate link — Docs, Privacy,
+  Terms — belongs to F26 or F27 and does not exist. Those features add their own.
+- **`nav.dashboard` did not exist in either catalogue**, so the header printed
+  the raw key and the server logged `MISSING_MESSAGE`. `i18n:check` compares the
+  two catalogues to each other and a key missing from both is missing
+  consistently — the failure mode already documented in `drone-actions.tsx`.
+- **"Correct in dark mode" is checked by adding `.dark` by hand.** Nothing in
+  the app applies that class — there is still no theme toggle (thread 48) — so
+  the criterion is met by construction and by inspection, not by a control a
+  user can reach.

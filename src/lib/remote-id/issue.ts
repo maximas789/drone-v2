@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import type { DbExecutor } from "@/lib/db";
 import { remoteId } from "@/lib/db/schema";
-import { generateCode } from "./codec";
+import { generateCode, isReservedCode } from "./codec";
 
 /**
  * Issuance: the moment a drone stops being a form and becomes an aircraft with
@@ -65,6 +65,14 @@ export async function issueRemoteId(
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const code = generate();
+
+    /**
+     * The landing page's example code is never issued to a real aircraft. It
+     * is drawn like any other, so skipping it here — rather than filtering
+     * inside `generateCode` — keeps the generator a pure function of the
+     * CSPRNG and puts the rule where the row is actually written.
+     */
+    if (isReservedCode(code)) continue;
 
     try {
       /**

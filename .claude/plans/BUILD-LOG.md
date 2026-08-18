@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–18).** F17, **F18** and **F19** done — F19a the card, QR, tap-to-copy and privacy explainer; F19b the print view, the downloads and the declared-modules form. **F16, F20 and F21 not started.** |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–19).** F17, **F18** and **F19** done; **F16a done** — the design tokens, the site chrome and the landing page. **F16b** (the three concept pages), **F20** and **F21** remain. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -114,7 +114,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 35 | **`drone_report` has no triage columns and no reviewer queue.** Reports are written, audited and listed on `/admin` newest-first, but there is no "handled" state, no assignment and no way to close one. Deliberate — an enum member nothing writes is a lie about what the app does — so **F22 owns adding whatever its queue needs**. | F11 | F22 |
 | 36 | **`viewerLevelFor` was never exercised with a reviewer who is also the drone's owner.** Staff wins by the order of the checks, so such a person sees the staff branch and their own reveal control; no row like that has ever existed. Worth a deliberate case when F22 gives reviewers aircraft. | F11 | F22, F31 |
 | 15 | **`role` reaches the app as `string \| null`, not a union.** Better Auth types an `additionalField` declared as a list of literals as a plain `string`. `roleOf()` in `src/lib/session.ts` narrows it and **fails closed** — anything unrecognised is treated as `pilot`. Never read `session.user.role` directly; use `roleOf` / `isReviewer` / `isAdmin`. | F05 | Every wave that branches on role |
-| 10 | **Nothing has checked the seeded polygons for self-intersection**, and no one has seen them on a map. F20 is the first render. | F04 | F20 |
+| 10 | **Nothing has checked the seeded polygons for self-intersection.** **They have now been *seen*** — F16a's landing page draws all 12 as an SVG, and they render cleanly: the restricted city, the permitted carve-outs, and KKIA's ring as a genuine hole under `fill-rule="evenodd"`. They are plainly authored regular polygons, which is what the disclaimer says. Seen is not tested, and nothing computes self-intersection. **F20 is still the first interactive render.** | F04 | F20 |
 | 17 | **`emailConfigured` is baked in at build time on the SSG auth pages.** `/[locale]/forgot-password` and `/verify-email` are prerendered, so the "no provider configured" notice reflects `RESEND_API_KEY` as it was during `next build`, not as it is at runtime. Setting the key on the host without rebuilding leaves the wrong sentence on the page. Same class as the `APP_URL` QR trap. | F06 | F29 (should check it), deployment |
 | 18 | **Nothing consumes `email_log` in the UI yet.** The rows are written and are the answer to "why didn't that email arrive?", but there is no screen that shows them. F29's system/ops page owes that. No Resend **webhook** was built either, so `delivered`/`bounced`/`complained` never arrive — deliberate: the endpoint needs a public URL and a signing secret. | F06 | F29 |
 | 19 | **`/dev/emails` sample links always carry the `ar` prefix.** Each template's `sample` is a static object built at module load with `localeUrl(path)`, whose default locale is Arabic, so the *English* preview shows `/en`-less URLs. A preview-data artefact only — real sends get the recipient's locale from the caller. | F06 | Nothing; cosmetic |
@@ -303,6 +303,81 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 19 — Wave 6 · F16a Public Landing (tokens, chrome, landing page)
+
+**Date:** 2026-08-18
+**Status:** ⚠️ done with deviations · **F16 is half done.** F16b is the three concept pages.
+
+**The design tokens finally have values.** Every palette in this build until now was shadcn's neutral default — `--primary` was near-black. F16 owns the one place they are set, so `globals.css` now carries a deep aviation blue-teal primary checked in **both** `:root` and `.dark`, cool-grey neutrals, `--radius: 0.5rem`, and the three domain tokens `--zone-permitted` / `--zone-restricted` / `--zone-no-fly` with their `-foreground` pairs, exposed to Tailwind through `@theme inline`. **F20's map and every status badge read these**, so a zone is one colour everywhere.
+
+**Three calls settled before building** — two with the user, one recorded:
+
+1. **F16 is split.** F16a = tokens, chrome, landing page. F16b = `/how-it-works`, `/remote-id`, `/zones`.
+2. **The example card's code is reserved.** `AJN-DEM0-CARD` is in `RESERVED_CODES` and `issueRemoteId` skips it, so the public landing page can never one day point at a real pilot's aircraft. No demonstration registration was seeded — the scan honestly reports `not_registered`, which is the mechanism being shown.
+3. **The map preview is an SVG, not MapLibre** (my call, recorded in F16's file). F20 owns the interactive map and a second one here would be two implementations of the same picture.
+
+**Built:**
+
+- `/[locale]/(public)/page.tsx` — the landing page. **F02's Wave 1 placeholder is gone.**
+- `src/components/landing/` — `hero`, `problem`, `remote-id-explainer`, `map-preview`, `steps`, `for-gaca`.
+- `src/components/layout/` — `site-header`, `site-footer`, `disclaimer`.
+- `src/lib/geo/project.ts` + tests — a pure equirectangular projection with a `cos(lat)` correction.
+- `src/lib/landing/demo-card.ts` — the reserved code and its QR as a data URI.
+- 42 catalogue keys (**860**).
+
+**Deviations, each with its reason:**
+
+- **The airspace preview is a static SVG of the real seeded rows.** It reads `listActiveZones` — the same reader the rest of the app uses — so the front door shows what a pilot is actually judged against. It cannot pan or zoom and answers no airspace question. **F20 replaces the picture, not the data.**
+- **The demo QR is a data URI, not a stored blob.** Nothing here is owned by anybody, so there is no row to check ownership against and no pathname to sweep; `/api/files` exists to guard *someone's* file. It is rendered by `renderQrPng` — F08's encoder, same payload builder, same error correction — so it is the product, not a picture of it.
+- **The footer ships no navigation at all.** Docs, Privacy and Terms all belong to F26 and F27 and do not exist. A footer link to a 404 is worse than a footer without one.
+- **No `(public)/layout.tsx`.** The auth pages have their own frame and F11's scan page is a field inspector's surface; a shared public layout would push a marketing header onto both. The pages compose the header and footer instead.
+- **`SiteFooter` prints a fixed year, not `new Date()`.** A page whose output depends on when it was rendered is untestable by definition.
+- **The card's dates are fixed constants.** Computing them from `now` would let an example card drift into looking like a live record.
+
+**Two defects found by opening the page**, with `typecheck` and `lint` green:
+
+1. **`nav.dashboard` did not exist in either catalogue.** The header printed the raw key `nav.dashboard` to a signed-in reader, and the server logged `MISSING_MESSAGE`. **`i18n:check` cannot see this** — it compares the two catalogues to each other, and a key missing from both is missing consistently. Exactly the failure `drone-actions.tsx` documents. Key added to both.
+2. **The map preview rendered about 1,500 px tall and swallowed the page.** The viewBox aspect comes from the real extent of the seeded zones and Riyadh's is tall, so `h-auto` alone let it run. Now capped at 26 rem with `preserveAspectRatio="xMidYMid meet"`, which letterboxes rather than distorting — a map may not be squashed to fit a box.
+
+*(A third was investigated and was not a defect: `getComputedStyle` reported the light `--primary` on a button while `<html>` already carried `.dark`. The compiled rule is `background-color: var(--primary)` and both palettes are emitted; a screenshot showed the dark primary rendering correctly. The computed-style read was stale. Recorded because the wrong conclusion was one step away.)*
+
+**Verified — in Chrome, over HTTP:**
+
+| Criterion | Result |
+|---|---|
+| `/` signed out | OK — 307 to `/ar`, full landing page in Arabic RTL |
+| **The seeded polygons, drawn** | OK — **the first time anyone in this build has seen them** (thread 10). 12 zones: an amber restricted city, green permitted carve-outs, red no-fly overlays, and KKIA's ring rendering as a genuine hole, so `fill-rule="evenodd"` is doing its job. No self-intersection artefact visible. They are plainly *authored* regular polygons, which is what the disclaimer beside them says |
+| **A real card with a real QR** | OK — encoded by F08's encoder, labelled *بطاقة توضيحية* |
+| **What the QR resolves to** | OK — `/api/rid/AJN-DEM0-CARD` signed out returns `not_registered`; the human page 200s. The code is reserved, so it stays that way |
+| No raw message keys anywhere on the page | OK — after fixing `nav.dashboard` |
+| **Dark mode** | OK — by adding `.dark` by hand: dark ground, the lifted teal primary carrying dark text, and **the QR keeping its white plate**, which is what makes it scannable at all |
+| The problem above any feature list | OK — three beats, then the answer, then how it works |
+| Nothing implying endorsement | OK — *مبادرة مقترحة* eyebrow, the proposal notice in the footer, no logo, seal, quotation, rating or count anywhere |
+| **375 px, 768 px, 1440 px** | OK — via the iframe (thread 44), Arabic and English: `scrollWidth === clientWidth`, no overflowing element |
+| English | OK — a real translation, not transliterated |
+| **No regression from the token change** | OK — `/ar/drones` re-opened: teal primary, badges and cards intact |
+| **Console** | OK — zero errors after the fix |
+| **Mutation testing** | 4 mutants against the projection, **4 killed**: the y-flip, the `cos(lat)` correction, merged rings (which would paint a carve-out over a zone instead of punching a hole), and ignored padding |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (860), `pnpm test` (**619**), `pnpm build` — all green. `/[locale]` builds **dynamic**, which it must: the primary action depends on the session and the preview reads the seeded zones.
+
+**Not verified:**
+
+- **`layout.tsx` metadata is untouched**, as F16 requires — so the landing page still carries whatever title F02 set. **F30 owns `<head>`** and is the only step that sees every public page.
+- **Nothing checked the polygons for self-intersection.** They have now been *seen* and look clean, which is not the same as tested. **Thread 10 stays open** for F20.
+- **No theme toggle exists**, so dark mode was reached by adding the class by hand. Thread 48.
+- The hero leaves a lot of empty space to one side at 1440 px. Deliberate — the brief puts the visual weight on the map rather than on illustration — but it has not been looked at by anyone but me.
+
+**Next session should know:**
+
+- **F16b is next**: `/how-it-works`, `/remote-id`, `/zones`. `/remote-id` is the intellectual core of the pitch and needs real sources.
+- **The design tokens are set and are not to be re-picked.** `--zone-*` are consumed by the map preview today and by **F20's map** next; anything that needs a zone colour reads the token.
+- **`src/lib/geo/project.ts` is not a map.** If F20 needs a projection it should use MapLibre's, not this — this exists so the landing page can draw without a map library.
+- **`AJN-DEM0-CARD` is reserved in the codec.** If the landing card's code ever changes, change `RESERVED_CODES` with it; `demo-card.ts` throws at import if the two disagree.
+- **The profile's ID number is still fabricated** (`1055512345`) — unchanged, and the user's to resolve.
 
 ---
 

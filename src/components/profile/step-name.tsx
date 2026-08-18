@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { Field, type Problems } from "./field";
+import { Field, type Problems } from "@/components/form/field";
 
 /**
  * Step 1: the name, in both languages.
@@ -36,6 +36,7 @@ export function StepName({
   return (
     <div className="flex flex-col gap-4">
       <Field
+        namespace="profile"
         label={t("fullNameAr")}
         hint={t("fullNameArHint")}
         codes={["name_ar_required", "name_ar_script"]}
@@ -58,6 +59,7 @@ export function StepName({
       </Field>
 
       <Field
+        namespace="profile"
         label={t("fullNameEn")}
         hint={t("fullNameEnHint")}
         codes={["name_en_required", "name_en_script"]}

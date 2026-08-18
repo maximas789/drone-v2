@@ -103,3 +103,15 @@ src/components/drones/{wizard,step-type,step-specs,step-remote-id,step-photos,
 - [ ] A drone within 30 days of expiry is visually flagged in the list.
 - [ ] The wizard renders correctly in Arabic RTL at 375 px, with Latin numerals for weights and dates.
 - [ ] `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` pass.
+
+---
+
+## Corrections after F18a (Session 15)
+
+The build log is the truth; these are the places this file was wrong. **F18 is being built in two halves** — F18a is the wizard and the list, F18b is the detail page, edit, the six status screens, rejection, renewal and deletion.
+
+- **A drone does not exist in `draft` from step 1.** `drone.nickname`, `buildType`, `weightGrams` and `weightClass` are all NOT NULL, so the row first exists when step 2 is answered. Five panes, first write at the second. **`nickname` is not assigned to any step above** — it belongs on step 1, and that is where it was built.
+- **Step 3 does not accept a declared module.** `remote_id_declaration.remoteIdId` is NOT NULL onto `remote_id`, and [F10](./F10-remote-id-issuance.md) issues that row **only on approval**, so a draft has nothing to attach a declaration to. Step 3 states what the aircraft *gets* — an Ajniha Remote ID — and says an existing module can be declared once approved. **[F19](./F19-digital-id-card.md)'s card owns the declaration form.** The criterion *"a declared module can be added with a PDF, and shows as pending verification"* moves there.
+- **The approved screen shows no QR.** The code, status and valid-until are text; F19 owns the card, the QR, tap-to-copy and the print view. The criterion *"shows … a scannable QR"* is F19's. Two surfaces rendering a QR is the drift F11's single-projection rule exists to prevent.
+- **Build type is three radio cards, not a dropdown**, so that `self_built` and `fpv` are as visible as `commercial` rather than hidden behind a click.
+- **The serial number field is absent** for self-built and FPV — not disabled, not "optional". The server returns `serial_not_applicable` if one arrives anyway rather than dropping it silently.

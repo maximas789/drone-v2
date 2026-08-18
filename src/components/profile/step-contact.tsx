@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Field, type Problems } from "./field";
+import { Field, type Problems } from "@/components/form/field";
 
 export type CityOption = { id: string; nameAr: string; nameEn: string };
 
@@ -53,6 +53,7 @@ export function StepContact({
   return (
     <div className="flex flex-col gap-4">
       <Field
+        namespace="profile"
         label={t("mobile")}
         hint={t("mobileHint")}
         codes={["mobile_format"]}
@@ -81,6 +82,7 @@ export function StepContact({
       </p>
 
       <Field
+        namespace="profile"
         label={t("cityLabel")}
         codes={["city_required"]}
         problems={problems}
@@ -108,6 +110,7 @@ export function StepContact({
       </Field>
 
       <Field
+        namespace="profile"
         label={`${t("addressLine")} — ${tCommon("optional")}`}
         codes={["address_too_long"]}
         problems={problems}
@@ -126,6 +129,7 @@ export function StepContact({
       </Field>
 
       <Field
+        namespace="profile"
         label={`${t("emergencyContact")} — ${tCommon("optional")}`}
         hint={t("emergencyContactHint")}
         codes={["emergency_contact_format"]}

@@ -45,6 +45,16 @@ export const LIMITS = {
   /** Stops queue flooding. */
   "drone.submit": [{ window: HOUR, max: 5 }],
   /**
+   * Not in F09's table — added by F18, which built the wizard.
+   *
+   * A draft save fires on every pane advance and on every correction, so this
+   * is deliberately loose: it stops a script creating ten thousand draft rows,
+   * and it must never interrupt somebody typing. Far more generous than
+   * `drone.submit`, because a draft costs a row and a submission costs a
+   * reviewer's attention.
+   */
+  "drone.draft": [{ window: MINUTE, max: 20 }],
+  /**
    * Not in F09's table — added by F17, which built the profile actions.
    *
    * The reason is **not** flooding: it is that a duplicate identity number is

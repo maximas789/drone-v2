@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import type { Actor } from "@/lib/audit";
 import { getSession } from "@/lib/auth-guards";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { drone } from "@/lib/db/schema";
 import { getDroneById } from "@/lib/data/drone";
 import { inngest } from "@/lib/inngest/client";
 import { droneApprovedEvent, droneRevokedEvent } from "@/lib/inngest/events";
@@ -19,6 +21,12 @@ import {
   revokeDrone,
   submitDrone,
 } from "@/lib/workflow/drone";
+import {
+  validateDroneSpecs,
+  validateDroneType,
+  type SpecsDraft,
+  type TypeDraft,
+} from "@/lib/validation/drone";
 
 /**
  * Every decision anybody makes about a registration.
@@ -39,6 +47,93 @@ import {
  */
 
 const MAX_REASON_LENGTH = 2_000;
+
+export type DraftInput = {
+  type: TypeDraft;
+  specs: Omit<SpecsDraft, "buildType">;
+};
+
+/**
+ * Create or update a **draft** registration. F18's wizard, panes 1 and 2.
+ *
+ * **The row appears when pane 2 is answered, not pane 1** — `drone.nickname`,
+ * `buildType`, `weightGrams` and `weightClass` are all NOT NULL, so there is no
+ * half-row to save after the first pane. Exactly the shape F17 hit with
+ * `pilot_profile`, and resolved the same way: the panes are five, the first
+ * write is one, and the UI only claims a step is saved where it is. Loosening
+ * the columns so a form could save half an airframe would weaken a
+ * regulator-facing record for the sake of a wizard.
+ *
+ * **`weightClass` is derived here, never accepted from the caller.** A pilot
+ * who picks their own class picks the flattering one, and the class is what the
+ * airspace engine compares a zone's ceiling against.
+ *
+ * Editing is refused once the drone leaves `draft`: a submitted registration is
+ * part of the regulatory record, and the check is server-side because the
+ * absence of an Edit button is not a check.
+ */
+export async function saveDroneDraftAction(
+  droneId: string | null,
+  input: DraftInput,
+): Promise<ActionResult<{ droneId: string; weightClass: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("drone.draft", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const type = validateDroneType(input.type);
+  if (!type.ok) return refuse(...type.problems);
+
+  const specs = validateDroneSpecs({
+    ...input.specs,
+    // Taken from the validated type, not from the specs payload — otherwise a
+    // direct POST could claim `self_built` on pane 1 and `commercial` on pane 2
+    // and slip past the serial rule in whichever direction suited it.
+    buildType: type.value.buildType,
+  });
+  if (!specs.ok) return refuse(...specs.problems);
+
+  const values = { ...type.value, ...specs.value };
+
+  if (droneId) {
+    const owned = await getDroneById(session, droneId);
+    // A reviewer can *read* somebody else's drone; nobody edits one but its
+    // owner, so this checks the owner rather than reusing the read's verdict.
+    if (!owned || owned.ownerUserId !== session.user.id) return refuse("not_found");
+    if (owned.status !== "draft") return refuse("not_editable");
+
+    await db
+      .update(drone)
+      .set({ ...values, updatedAt: new Date() })
+      .where(eq(drone.id, droneId));
+
+    revalidatePath("/[locale]/drones", "page");
+    return {
+      ok: true,
+      data: { droneId, weightClass: values.weightClass },
+    };
+  }
+
+  const [row] = await db
+    .insert(drone)
+    .values({ ...values, ownerUserId: session.user.id })
+    .returning({ id: drone.id });
+  if (!row) throw new Error("drone insert returned no row");
+
+  /**
+   * **No audit event for a draft, and none for editing one.** `audit_event` is
+   * the regulator's approval trail; a pilot typing a weight into a form they
+   * have not submitted is not a decision anybody needs to answer for. The trail
+   * starts at `drone.submitted`, which is where `applyTransition` picks it up.
+   */
+  revalidatePath("/[locale]/drones", "page");
+  return { ok: true, data: { droneId: row.id, weightClass: values.weightClass } };
+}
 
 /** The pilot's own path: draft → pending, and the two ways back into the queue. */
 export async function submitDroneAction(

@@ -14,7 +14,7 @@ import {
   validateContact,
   validateIdentity,
 } from "@/lib/validation/profile";
-import { FormProblem } from "./field";
+import { FormProblem } from "@/components/form/field";
 import { StepContact, type CityOption } from "./step-contact";
 import { StepIdentity, type IdentityValues } from "./step-identity";
 import { StepName } from "./step-name";
@@ -133,8 +133,8 @@ export function ProfileWizard({
           ),
         }),
       );
-    } else if (reasons.some((reason) => reason.code === "unauthorized")) {
-      setFormMessage(t("errors.unauthorized"));
+    } else if (reasons.some((reason) => reason.code === "not_authenticated")) {
+      setFormMessage(t("errors.not_authenticated"));
     } else if (reasons.some((reason) => reason.code === "profile_identity_first")) {
       setFormMessage(t("errors.profile_identity_first"));
     } else if (!reasons.some((reason) => reason.code in STEP_FOR_CODE)) {

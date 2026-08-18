@@ -7,6 +7,12 @@ import { Label } from "@/components/ui/label";
 /**
  * One labelled control, with its hint and its refusal.
  *
+ * **Namespaced, so it serves every form in the app.** F17 wrote it for the
+ * profile; F18's registration wizard needs the identical wiring against
+ * `drones.errors.*`. The namespace is a prop rather than the component being
+ * copied, because a copy is two places that can disagree about how a field
+ * announces itself to a screen reader.
+ *
  * It exists because the wizard and the settings page render the **same** fields,
  * and a field whose error appears in one place and not the other is the kind of
  * defect no check in this repo catches (open thread 11). Wiring
@@ -32,6 +38,7 @@ import { Label } from "@/components/ui/label";
 export type Problems = ReadonlySet<string>;
 
 export function Field({
+  namespace,
   label,
   hint,
   /**
@@ -42,6 +49,8 @@ export function Field({
   problems,
   children,
 }: {
+  /** The catalogue namespace holding `errors.<code>` — `profile` or `drones`. */
+  namespace: "profile" | "drones";
   label: string;
   hint?: string;
   codes: readonly string[];
@@ -52,7 +61,7 @@ export function Field({
     "aria-invalid": boolean | undefined;
   }) => ReactNode;
 }) {
-  const t = useTranslations("profile");
+  const t = useTranslations(namespace);
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;

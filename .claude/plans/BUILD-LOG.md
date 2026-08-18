@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Session 14).** F17 done with deviations; F16, F18–F21 not started. |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–15).** F17 done; **F18a** (wizard + list) done; F18b, F16, F19–F21 not started. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -132,7 +132,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 33 | **HEIC is rejected, and iPhones shoot HEIC by default.** The kind table accepts JPEG, PNG and WebP only; a pilot photographing their drone on an iPhone with default settings gets `upload_type_rejected` and no explanation of why their photo app produced a file the site will not take. Nothing has been uploaded from a real phone. Either the table grows a sniffer for it or the copy has to say so. | F07 | F18, F31 |
 | 37 | **A booking has no launch point, so no-fly overlays are not resolved at booking time.** `createBookingAction` evaluates with `AirspaceQuery.zoneId` because the booking form picks a zone, not a coordinate, and `booking` has no lat/lng column. A permitted zone overlapping a no-fly zone would therefore be bookable at the overlap — the *map* resolves it (point query), the booking does not. The seeded `RUH-P-01` and `RUH-NF-KKIA` touch in a ~50 m sliver, so this is not hypothetical. **Either F23 refuses to publish an overlapping permitted zone, or F21 sends the launch point and the schema grows a column for it.** | F12/F13 | F21, F23 |
 | 38 | **The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.** A zone with `nightAllowed: false` therefore refuses its own first slot for part of the year — the engine is right (you may not fly before sunrise) but the hours and the rule disagree, and F21's picker will show slots that are always refused. `slotStates` has no `night` state to grey them with, deliberately: F13's state table has five members and inventing a sixth here would put sun maths in the slot grid. **F21 or F23 owns the reconciliation.** | F12/F13 | F21, F23 |
-| 40 | **Most server actions have still never been driven over HTTP** — 21 exist. **Session 14 broke the drought**: F17's two were driven from a real browser session *and* POSTed at directly with no cookie (both refused `unauthorized`). The other 19 remain untouched — F18 owns registration, F20 the map, F21 booking, F22 the queues. Still the largest standing gap. | F12/F13/F14 | F18, F20, F21, F22, F31 |
+| 40 | **Most server actions have still never been driven over HTTP** — 22 exist. **Sessions 14–15 broke the drought at both ends**: F17's two were POSTed at signed-out, and F18a POSTed four **with a real session cookie** — `saveDroneDraftAction` on a `pending` drone answered `not_editable`, the upload route `upload_target_locked`, `submitDroneAction` `already_applied`, and the row was unchanged. The 19 decision/booking/map actions remain untouched — F20 the map, F21 booking, F22 the queues. | F12/F13/F14 | F20, F21, F22, F31 |
 | 41 | **"A reviewer approves and the pilot gets an email with a QR" has never run as one flow.** `approveDroneAction` sends `drone/approved`; F08's `qr-render` job renders and mails. Both halves are proven — the job against hand-triggered events, the action against the database — but Inngest was not running during F14's probe and no Resend key exists, so the seam between them is structural. | F14 | F31 |
 | 42 | **An admin can approve their own drone.** Staff hold `owner` and `admin` at once, deliberately, so that staff can use the app as pilots; the cost is no segregation of duties on a decision. It also cannot be blocked in this build, where the only admin is the only account. **F22 owns a four-eyes rule** if it wants one. | F14 | F22 |
 | 43 | **`notification.emailLogId` is wired on the approval path only.** `linkNotificationEmail` matches on `(userId, entityId)` and `qr-render` calls it after sending. The expiry sweep, the booking reminders and the closure fan-out all send email beside a notification and do not link it, so F29's "why didn't that email arrive?" answers for approvals and shrugs for the rest. | F15 | F29 |
@@ -224,10 +224,10 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-17 (F17) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
-| `pnpm lint` | 2026-08-17 (F17) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
-| `pnpm build` | 2026-08-17 (F17) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build; F17's `/[locale]/profile/complete` and `/[locale]/settings/profile` build **dynamic** |
-| `pnpm i18n:check` | 2026-08-17 (F17) | ✅ **632 keys**, ar/en in sync (556 at F15) |
+| `pnpm exec tsc --noEmit` | 2026-08-18 (F18a) | ✅ clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-18 (F18a) | ✅ clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14) |
+| `pnpm build` | 2026-08-18 (F18a) | ✅ `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build; F17's `/[locale]/profile/complete` and `/[locale]/settings/profile` build **dynamic** |
+| `pnpm i18n:check` | 2026-08-18 (F18a) | ✅ **690 keys**, ar/en in sync (632 at F17, 556 at F15) |
 | `pnpm db:up` + `db:migrate` | 2026-08-17 (F11) | ✅ `0004_broken_the_initiative` applied — `remote_id_scan`, `drone_report`, `remote_id_viewer_level`. **SQL read in full**: one enum, two tables, four FKs, five indexes, no drops. **24 tables.** |
 | Remote ID codec, issuance, declarations | 2026-08-17 (F10) | ✅ against the live database — 100 000-code alphabet and duplicate checks, forced collision, five-collision throw, renewal keeping the code, suspension/reactivation, the module-claim transfer. See the session entry |
 | Scan page + JSON twin at four viewer levels | 2026-08-17 (F11) | ✅ over HTTP — anonymous **12 keys**, owner 28, reviewer 29; the full national ID appears in no payload at any level |
@@ -238,7 +238,7 @@ What has actually been **run**, not what was written. F31 reads this.
 | A decision driven over HTTP | — | ❌ **not run.** 19 server actions now exist and no page calls any of them |
 | Approval → QR → email, as one flow | — | ❌ **never run as one.** The action sends the event and F08's job was proven separately; Inngest was not running during F14's probe |
 | Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
-| `pnpm test` | 2026-08-17 (F17) | ✅ **568 passed, 25 files** (48 new: the Saudi ID checksum, the mobile normaliser, the profile validators, the open-redirect guard, and a **source scan** asserting the mask exists in one file and no page renders a raw document number; **12 mutations run, all 12 caught** — one initially "survived" and turned out to be a mis-aimed mutation, not a gap). Earlier: **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm test` | 2026-08-18 (F18a) | ✅ **583 passed, 26 files** (15 new: the weight-class boundaries, the serial-iff-commercial rule and the type/specs validators — **no mutations run on them yet**, see the session entry). Earlier: **568 passed, 25 files** (48 new: the Saudi ID checksum, the mobile normaliser, the profile validators, the open-redirect guard, and a **source scan** asserting the mask exists in one file and no page renders a raw document number; **12 mutations run, all 12 caught** — one initially "survived" and turned out to be a mis-aimed mutation, not a gap). Earlier: **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | `pnpm db:up` + `db:migrate` | 2026-08-16 (F08) | ✅ `0003_closed_toro` applied — the `job` table and `job_status`. **SQL read in full**: one enum, one table, two indexes, no drops. **22 tables.** |
 | Inngest dev server | 2026-08-16 (F08) | ✅ `npx inngest-cli dev` connected to `/api/inngest`; app `ajniha`, **10 functions**, no error. Every cron registered with `TZ=Asia/Riyadh`. |
 | Every F08 job, end to end | 2026-08-16 (F08) | ✅ all ten triggered against the live database, including the twice-run idempotency checks, the forced fan-out failure, cancel and re-run. See the session entry's table. Probe rows all deleted. |
@@ -250,12 +250,14 @@ What has actually been **run**, not what was written. F31 reads this.
 | Email — real delivery | — | ❌ **not run.** Needs a Resend account; `providerMessageId` has never held a real value. |
 | Rate limiting — layer 2 | 2026-08-16 (F09) | ✅ against the live database: burst, daily, two-scope isolation, IP independence, no raw IPs, the generous map limit, and the sweep. Every probe row deleted after. |
 | Rate limiting — layer 1 | 2026-08-16 (F09) | ✅ 5 sign-up attempts through, **6th and 7th HTTP 429**. Run with a 1-char password so no account was created (`user` still 0), counters deleted afterwards. |
-| Rate limiting — direct action POST | — | ❌ **still not run.** F17 proved a *signed-out* direct POST is refused, but tripping a limit through one still needs the owner's session cookie, which is not something to lift out of their browser. |
+| Rate limiting — direct action POST | 2026-08-18 (F18a) | ✅ **done.** Four server actions POSTed from the owner's own session against a `pending` drone: `not_editable`, `upload_target_locked`, `already_applied`, `not_found`. The guard-then-limit prologue is now exercised over real HTTP, not only in probes. Tripping a *limit* through one is still unrun |
 | Sign-up sends its verification email | 2026-08-16 (F09 session) | ✅ **after a fix.** It did not, until the owner's real sign-up exposed it — see the Session 7 addendum. |
 | Owner account | 2026-08-17 | ✅ one user, `admin`, `preferred_locale = ar`. Three probe accounts were created and deleted while chasing the bug above; `user` is back to that one row, `email_log` and `rate_limit` emptied, the 12 seeded zones untouched. **Re-confirmed after F10/F11:** every probe row from that session deleted too — `drone`, `remote_id`, `remote_id_scan`, `drone_report`, `pilot_profile`, `audit_event` and `email_log` all back to 0. |
 | F17 profile flow, in Chrome + against the live database | 2026-08-17 (F17) | ✅ wizard end to end in Arabic, the `?next=` return journey, the duplicate-document refusal against a probe account, `verifiedAt` cleared by an identity change, the rejection banner, the owner seeing `•••••4967`, and the audit trail carrying only the mask. Console clean. Every probe row deleted |
 | **A server action POSTed directly, no session** | 2026-08-17 (F17) | ✅ **first time in this build.** Both F17 actions answered `{"ok":false, reasons:[{code:"unauthorized"}]}`. Closes half of thread 40 and the whole of F09's "direct action POST" gap for these two |
 | 375 px, Arabic, via the iframe | 2026-08-17 (F17) | ✅ `scrollWidth === clientWidth`, no overflowing element, the three date selects on one row. `resize_window` not used — thread 44 |
+| F18a registration flow, in Chrome | 2026-08-18 (F18a) | ✅ **a self-built airframe with no serial number registered end to end by clicking** — serial field absent, weight boundaries live, zero-photo submit refused, `?draft=` restored after a cold reload, empty state, Arabic and English, console clean. Probe rows and the local blob deleted |
+| 375 px, Arabic, `/drones/new` | 2026-08-18 (F18a) | ✅ via the iframe — no horizontal overflow, radio cards stack |
 | `pnpm db:seed` | 2026-08-15 (F04) | ✅ 6 cities, 12 zones, 98 hour rows, 2 closures. Second run inserted 0 of everything and left every `updated_at` byte-identical (md5 compared). |
 | Signed-out route protection | 2026-08-16 (F05) | ✅ over HTTP — see entry. Includes the **forged-cookie** probe that proves the proxy is not the boundary. |
 | Two-account ownership | 2026-08-16 (F05) | ✅ two probe accounts created, **every F05 criterion exercised**, then both deleted — `user`, `session`, `account`, `audit_event` all back to **0**, seed's 12 zones untouched. Details in the session entry. |
@@ -287,6 +289,80 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 15 — Wave 6 · F18a Drone Registration (wizard and list)
+
+**Date:** 2026-08-18
+**Status:** ⚠️ done with deviations · **F18 is split; this is the first half.** Ran in the same context as Session 14, no `/clear` between.
+
+**The product does its thing now, through a browser.** A self-built airframe with no serial number was registered end to end by a person clicking, not by a probe script — and **a server action was driven over HTTP with a real session cookie for the first time in this build.**
+
+**Built:**
+- `src/lib/validation/drone.ts` — **pure**: `weightClassFor`, `mayBeExempt`, `serialRequiredFor`, `validateDroneType`, `validateDroneSpecs`. Plus `drone.test.ts` (15). Suite **583 across 26 files**.
+- `saveDroneDraftAction` in `src/lib/actions/drone.ts`; `drone.draft` added to `LIMITS`.
+- `listPhotoAndRemoteIdForDrones` in `src/lib/data/drone.ts` — one batched query for the list, ownership re-checked rather than trusting the id list it is handed.
+- `/[locale]/(app)/drones` and `/[locale]/(app)/drones/new`.
+- `src/components/drones/` — `wizard`, `step-type`, `step-specs`, `step-remote-id`, `step-photos`, `step-review`, `card`, `status-badge`.
+- **`Field` and `FormProblem` moved to `src/components/form/`** and took a `namespace` prop. F17 wrote them for the profile; F18 needed identical wiring against `drones.errors.*`, and a copy is two places that can disagree about how a field announces itself to a screen reader. All nine profile call sites updated.
+- 58 catalogue keys (**690**).
+
+**Deviations, each with its reason:**
+- **The row appears at pane 2, not pane 1.** `drone.nickname`, `buildType`, `weightGrams` and `weightClass` are all NOT NULL. Same shape as F17's `pilot_profile`, same resolution: five panes, first write at the second, and the UI only claims a step is saved where it is. **`nickname` had no step assigned in F18's spec at all** — it is on pane 1.
+- **Declaring an existing Remote ID module moved to after approval.** `remote_id_declaration.remoteIdId` is NOT NULL onto `remote_id`, which F10 issues **only on approval** — a draft has nothing to hang a declaration on. Pane 3 states what the aircraft *gets* instead, and says a module can be declared once approved. F19's card owns the form. Rejected alternative: a nullable `droneId`, which needs a migration, a two-nullable-FK invariant nothing enforces, and would leave F10's "one module per airframe" index (keyed on `remoteIdId`) unable to stop two pilots claiming the same module while in draft.
+- **F18 renders no QR.** Settled with the user up front. The card shows the code as text; F19 owns the QR, the print view and tap-to-copy. F18's "shows a scannable QR" criterion is F19's and is **not met yet**.
+- **The build type is three radio cards, not a dropdown.** A dropdown hides two of the three answers behind a click, and the two it hides are `self_built` and `fpv` — the aircraft this product exists for.
+- **The serial field is absent for self-built and FPV**, not disabled and not marked optional. A greyed-out field that does not apply to you still reads as something you are missing. The server agrees: `validateDroneSpecs` returns `serial_not_applicable` for a serial that arrives anyway, rather than dropping it silently.
+- **`saveDroneDraftAction` takes the build type from the validated pane-1 payload**, never from the specs payload — otherwise a direct POST could claim `self_built` on one pane and `commercial` on the other and slip past the serial rule in whichever direction suited it.
+- **No audit event for creating or editing a draft.** `audit_event` is the regulator's approval trail; a pilot typing a weight into a form they have not submitted is not a decision anybody answers for. The trail starts at `drone.submitted`.
+- **The draft id lives in the query string**, not in client state — a closed tab, a refresh, or the route refresh that follows a photo upload all return to the same draft instead of starting a second one for the same airframe.
+- **`unauthorized` was renamed to `not_authenticated` in F17's profile actions.** Two codes for one thing, and the seven older drone actions had the older name. The catalogue key moved with it.
+- **The card links nowhere.** `/drones/[id]` is F18b's; shipping a card whose only affordance is a 404 is worse than one that does not claim to go anywhere.
+
+**Two defects found by opening the page, plus one caught by lint:**
+1. **Submitting with no photos moved the pilot to the photos pane and said nothing.** The pane's standing hint had not changed, so the button read as having done nothing. The `photo_required` refusal is now rendered on that pane as an `alert`.
+2. **`الهوية عن بُعد` printed twice on every card** — once as the label, once inside the value, because `remoteIdPending` carried its own prefix. Fixed in the catalogue.
+3. **`Date.now()` during render**, caught by `react-hooks/purity`. The 30-day expiry flag moved into `listPhotoAndRemoteIdForDrones`, which is where the query already happens — the page now renders a boolean and nothing about it can differ between server and browser.
+
+**Verified — in Chrome, over HTTP, against the live database:**
+
+| Criterion | Result |
+|---|---|
+| **A self-built airframe with no serial, end to end** | OK — `serial_number` NULL, 1450 g → `light`, `pending`, `submitted_at` set |
+| The serial field, commercial vs self-built | OK — **rendered** for commercial, **absent** for self-built |
+| A commercial airframe with no manufacturer | OK — refused on pane 1 |
+| `weightClass` at every boundary | OK — 249 `micro`, 250 `light`, 3999 `light`, 4000 `medium`, 25000 `heavy`, live on screen |
+| The under-250 g note | OK — shown only for `micro`, and says *may* be exempt |
+| Weights in Arabic | OK — `3,999 غرام`, Latin numerals |
+| Submitting with zero photos | OK — refused, sent to the photos pane, **and now says why** |
+| Abandoning and returning | OK — cold reload restored nickname, build type and manufacturer from `?draft=` |
+| The review screen | OK — no serial row for a self-built airframe; the "a human reviewer decides this" notice present |
+| **`/drones/new` with an incomplete profile** | OK — redirected to `/profile/complete?next=%2Fdrones%2Fnew` and **returned after completion**. F17's criterion, against the route it actually named |
+| **Editing a `pending` drone by POSTing the action, with a real session** | OK — `not_editable`. Upload → `upload_target_locked`, re-submit → `already_applied`. **Row unchanged** |
+| All four actions POSTed signed-out | OK — `not_authenticated` |
+| The empty state | OK — names the serial-less case as an invitation |
+| The audit trail | OK — `drone.photo_added`, `drone.submitted`. **No event for the draft** |
+| Arabic RTL and English | OK — both read correctly |
+| **375 px, Arabic** | OK — via the iframe, `scrollWidth === clientWidth`, no overflowing element. Screenshotted |
+| **Console** | OK — 6 messages, all React DevTools / HMR / Fast Refresh. Zero errors, zero warnings |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (690), `pnpm test` (583), `pnpm build` — all green; both routes dynamic.
+- **Every probe row deleted**, and the local blob with it: `drone`, `drone_photo`, `pilot_profile`, `audit_event` back to **0**, `uploads/` emptied. Owner account and the 12 seeded zones untouched.
+
+**Not verified:**
+- **No mutation testing on the new validators.** `drone.test.ts` passed first time and has not been broken on purpose — the one step this build normally takes and this session did not. **F18b should run it before adding more.**
+- **`/drones/[id]` does not exist**, so every status screen, the rejection notice, renewal, edit and deletion are unbuilt and untested. That is F18b's whole scope.
+- **No approved drone has ever existed through the UI**, so the Remote ID code has never rendered on a card — only the "issued on approval" placeholder. It needs F22's queue or a probe.
+- **The 30-day expiry tint was never seen**, for the same reason.
+- **Photos were uploaded by `fetch`, not by dropping a file on the dropzone.** F07's route was exercised; its drag-and-drop was not.
+- **No screen reader.** The radio cards and the live weight-class `role="status"` were written for one and never heard by one.
+
+**Next session should know (F18b):**
+- **Run the mutations on `drone.test.ts` first.** It is the only test file in this repo that has never been proven against broken code.
+- **`/drones/[id]` is the whole job**, plus edit, delete-only-on-draft (which must call `deleteDroneFiles` — F07's note still stands), and the six status screens.
+- **The reviewer's reason is on `drone.rejectionReason`** and must be shown verbatim; `resubmitDroneAction` already increments `rejectionCount` and clears the row's copy while the trail keeps it.
+- **`saveDroneDraftAction` already refuses a non-draft**, proven over HTTP — F18b's edit page can rely on it rather than re-implementing the check.
 
 ---
 
@@ -374,6 +450,15 @@ Newest at the top.
 - **F18 calls `requirePilotProfile(locale, "/drones/new")`** and gets the return journey for free.
 - **`maskIdDocument` is still the only masker**, and `id-exposure.test.ts` now fails if a second one appears or if a page renders the raw column.
 - **The wizard and the settings page share `StepName`/`StepIdentity`/`StepContact`.** A field added to one appears in both, which is the point.
+
+**F18 decisions, settled with the user before any code was written** (the same up-front move that paid off in F13, F15 and F17):
+
+- **F18 renders no QR.** Its drone detail page shows the Remote ID code as text, the status badge and valid-until, and a **link** to F19's card. F19 owns the card, the QR render job, tap-to-copy and the print view. F18's "shows a scannable QR" criterion is therefore **F19's** and stays unmet until F19 lands — recorded rather than quietly satisfied by a second renderer, which is the drift F11's single-projection rule exists to prevent.
+- **F18 is two sessions.** *F18a*: `/drones` list, the five-step wizard, draft creation, the submission gate, and the self-built-no-serial path proven end to end. *F18b*: the detail page, edit, the six status screens, rejection, renewal and deletion. An honest log entry goes between them.
+- **A draft cannot exist from step 1**, whatever the feature file says: `drone.nickname`, `buildType`, `weightGrams` and `weightClass` are all NOT NULL, so the row first exists when step 2 (specifications) is answered — exactly the shape F17 hit with `pilot_profile`. **`nickname` has no step assigned in F18's spec at all**; it belongs on step 1.
+- **Declaring an existing Remote ID module moves to *after* approval.** `remote_id_declaration.remoteIdId` is NOT NULL onto `remote_id`, and F10 issues that row **only on approval** — so a draft cannot hold a declaration, and F18's "a declared module can be added with a PDF, shows as pending verification" criterion is unbuildable as written. Step 3 instead states what the aircraft *gets* (an Ajniha Remote ID) and notes that an existing module can be declared once approved. **F19's card owns the declaration form**, where a `remote_id` row exists by definition. The rejected alternative was a nullable `droneId` on the declaration: it needs a migration, a two-nullable-FK invariant nothing enforces, and F10's "one module per airframe" partial unique index is keyed on `remoteIdId` — so two pilots could both claim the same module while in draft.
+
+---
 
 ---
 

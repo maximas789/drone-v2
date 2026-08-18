@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/select";
 import type { Locale } from "@/lib/locale";
 import type { IdDocumentType } from "@/lib/validation/saudi-id";
 import { DateOfBirthInput } from "./date-of-birth-input";
-import { Field, type Problems } from "./field";
+import { Field, type Problems } from "@/components/form/field";
 
 /** Mirrors the `id_document_type` enum. Translated at render, never stored. */
 const DOCUMENT_TYPES: readonly IdDocumentType[] = [
@@ -61,6 +61,7 @@ export function StepIdentity({
   return (
     <div className="flex flex-col gap-4">
       <Field
+        namespace="profile"
         label={t("idDocumentTypeLabel")}
         codes={[]}
         problems={problems}
@@ -86,6 +87,7 @@ export function StepIdentity({
       </Field>
 
       <Field
+        namespace="profile"
         label={t("idDocumentNumberLabel")}
         hint={isGcc ? t("idDocumentNumberHintGcc") : t("idDocumentNumberHint")}
         codes={[
@@ -116,6 +118,7 @@ export function StepIdentity({
       </Field>
 
       <Field
+        namespace="profile"
         label={t("dateOfBirth")}
         hint={t("dateOfBirthHint")}
         codes={["dob_required", "dob_invalid", "dob_underage"]}

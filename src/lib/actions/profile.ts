@@ -69,7 +69,7 @@ export async function saveIdentityAction(
   input: IdentityDraft,
 ): Promise<ActionResult<ProfileSaved>> {
   const session = await getSession();
-  if (!session) return refuse("unauthorized");
+  if (!session) return refuse("not_authenticated");
 
   const limit = await enforceLimit("profile.save", "user", session.user.id);
   if (!limit.ok) {
@@ -238,7 +238,7 @@ export async function saveContactAction(
   input: ContactDraft,
 ): Promise<ActionResult<ProfileSaved>> {
   const session = await getSession();
-  if (!session) return refuse("unauthorized");
+  if (!session) return refuse("not_authenticated");
 
   const limit = await enforceLimit("profile.save", "user", session.user.id);
   if (!limit.ok) {

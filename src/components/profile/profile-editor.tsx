@@ -8,7 +8,7 @@ import type { Reason } from "@/lib/actions/result";
 import { formatSeconds } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import { validateContact, validateIdentity } from "@/lib/validation/profile";
-import { FormProblem } from "./field";
+import { FormProblem } from "@/components/form/field";
 import { StepContact, type CityOption, type ContactValues } from "./step-contact";
 import { StepIdentity, type IdentityValues } from "./step-identity";
 import { StepName } from "./step-name";
@@ -107,8 +107,8 @@ function useRefusals(locale: Locale) {
       );
       return;
     }
-    if (reasons.some((reason) => reason.code === "unauthorized")) {
-      setFormMessage(t("errors.unauthorized"));
+    if (reasons.some((reason) => reason.code === "not_authenticated")) {
+      setFormMessage(t("errors.not_authenticated"));
       return;
     }
     if (reasons.some((reason) => reason.code === "profile_identity_first")) {

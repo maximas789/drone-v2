@@ -132,3 +132,88 @@ kind of thing that is only ever discovered by the wrong person.
   the app applies that class — there is still no theme toggle (thread 48) — so
   the criterion is met by construction and by inspection, not by a control a
   user can reach.
+
+---
+
+## Corrections after F16b (Session 20)
+
+F16 is complete. The three concept pages are built.
+
+### `/zones` shipped before F20, deliberately
+
+Settled with the user before building. F16 promises a public zone page and
+[F30](./F30-seo-discoverability.md) wants it indexable; waiting for
+[F20](./F20-airspace-map.md) would leave a 404 where a shared link lands for the
+whole of the largest feature remaining.
+
+The picture is **F16a's SVG, lifted into `src/components/airspace/zone-drawing.tsx`**
+and shared with the landing page — one implementation, two pages. The list
+beside it is real: every active zone, its ceiling, night rule, weight and
+build-type limits, and the full week of opening windows out of `zone_hour`.
+**F20 replaces the picture and leaves the list alone.** There is no second
+MapLibre map.
+
+There is **no booking control on `/zones`**. The airspace engine's answer
+depends on the aircraft's weight class and build type, so a "book" button on a
+page that knows neither would promise an outcome it cannot check.
+
+### `/remote-id`'s sources were fetched and read, and one of them corrected us
+
+Also settled with the user before building: real citations, not a "sources
+pending" note. Every document in `src/lib/landing/sources.ts` was retrieved and
+read on **2026-08-18**, and every quotation in `REMOTE_ID_QUOTES` was copied out
+of the text, not recalled.
+
+**The project's premise survives the primary source.** GACAR Part 107,
+Subpart F: *"This Subpart is applicable as of 1 January 2026."* § 107.302(b):
+every registered UA and model aircraft must carry Direct or Network Remote ID.
+
+**One stated premise does not.** `CLAUDE.md` says GACA registration *requires* a
+manufacturer serial number. GACA's own E-Book Volume 18 is more careful:
+Table 1 makes the serial essential information for the **Specific Category
+only**, Note 3 asks for it in the Open Category *"if this information is
+available"*, and the identifier an aircraft displays may be *"either the GACA
+registration certificate number or the UAS serial number"*.
+
+So the page argues the accurate and stronger version: **the regulator already
+contemplates an authority-issued identifier standing in for a serial**, and from
+2026 what must be *broadcast* under DRI is a registration number and an add-on's
+serial (§ 107.303(c)) — never the airframe's factory marking. NRI is the route
+that does want the UA's own serial (§ 107.304(b)(2)), and the page says so.
+
+The FAA half is the same shape and is quoted for it: identity may be a serial
+**or a session ID** (§ 89.305(a)), and a broadcast module broadcasts *its own*
+serial (§ 89.315(a)).
+
+**What could not be verified:** the **three-year registration validity** in
+`CLAUDE.md`. GACAR Part 48 could not be retrieved, and the three-year periods
+that do appear in Part 107 are the UAS Operator Certificate's duration and a
+record-retention rule — neither is a drone registration. The app's
+`remoteId.validity` string is therefore a **product decision, not a cited fact**,
+and `/remote-id` does not present it as one.
+
+### The honesty section is load-bearing
+
+`/remote-id` ends with **what an Ajniha Remote ID is not**: not a radio, not a
+certified DRI/NRI system, not issued by GACA, and not something that makes a
+flight lawful. Without it the page is accurate throughout and still leaves a
+reader believing a sticker makes their aircraft compliant.
+
+**Quotations are verbatim and untranslated**, `dir="ltr"`, with the Arabic gloss
+around them. Rendering a paraphrase inside quotation marks would put words a
+regulator never wrote in a regulator's mouth, on the one page whose argument
+rests on what they did write.
+
+### The rest
+
+- **`src/components/layout/public-page.tsx`** is a composed frame, still **not**
+  a `layout.tsx`, for F16a's reason: a route layout would push the marketing
+  chrome onto the auth pages and onto F11's scan page.
+- **The landing page now links to all three.** `Steps` → `/how-it-works`,
+  `RemoteIdExplainer` → `/remote-id`, `MapPreview` → `/zones`. Before this the
+  front door had no route to any of them. **The footer still ships no
+  navigation** — F26 and F27 add their own.
+- **`formatWeekday` and `formatMinuteOfDay`** were added to `src/lib/format.ts`,
+  with tests. A `zone_hour` is a time *of day* already in Riyadh civil time, so
+  it is formatted in **UTC** — running it through `Asia/Riyadh` would add +3 a
+  second time and publish 09:00 for a zone that opens at 06:00.

@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { ButtonLink } from "@/components/ui/button-link";
 
 /**
  * Four concrete steps — named actions, not adjectives.
@@ -27,6 +28,15 @@ export async function Steps() {
           </li>
         ))}
       </ol>
+
+      {/* Four steps is the summary; /how-it-works is the version that answers
+          "and then what happens?". Without this link the front door has no
+          route to it at all. */}
+      <div>
+        <ButtonLink variant="outline" href="/how-it-works">
+          {t("stepsCta")}
+        </ButtonLink>
+      </div>
     </section>
   );
 }

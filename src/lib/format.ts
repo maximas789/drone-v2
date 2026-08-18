@@ -135,6 +135,45 @@ export function formatRelativeTime(
   return formatter.format(0, "second");
 }
 
+/**
+ * `الأحد` / `Sunday` — a standalone weekday name from its index, **Sunday = 0**.
+ *
+ * `zone_hour.weekday` is an integer, not an instant, so there is nothing to
+ * format until one is built. The reference date is a real Sunday
+ * (2024-01-07) advanced by the index and read back in **UTC**, so the +3 civil
+ * day cannot roll it into Monday. The year is never rendered.
+ *
+ * Same reasoning as `formatMonthName`: CLDR already knows both languages'
+ * weekday names, so nothing has to be written into the message catalogue and
+ * nothing can drift out of step with the calendar the rest of the app uses.
+ */
+export function formatWeekday(weekday: number, locale: Locale): string {
+  const sunday = Date.UTC(2024, 0, 7);
+  return dateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(
+    new Date(sunday + weekday * 24 * 60 * 60 * 1000),
+  );
+}
+
+/**
+ * `06:00` — an opening time held as minutes from local midnight.
+ *
+ * **UTC, not `Asia/Riyadh`.** A `zone_hour` is already a Riyadh civil time; it
+ * is a time *of day*, not an instant, and running it through the +3 offset
+ * again would print 09:00 for a zone that opens at 06:00. The date the minutes
+ * are hung on is arbitrary and never rendered.
+ *
+ * 24-hour in both locales, for the reason `formatTime` gives: aviation reads
+ * 24h, and the Latin numerals come from the forced locale tag.
+ */
+export function formatMinuteOfDay(minutes: number, locale: Locale): string {
+  return dateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, 0, 1) + minutes * 60 * 1000));
+}
+
 // --- Riyadh civil calendar ------------------------------------------------
 
 /**

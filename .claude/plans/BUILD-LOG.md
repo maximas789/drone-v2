@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–19).** F17, **F18** and **F19** done; **F16a done** — the design tokens, the site chrome and the landing page. **F16b** (the three concept pages), **F20** and **F21** remain. |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–20).** **F16, F17, F18 and F19 done.** **F20** (the interactive map) and **F21** (booking) remain, and F21 is blocked on F20. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -142,6 +142,8 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 47 | **No QR has ever been printed, and none has been scanned by a real phone camera.** F19a proved what the image *encodes* — the stored PNG is byte-identical to a fresh encode of the `/ar/rid/{code}` URL, with a differing control — and that the target resolves. Neither says a camera can read a **20 mm printed** symbol at ~15 cm, which is the criterion F19 actually states and the thing a field inspector does. It needs paper and a phone, so no amount of code can close it. **F19b owns the print view**; whoever builds it should print one sheet and try, or say plainly that it is unverified. | F19a | F19b, F31 |
 | 48 | **The print dialog has never been opened, and the printed palette is untestable today.** `window.print()` blocks the page on a native dialog the browser tooling cannot dismiss, so the Print button is wired and unexercised; the `@page` rule, the chrome-hiding selectors and the millimetre sizes were verified from the CSSOM and by measurement instead. Separately, *"printed output uses the light palette even in dark mode"* is **vacuous right now**: nothing in this app ever applies the `.dark` class — there is no theme toggle. **Re-check both when F28 ships one**, and note the printed surfaces also use explicit `bg-white` / `text-black` rather than theme tokens. | F19b | F28, F31 |
 | 49 | **A declaration's `validFrom` / `validUntil`, `verifiedAt` and `rejectedAt` are written by nobody.** F19b's form deliberately does not collect them — a pilot typing a certificate's validity before anyone has read the certificate would put an unchecked claim on the card beside the verified ones. So the card renders only the *unverified* state, and `moduleVerified` / `moduleRejected` have catalogue keys that have never been shown. **F22 owns all four.** | F19b | F22 |
+| 50 | **`CLAUDE.md` says GACA registration *requires* a manufacturer serial number. GACA's own documents do not.** E-Book Volume 18, Table 1 makes the serial essential information for the **Specific Category only**; Note 3 asks for it in the Open Category *"if this information is available"* and says the displayed identifier is *"either the GACA registration certificate number or the UAS serial number"*. **The product is unaffected and the pitch is stronger for it** — `/remote-id` argues the accurate version, that the regulator already contemplates an authority-issued identifier standing in for a serial, and that from 1 January 2026 what must be *broadcast* under DRI is a registration number, not a factory marking. But `CLAUDE.md`'s opening paragraph still states the unverified version, and it is the file every session reads first. **The correction is the user's to make.** | F16b | `CLAUDE.md`, F26, F27, F30 |
+| 51 | **The three-year registration validity is uncited.** GACAR Part 48 could not be retrieved under any filename tried, and the three-year periods that *do* appear in Part 107 are the UAS Operator Certificate's duration (§ 107.131) and a record-retention rule — neither is a drone registration. `remoteId.validity` (*"Registration is valid for three years"*) is therefore **a product decision, not a regulatory fact**, and `/remote-id` deliberately does not present it as one. Anything that later attributes it to GACA needs Part 48 first. | F16b | F26, F27 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -303,6 +305,86 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 20 — Wave 6 · F16b Concept Pages (`/how-it-works`, `/remote-id`, `/zones`)
+
+**Date:** 2026-08-18
+**Status:** ⚠️ done with deviations · **F16 is complete.**
+
+**The headline is a premise that did not survive its own primary source.** `/remote-id` was built with the sources actually fetched and read, and GACA's own E-Book Volume 18 contradicts a sentence in `CLAUDE.md`: **GACA registration does not require a manufacturer serial number.** Table 1 makes the serial essential information for the **Specific Category only**; Note 3 asks for it in the Open Category *"if this information is available"* and says the identifier an aircraft displays is *"either the GACA registration certificate number or the UAS serial number"*. See **Open Thread 50** — the fix is a one-line correction to `CLAUDE.md`, and it is the user's call, not mine.
+
+**The rest of the premise held, exactly.** GACAR Part 107, Subpart F: *"This Subpart is applicable as of 1 January 2026."* § 107.302(b): every registered UA **and model aircraft** must be equipped with Direct or Network Remote ID. Quoted verbatim on the page, from the PDF.
+
+**Two calls settled with the user before building**, as asked:
+
+1. **`/zones` ships now**, with F16a's SVG plus a real zone list — not deferred into F20.
+2. **`/remote-id` cites real sources**, fetched and read, rather than shipping with a "sources pending" note.
+
+**Built:**
+
+- `/[locale]/(public)/{how-it-works,remote-id,zones}/page.tsx`.
+- `src/components/layout/public-page.tsx` — `PublicPage` + `Section`. Still **not** a `layout.tsx`, for F16a's reason.
+- `src/components/airspace/zone-drawing.tsx` — F16a's SVG **lifted out of `landing/map-preview.tsx`** and shared. Two components drawing the same polygons with their own fill rules is the drift the single-projection rule exists to stop.
+- `src/components/airspace/zone-list.tsx` — every active zone, its permissions, and its week of opening windows.
+- `src/lib/landing/sources.ts` — 7 documents and 10 verbatim quotations, each with the date it was read.
+- `formatWeekday` and `formatMinuteOfDay` in `src/lib/format.ts`, with tests (**623**).
+- 123 catalogue keys (**983**).
+
+**The research, and what it cost.** eCFR blocks non-browser requests; `www.gaca.gov.sa` serves its homepage for every `/-/media/` path. The apex `gaca.gov.sa` serves the PDFs and **does not need the `?as=0&hash=` query** the search results carry. `107-v5.pdf` does not exist under any name tried — **Part 107 v4 is what was read**, and the page says so rather than rounding to "GACA says". GACA's Log of Versions (2 Aug 2026) confirms the current edition is 5.0 and that its changes are Standard Scenarios and pilot training, **not Subpart F**.
+
+Trade press said edition 5 introduced Remote ID. The primary source says Subpart F was already in v4. **Two secondary sources agreed with each other and were both imprecise** — which is the argument for reading the document.
+
+**Deviations, each with its reason:**
+
+- **`/zones` has no booking control.** The engine's answer depends on the aircraft's weight class and build type; a button on a page that knows neither would promise an outcome it cannot check. It sends you to registration instead.
+- **Quotations are verbatim, `dir="ltr"`, and untranslated**, with the Arabic gloss around them. A paraphrase inside quotation marks puts words a regulator never wrote in a regulator's mouth, on the one page whose whole argument rests on what they did write. Document titles are untranslated for the same reason — a translated title is an uncheckable citation.
+- **`14 CFR Part 89` is credited to Cornell LII, not eCFR.** LII is what was actually read. Citing the canonical URL because it is canonical would be claiming a read that never happened.
+- **`/remote-id` ends with "what it is not"** — not a radio, not a certified DRI/NRI system, not issued by GACA, does not make a flight lawful. Without it the page is accurate throughout and still leaves a reader believing a sticker makes their aircraft compliant.
+- **The landing page now links to all three** (`Steps` → `/how-it-works`, `RemoteIdExplainer` → `/remote-id`, `MapPreview` → `/zones`). Before this the front door had no route to any of them. **The footer still ships no navigation** — F26 and F27 add their own.
+- **`formatMinuteOfDay` formats in UTC, not `Asia/Riyadh`.** A `zone_hour` is a time *of day* already in Riyadh civil time; running it through the +3 offset again publishes 09:00 for a zone that opens at 06:00. There is a test that says so.
+
+**Two defects found by opening the page**, with `typecheck` and `lint` green — thread 11's fourth proof:
+
+1. **No-fly zones rendered "Ceiling: 0 m".** Every seeded no-fly zone stores `ceilingAglM: 0` as a sentinel for "no altitude at all"; under the heading *Ceiling* that reads as a limit you could fly under, which is the opposite of the rule. Permissions — the ceiling included — are now shown for **permitted zones only**.
+2. **The concept pages' prose was centred while the header and footer stayed at the wider measure**, so the page's start margin moved between the chrome and the content. In RTL it is the *right* edge that drifts, which is the one the eye follows down the page. Fixed by matching `max-w-6xl` and setting the reading measure with an inner, uncentred `max-w-3xl`.
+
+*(A third was a judgement call rather than a defect: the week of opening hours was a two-column grid, so the days zig-zagged and the times landed in two alignments — the eye had to hop to compare Thursday with Friday, which is the comparison somebody planning a flight is making. Now one column.)*
+
+**Verified — in Chrome, over HTTP:**
+
+| Criterion | Result |
+|---|---|
+| All three pages, both locales | OK — no raw message keys, no `MISSING_MESSAGE`, zero console errors |
+| **Every cited URL** | OK — all 7 re-fetched and 200; the 3 GACA links serve `application/pdf`, the 4 LII links `text/html` |
+| **Every quotation** | OK — copied from the extracted text, not recalled. § 89.305(a) was re-fetched a second time asking for the paragraph *verbatim*, because the first fetch had paraphrased it |
+| **Opening hours** | OK — `RUH-P-01` prints Sunday first, Friday split `06:00 – 10:00, 15:30 – 20:00` around Jumu'ah, Latin numerals in Arabic, and **not** shifted by +3 |
+| Zone list | OK — 12 zones, grouped permitted → restricted → no-fly, permitted first because that is the question being asked |
+| **375 px and 768 px** | OK — via the iframe (thread 44), both locales, all three pages: `scrollWidth === clientWidth`, no element wider than the viewport. The long English blockquotes were the risk and they wrap |
+| **Dark mode** | OK — by adding `.dark` by hand (thread 48). Quotations legible, section numbers not reordered |
+| **Bidi** | OK — `§ 107.302(b)` renders as written inside an Arabic page, not as `(b)107.302 §`. Times are `dir="ltr"` so `06:00 – 11:00` does not read as opening at 11:00 |
+| Every internal link | OK — 4 landing links, all locale-prefixed; every route 200s (`/drones/new` and `/dashboard` 307 to sign-in, which is the proxy doing its job) |
+| **Landing page after the refactor** | OK — 12 SVG paths, the demo QR still a data URI, legend intact |
+| **Message keys** | OK — 141 keys resolved statically against `ar.json`, including every branch reached through a template literal. `i18n:check` cannot do this: it compares the catalogues to *each other*, so a key missing from both passes, which is how `nav.dashboard` shipped in F16a |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (983), `pnpm test` (**623**), `pnpm build` — all green. The three routes build **dynamic**: they read the session for the primary action, and `/zones` reads the seeded rows.
+
+**Not verified:**
+
+- **The three-year registration validity could not be confirmed.** GACAR Part 48 could not be retrieved under any filename tried. The three-year periods that *do* appear in Part 107 are the UAS Operator Certificate's duration (§ 107.131) and a record-retention rule — neither is a drone registration. `remoteId.validity` is therefore a **product decision, not a cited fact**, and `/remote-id` does not present it as one. **Thread 51.**
+- **Nothing checked the polygons for self-intersection.** Unchanged. **Thread 10 stays open** for F20.
+- **No theme toggle**, so dark mode was reached by adding the class by hand. Thread 48.
+- **1440 px was looked at by me only.** The concept pages are a single narrow column on a wide screen, which is right for prose and is a choice somebody may disagree with.
+- **`layout.tsx` metadata untouched**, as F16 requires. F30 owns `<head>`.
+
+**Next session should know:**
+
+- **F16 is done. F20 is the critical path** — F21 is blocked on it, and it is the feature that closes thread 10.
+- **F20 replaces the picture on `/zones` and the landing page, and leaves the list alone.** Both read `src/components/airspace/zone-drawing.tsx`; swap that one component. The zone table, its hours and its permissions are not F20's to touch.
+- **`src/lib/landing/sources.ts` is the citation module.** Anything that cites a regulation goes through it, and nothing goes in that has not been opened and read. **F26's docs and F27's legal pages will both want it.**
+- **`formatWeekday` / `formatMinuteOfDay` exist now** — F21's slot picker and F23's hours editor should use them rather than writing a second weekday table.
+- **The profile's ID number is still fabricated** (`1055512345`) — unchanged, and the user's to resolve.
 
 ---
 

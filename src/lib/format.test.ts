@@ -3,7 +3,9 @@ import {
   RIYADH_OFFSET_MINUTES,
   formatDate,
   formatDateRange,
+  formatMinuteOfDay,
   formatTime,
+  formatWeekday,
   riyadhDayKey,
   riyadhWeekday,
 } from "./format";
@@ -118,5 +120,42 @@ describe("formatDateRange", () => {
     );
     expect(formatted).toContain("15 March 2026");
     expect(formatted).toContain("16 March 2026");
+  });
+});
+
+describe("formatWeekday", () => {
+  /**
+   * **Sunday = 0** is the whole reason this exists. `zone_hour.weekday` is
+   * indexed on the Saudi week, and a helper that quietly agreed with
+   * `Date#getDay()`'s Sunday-is-0 by accident rather than on purpose would
+   * drift the first time somebody "fixed" the reference date.
+   */
+  it("puts Sunday at 0 and Friday at 5", () => {
+    expect(formatWeekday(0, "en")).toBe("Sunday");
+    expect(formatWeekday(5, "en")).toBe("Friday");
+    expect(formatWeekday(6, "en")).toBe("Saturday");
+  });
+
+  it("names the day in Arabic", () => {
+    expect(formatWeekday(5, "ar")).toBe("الجمعة");
+  });
+});
+
+describe("formatMinuteOfDay", () => {
+  /**
+   * The trap: a `zone_hour` is **already** a Riyadh civil time. Formatting it
+   * in `Asia/Riyadh` would add the +3 offset a second time and print 09:00 for
+   * a zone that opens at 06:00 — a wrong opening time on a public page, with
+   * nothing else in the app to contradict it.
+   */
+  it("does not re-apply the Riyadh offset", () => {
+    expect(formatMinuteOfDay(6 * 60, "en")).toBe("06:00");
+    expect(formatMinuteOfDay(6 * 60, "ar")).toBe("06:00");
+  });
+
+  it("is 24-hour and keeps Latin numerals in Arabic", () => {
+    expect(formatMinuteOfDay(15 * 60 + 30, "en")).toBe("15:30");
+    expect(formatMinuteOfDay(15 * 60 + 30, "ar")).toBe("15:30");
+    expect(formatMinuteOfDay(20 * 60, "ar")).toBe("20:00");
   });
 });

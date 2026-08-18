@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button-link";
 import { formatDate } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import { DEMO_CARD_CODE, demoQrDataUri } from "@/lib/landing/demo-card";
@@ -40,6 +41,14 @@ export async function RemoteIdExplainer({ locale }: { locale: Locale }) {
         <h2 className="text-2xl font-semibold">{t("remoteIdTitle")}</h2>
         <p className="text-muted-foreground">{t("remoteIdBody")}</p>
         <p className="text-muted-foreground">{t("accountabilityBody")}</p>
+
+        {/* The argument this section states in two sentences is made properly,
+            with the regulations quoted, on /remote-id. */}
+        <div>
+          <ButtonLink variant="outline" href="/remote-id">
+            {t("remoteIdCta")}
+          </ButtonLink>
+        </div>
       </div>
 
       <div className="md:flex-1">

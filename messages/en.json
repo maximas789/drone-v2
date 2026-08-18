@@ -136,7 +136,78 @@
         "body": "Every decision and every identity reveal is written to a log the product has no path to edit or delete."
       }
     },
-    "footerLine": "Ajniha — a proposed platform for drone registration and airspace booking."
+    "footerLine": "Ajniha — a proposed platform for drone registration and airspace booking.",
+    "mapCta": "All zones and their hours",
+    "stepsCta": "Read the whole path",
+    "remoteIdCta": "How Remote ID works"
+  },
+  "howItWorks": {
+    "pageTitle": "How it works",
+    "pageLead": "From creating an account to taking off — and what a stranger sees when they scan your aircraft. This is the whole path, as a pilot meets it.",
+    "detailLabel": "Detail:",
+    "stages": {
+      "account": {
+        "title": "Create your account and complete your profile",
+        "body": "The account is yours, not the aircraft's. You give your name, your contact details and your national ID or Iqama number once, and they carry across every aircraft you register afterwards.",
+        "detail": "A reviewer checks your identity. There is no automated verification and no SMS — a person reads the document and decides."
+      },
+      "register": {
+        "title": "Register the aircraft, serial number or not",
+        "body": "You describe the aircraft: build type, weight class, manufacturer and model if it has them, and photographs. The serial number field is optional.",
+        "detail": "This is the entire point. A self-built or FPV aircraft has no serial number, and that does not stop it being registered here."
+      },
+      "review": {
+        "title": "A person reviews it",
+        "body": "The registration sits under review until a reviewer opens it, and is then either approved or rejected with a written reason you can read.",
+        "detail": "A rejection is not the end of it: you fix what was asked for and resubmit. Every decision is written to the audit trail under the name of whoever made it."
+      },
+      "identity": {
+        "title": "Your Remote ID and QR code are issued",
+        "body": "On approval the aircraft gets its own Remote ID code, a digital card, and a QR code you can print and fix to the airframe.",
+        "detail": "The code stays the same for the life of the aircraft, renewal included, so a printed sticker never dies."
+      },
+      "book": {
+        "title": "Book a zone and a slot",
+        "body": "You pick a permitted zone and a slot inside its opening hours. The system checks the zone, the ceiling, the weight class, the build type and any temporary closure before it answers.",
+        "detail": "A refusal comes back as specific reasons rather than a generic message, so you know exactly which rule stopped you."
+      },
+      "renew": {
+        "title": "Fly, then renew",
+        "body": "You fly inside the zone you booked and within its window. The registration has a validity period, and you are told before it lapses.",
+        "detail": "Once it has lapsed the code still scans — it simply reports that the registration has expired instead of that it is valid."
+      }
+    },
+    "refusalsTitle": "What the system refuses",
+    "refusalsLead": "Everything is closed by default. Better to know that before you drive out to the site.",
+    "refusals": {
+      "outside": {
+        "title": "Outside a permitted zone",
+        "body": "The launch point is inside the Riyadh area but not inside any published permitted zone."
+      },
+      "closed": {
+        "title": "Outside opening hours, or during a closure",
+        "body": "Each zone has two windows a day, and Friday is split around Jumu'ah. A temporary closure overrides the published hours."
+      },
+      "ceiling": {
+        "title": "Above the ceiling",
+        "body": "Each zone has a ceiling in metres above ground level. It is not advisory."
+      },
+      "capacity": {
+        "title": "The zone is full",
+        "body": "Each slot has a limited number of seats. Two bookings for the same place at the same time cannot both succeed."
+      },
+      "status": {
+        "title": "The aircraft is not approved",
+        "body": "A draft, a registration still under review, and a revoked or expired one: none of them can book."
+      }
+    },
+    "privacyTitle": "Who sees what",
+    "privacyLead": "Anyone who scans your aircraft sees the registration status, the build type, the weight class and the city of registration. They do not see your name, your mobile number, your ID number, or where you are flying. An authorised reviewer can reveal the owner when they need to — after writing a reason, and the reveal is recorded against their name.",
+    "nextTitle": "Get started",
+    "nextBody": "Registering here does not need a serial number.",
+    "nextCta": "Register your drone",
+    "remoteIdCta": "What is Remote ID?",
+    "zonesCta": "Flight zones"
   },
   "auth": {
     "signInTitle": "Sign in",
@@ -596,6 +667,100 @@
       }
     }
   },
+  "remoteIdPage": {
+    "pageTitle": "Remote ID",
+    "pageLead": "A digital licence plate for drones: an identifier broadcast during flight that ties what you can see in the sky to a record someone can look up. This page explains the two models the rule rests on — the American one and the Saudi one — and why an Ajniha Remote ID is a workable substitute for a serial number.",
+    "whatTitle": "What Remote ID is",
+    "whatBody": "It is not tracking and it is not a camera. It is a short message broadcast from the aircraft while it flies, carrying an identifier, a position, an altitude, a speed and the pilot's location, and any device nearby can receive it.",
+    "whatBody2": "The identifier by itself says nothing about the owner. Its value is that it points at a record: whoever is authorised to look that record up learns who the aircraft belongs to, and everyone else sees a number. That separation between identifier and identity is what makes the model workable at all.",
+    "faaTitle": "The American model: broadcast",
+    "faaBody": "The FAA's Remote ID rule is Part 89 of Title 14, and it offers three ways to comply.",
+    "faaRoutes": {
+      "standard": {
+        "title": "An aircraft that broadcasts by itself",
+        "body": "An aircraft built to broadcast its own identity."
+      },
+      "module": {
+        "title": "A fitted broadcast module",
+        "body": "A part fixed to an aircraft that does not broadcast, which broadcasts on its behalf. This is the route open to home-built aircraft."
+      },
+      "fria": {
+        "title": "A recognized area where you may fly without broadcasting",
+        "body": "A specific site where flight without broadcast is allowed, provided the aircraft stays within visual line of sight."
+      }
+    },
+    "faaIdentityBody": "What matters in the rule is that the identity being broadcast is not necessarily the aircraft's serial number. The text offers a choice:",
+    "faaModuleBody": "And with a fitted module, the number broadcast is the module's own serial number, not that of the aircraft carrying it:",
+    "gacaTitle": "The Saudi model: Direct or Network Remote ID",
+    "gacaBody": "Subpart F of GACAR Part 107 carries an explicit application date, and requires every registered aircraft — model aircraft included — to carry one of two systems.",
+    "gacaDriBody": "Direct Remote ID (DRI) broadcasts the operator's registration number and the verification code GACA issued, then the serial number of the fitted add-on:",
+    "gacaNriBody": "Network Remote ID (NRI), by contrast, also requires the aircraft's own serial number — and that is the practical difference between the two routes:",
+    "gacaVersionNote": "The passages above are quoted from Version 4.0 of Part 107, which is the edition that could be obtained. GACA's own log of versions shows the current edition is 5.0, and that its amendments concern standard scenarios and pilot training rather than Subpart F.",
+    "gapTitle": "Where the gap actually is",
+    "gapBody": "The common belief is that registration requires a manufacturer's serial number. GACA's own documents are more careful than that: the serial is essential information for the Specific Category only, is asked for in the Open Category if it is available, and the identifier an aircraft displays may be the registration certificate number instead.",
+    "gapBody2": "So the gap is not the serial number. It is what the identifier points at: a home-built aircraft has no number and no record tying it to an accountable person, so there is nothing to look up when somebody sees it overhead.",
+    "gapBody3": "From 1 January 2026 this gets sharper still: what has to be broadcast is a registration number issued by an authority, not a factory marking. And whoever issues the number holds the record. That is exactly what Ajniha does.",
+    "ajnihaTitle": "What Ajniha issues",
+    "ajnihaBody": "A Remote ID issued by the platform, bound to a registered aircraft and to an owner whose identity a person has checked.",
+    "ajniha": {
+      "code": {
+        "title": "A stable code",
+        "body": "One code for the life of the aircraft, in a form you can read out and say aloud, and it survives renewal."
+      },
+      "record": {
+        "title": "A record behind it",
+        "body": "The code points at an approved registration: build type, weight class, city of registration, and an accountable owner."
+      },
+      "scan": {
+        "title": "A public page when it is scanned",
+        "body": "Anyone who scans the code reaches a page stating the registration's status, with nothing about the owner on it."
+      },
+      "reveal": {
+        "title": "A reveal that is logged, never automatic",
+        "body": "An authorised reviewer can reveal the owner after writing a reason, and the reveal is written to the audit trail before anything is shown."
+      },
+      "renewal": {
+        "title": "A sticker that does not die",
+        "body": "Renewal does not change the code, because the sticker may have been on the airframe for years."
+      }
+    },
+    "notTitle": "And what it is not",
+    "notBody": "This is said plainly, because the rest of the page means nothing without it.",
+    "not": {
+      "notRadio": {
+        "title": "Not a radio",
+        "body": "An Ajniha code is an identifier in a register, not a signal transmitted from the aircraft, and it does not replace a DRI or NRI unit."
+      },
+      "notCertified": {
+        "title": "Not a certified system",
+        "body": "The platform has not been evaluated or accepted as a Direct or Network Remote ID system under any regulation."
+      },
+      "notGaca": {
+        "title": "Not issued by GACA",
+        "body": "Ajniha is an independent proposal. Nothing here implies that the General Authority of Civil Aviation has approved or adopted it."
+      },
+      "notLegal": {
+        "title": "It does not make your flight lawful",
+        "body": "If your aircraft carries a real broadcast module, declare it here for a reviewer to check. The regulation, not this page, remains the authority."
+      }
+    },
+    "sourcesTitle": "Sources",
+    "sourcesLead": "Every document below was opened and read on the date shown. There is no quotation and no section number on this page that was not read in its source.",
+    "retrievedOn": "Read on {date}",
+    "sources": {
+      "gacar107": "Subpart F and its application date; §§ 107.303 and 107.304.",
+      "gacarVersions": "Which edition of Part 107 is current, and what it changed.",
+      "volume18": "What a Certificate of Registration requires, and the identifier an aircraft displays.",
+      "cfr89": "The structure of Part 89 and when it was issued.",
+      "cfr89115": "The alternative routes: a broadcast module, and recognized identification areas.",
+      "cfr89305": "The message elements for an aircraft that broadcasts by itself.",
+      "cfr89315": "The message elements for a fitted broadcast module."
+    },
+    "nextTitle": "See it working",
+    "nextBody": "The ID card on the home page is real, and its QR opens the actual scan page.",
+    "nextCta": "Register your drone",
+    "howItWorksCta": "How it works"
+  },
   "zones": {
     "title": "Zones",
     "zone": "Zone",
@@ -608,7 +773,29 @@
     "closedNow": "Closed now",
     "openNow": "Open now",
     "nextOpen": "Opens at {time}",
-    "disclaimer": "The zones shown here are authored for demonstration. They are not official airspace."
+    "disclaimer": "The zones shown here are authored for demonstration. They are not official airspace.",
+    "pageTitle": "Flight zones in Riyadh",
+    "pageLead": "Riyadh is closed by default. Flight is possible only inside a published permitted zone, within its hours and below its ceiling. This is the full list.",
+    "noZones": "No zone data has been loaded yet.",
+    "kindExplainer": {
+      "permitted": "Zones you can fly in once you have a booking, within the hours, ceiling, weight and build-type limits below.",
+      "restricted": "The base everything else sits on: inside this area flight is not permitted unless you are inside a published permitted zone.",
+      "no_fly": "Flight is never permitted here, and a no-fly zone takes precedence over any permitted zone it overlaps."
+    },
+    "ceilingNotApplicable": "Not applicable",
+    "night": "Night flight",
+    "weightUpTo": "Up to {weight}",
+    "anyValue": "No limit",
+    "listSeparator": ", ",
+    "broadcastRequired": "Broadcast Remote ID required",
+    "hours": "Opening hours (Riyadh time)",
+    "hoursUnpublished": "No opening hours have been published for this zone.",
+    "hoursNotApplicable": "No opening hours — flight is not permitted here.",
+    "closedAllDay": "Closed",
+    "bookingTitle": "Booking needs an account and a registered aircraft",
+    "bookingBody": "Whether you may fly depends on your aircraft's weight and build type, not on the zone alone. That is why there is no booking button here: register your aircraft first, and the system will answer for each zone in turn.",
+    "bookingCta": "Register your drone",
+    "howItWorksCta": "See how it works"
   },
   "map": {
     "title": "Airspace map",

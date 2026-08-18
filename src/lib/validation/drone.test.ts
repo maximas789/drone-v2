@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { acceptsUploads } from "@/lib/storage/validate";
 import {
+  isDroneEditable,
+  NICKNAME_MAX_LENGTH,
+  NICKNAME_MIN_LENGTH,
+  SERIAL_MAX_LENGTH,
+  SERIAL_MIN_LENGTH,
+  TEXT_MAX_LENGTH,
   mayBeExempt,
   serialRequiredFor,
   validateDroneSpecs,
@@ -45,6 +52,46 @@ describe("serialRequiredFor", () => {
   });
 });
 
+describe("isDroneEditable", () => {
+  it("allows a draft and a rejection, and nothing else", () => {
+    // The rule two surfaces now share: whether a photograph may be added and
+    // whether a weight may be corrected are the same question. F18a proved they
+    // can drift — it wrote `status !== "draft"` for the fields while F07's list
+    // already said `rejected` was editable, so a rejection about the declared
+    // weight was unanswerable.
+    expect(isDroneEditable("draft")).toBe(true);
+    expect(isDroneEditable("rejected")).toBe(true);
+
+    for (const status of ["pending", "approved", "expired", "revoked"]) {
+      expect(isDroneEditable(status), status).toBe(false);
+    }
+  });
+
+  it("refuses a status it does not recognise", () => {
+    // Fails closed, like `roleOf`. An unrecognised value must never widen what
+    // may be changed on a regulator-facing record.
+    expect(isDroneEditable("")).toBe(false);
+    expect(isDroneEditable("DRAFT")).toBe(false);
+    expect(isDroneEditable("anything")).toBe(false);
+  });
+
+  it("is the same list `acceptsUploads` enforces", () => {
+    // The two are one export and a delegating call, and this is what keeps them
+    // that way: a future session re-introducing a second literal list fails
+    // here rather than in a browser three waves later.
+    for (const status of [
+      "draft",
+      "rejected",
+      "pending",
+      "approved",
+      "expired",
+      "revoked",
+    ]) {
+      expect(acceptsUploads(status), status).toBe(isDroneEditable(status));
+    }
+  });
+});
+
 describe("validateDroneType", () => {
   const base = {
     nickname: "أبو رعد",
@@ -87,6 +134,33 @@ describe("validateDroneType", () => {
     expect(validateDroneType({ ...base, nickname: "أ" }).ok).toBe(false);
     expect(validateDroneType({ ...base, nickname: "   " }).ok).toBe(false);
     expect(validateDroneType({ ...base, nickname: "  Rad  " }).ok).toBe(true);
+  });
+
+  it("holds both nickname boundaries, not just the floor", () => {
+    // The ceiling was the gap a mutation found: deleting the
+    // `> NICKNAME_MAX_LENGTH` clause left all fifteen tests green, so nothing
+    // stopped an unbounded string reaching a NOT NULL column.
+    const at = "n".repeat(NICKNAME_MAX_LENGTH);
+    expect(validateDroneType({ ...base, nickname: at }).ok).toBe(true);
+    expect(validateDroneType({ ...base, nickname: at + "n" }).ok).toBe(false);
+
+    expect(
+      validateDroneType({ ...base, nickname: "n".repeat(NICKNAME_MIN_LENGTH) })
+        .ok,
+    ).toBe(true);
+  });
+
+  it("holds the free-text ceiling on each of the three text fields", () => {
+    const at = "م".repeat(TEXT_MAX_LENGTH);
+    const over = at + "م";
+
+    for (const field of ["manufacturer", "model", "propulsion"] as const) {
+      expect(validateDroneType({ ...base, [field]: at }).ok).toBe(true);
+
+      const result = validateDroneType({ ...base, [field]: over });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.problems).toContain("text_too_long");
+    }
   });
 });
 
@@ -163,6 +237,29 @@ describe("validateDroneSpecs", () => {
     expect(validateDroneSpecs({ ...selfBuilt, weightGrams: "300001" }).ok).toBe(
       false,
     );
+  });
+
+  it("holds both serial-length boundaries", () => {
+    // Neither end was tested: removing the `< SERIAL_MIN_LENGTH` clause left
+    // the whole file green, so a single-character serial would have been
+    // accepted onto a commercial airframe as a manufacturer's serial.
+    const commercial = { ...selfBuilt, buildType: "commercial" as const };
+
+    for (const serialNumber of [
+      "A".repeat(SERIAL_MIN_LENGTH),
+      "A".repeat(SERIAL_MAX_LENGTH),
+    ]) {
+      expect(validateDroneSpecs({ ...commercial, serialNumber }).ok).toBe(true);
+    }
+
+    for (const serialNumber of [
+      "A".repeat(SERIAL_MIN_LENGTH - 1),
+      "A".repeat(SERIAL_MAX_LENGTH + 1),
+    ]) {
+      const result = validateDroneSpecs({ ...commercial, serialNumber });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.problems).toContain("serial_format");
+    }
   });
 
   it("reports every problem at once", () => {

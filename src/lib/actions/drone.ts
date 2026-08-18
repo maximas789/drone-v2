@@ -8,6 +8,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { drone } from "@/lib/db/schema";
 import { getDroneById } from "@/lib/data/drone";
+import { listDroneFilePathnames } from "@/lib/data/upload";
+import { deleteFile } from "@/lib/storage";
 import { inngest } from "@/lib/inngest/client";
 import { droneApprovedEvent, droneRevokedEvent } from "@/lib/inngest/events";
 import { enforceLimit } from "@/lib/rate-limit";
@@ -22,6 +24,7 @@ import {
   submitDrone,
 } from "@/lib/workflow/drone";
 import {
+  isDroneEditable,
   validateDroneSpecs,
   validateDroneType,
   type SpecsDraft,
@@ -68,9 +71,20 @@ export type DraftInput = {
  * who picks their own class picks the flattering one, and the class is what the
  * airspace engine compares a zone's ceiling against.
  *
- * Editing is refused once the drone leaves `draft`: a submitted registration is
- * part of the regulatory record, and the check is server-side because the
- * absence of an Edit button is not a check.
+ * Editing is refused once the drone leaves `draft` **or `rejected`**: a
+ * submitted registration is part of the regulatory record, and the check is
+ * server-side because the absence of an Edit button is not a check.
+ *
+ * **`rejected` is editable, and F18a had it wrong.** F18's own criterion says a
+ * rejection re-enables editing, and F07 had already settled the same question
+ * the same way — `EDITABLE_DRONE_STATUSES` is `["draft", "rejected"]`, so a
+ * rejected drone has been accepting new *photographs* since Wave 4 while this
+ * action refused to let its *weight* be corrected. A pilot told "the weight you
+ * declared does not match the airframe" could not act on it. The two lists are
+ * now one list, imported rather than repeated, so they cannot drift again.
+ *
+ * `pending`, `approved`, `expired` and `revoked` are still refused, which is
+ * the half F18a proved over HTTP.
  */
 export async function saveDroneDraftAction(
   droneId: string | null,
@@ -105,7 +119,7 @@ export async function saveDroneDraftAction(
     // A reviewer can *read* somebody else's drone; nobody edits one but its
     // owner, so this checks the owner rather than reusing the read's verdict.
     if (!owned || owned.ownerUserId !== session.user.id) return refuse("not_found");
-    if (owned.status !== "draft") return refuse("not_editable");
+    if (!isDroneEditable(owned.status)) return refuse("not_editable");
 
     await db
       .update(drone)
@@ -113,6 +127,7 @@ export async function saveDroneDraftAction(
       .where(eq(drone.id, droneId));
 
     revalidatePath("/[locale]/drones", "page");
+    revalidatePath("/[locale]/drones/[id]", "page");
     return {
       ok: true,
       data: { droneId, weightClass: values.weightClass },
@@ -132,7 +147,65 @@ export async function saveDroneDraftAction(
    * starts at `drone.submitted`, which is where `applyTransition` picks it up.
    */
   revalidatePath("/[locale]/drones", "page");
+  revalidatePath("/[locale]/drones/[id]", "page");
   return { ok: true, data: { droneId: row.id, weightClass: values.weightClass } };
+}
+
+/**
+ * Delete a registration. **Drafts only.**
+ *
+ * A submitted registration is part of the regulatory record: once a reviewer
+ * has seen it, "it was never here" is not a thing the pilot gets to say. The
+ * status is re-checked here rather than trusted from the page, because the
+ * absence of a Delete button is not a check — this action is an ordinary POST.
+ *
+ * **The bytes go before the row does.** `drone_photo` cascades when the drone
+ * row is deleted, and at that moment every pathname the app knew about is gone
+ * with it — nothing left in the database will ever tell you the files were left
+ * behind. An orphaned blob is not litter, it is a photograph of somebody's
+ * aircraft that stays fetchable to anyone holding the pathname, for ever, with
+ * no row and no ownership check in front of it any more.
+ *
+ * So the order is: read the pathnames, delete the bytes, then delete the row.
+ * The failure this ordering chooses is the recoverable one — if the row delete
+ * fails after the files are gone, the pilot sees a draft with broken thumbnails
+ * and deletes it again, and the second attempt succeeds. The other order fails
+ * to a leak nobody can see or clean up.
+ *
+ * **No audit event**, matching F18a's call on creating and editing a draft:
+ * `audit_event` is the regulator's approval trail, and it starts at
+ * `drone.submitted`. A draft never entered it, so an event recording its
+ * deletion would be the only trace in the trail of an aircraft that was never
+ * registered.
+ */
+export async function deleteDroneAction(
+  droneId: string,
+): Promise<ActionResult<undefined>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("drone.draft", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const owned = await getDroneById(session, droneId);
+  // A reviewer may read someone else's drone; nobody deletes one but its owner.
+  if (!owned || owned.ownerUserId !== session.user.id) return refuse("not_found");
+  if (owned.status !== "draft") return refuse("not_deletable");
+
+  const pathnames = await listDroneFilePathnames(session, droneId);
+  for (const pathname of pathnames) {
+    await deleteFile(pathname);
+  }
+
+  await db.delete(drone).where(eq(drone.id, droneId));
+
+  revalidatePath("/[locale]/drones", "page");
+  revalidatePath("/[locale]/drones/[id]", "page");
+  return { ok: true, data: undefined };
 }
 
 /** The pilot's own path: draft → pending, and the two ways back into the queue. */
@@ -184,6 +257,7 @@ async function pilotEdge(
   if (!outcome.ok) return refuse(outcome.reason);
 
   revalidatePath("/[locale]/drones", "page");
+  revalidatePath("/[locale]/drones/[id]", "page");
   return { ok: true, data: { status: outcome.to } };
 }
 
@@ -216,6 +290,7 @@ export async function approveDroneAction(
 
   revalidatePath("/[locale]/admin", "page");
   revalidatePath("/[locale]/drones", "page");
+  revalidatePath("/[locale]/drones/[id]", "page");
   return { ok: true, data: { status: outcome.to, remoteIdCode: outcome.remoteIdCode } };
 }
 

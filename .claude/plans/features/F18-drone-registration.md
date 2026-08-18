@@ -115,3 +115,23 @@ The build log is the truth; these are the places this file was wrong. **F18 is b
 - **The approved screen shows no QR.** The code, status and valid-until are text; F19 owns the card, the QR, tap-to-copy and the print view. The criterion *"shows … a scannable QR"* is F19's. Two surfaces rendering a QR is the drift F11's single-projection rule exists to prevent.
 - **Build type is three radio cards, not a dropdown**, so that `self_built` and `fpv` are as visible as `commercial` rather than hidden behind a click.
 - **The serial number field is absent** for self-built and FPV — not disabled, not "optional". The server returns `serial_not_applicable` if one arrives anyway rather than dropping it silently.
+
+## Corrections after F18b (Session 16)
+
+**F18 is complete.** These are the places the file above was still wrong, or was made wrong by what F18b found.
+
+- **`rejected` is editable, not only `draft`.** The Status table's *"edit re-enabled"* is right and F18a's action was not — it refused every non-`draft` status, so a rejection about the declared weight could not be answered. The rule now lives once, as `isDroneEditable` / `EDITABLE_DRONE_STATUSES` in `src/lib/validation/drone.ts`, and F07's `acceptsUploads` re-exports it. **Do not write `status !== "draft"` anywhere.**
+- **The approved screen has no "Book a flight".** F21 owns booking and does not exist; the criterion moves to F21. The screen links to **`/rid/{code}`** — F11's scan page — so the pilot can see what a person scanning their aircraft sees.
+- **Deletion sweeps the blobs *before* the row, not after.** `drone_photo` cascades, and with it every pathname the app knew. The helper is `listDroneFilePathnames` + `deleteFile` (F07); **there is no `deleteDroneFiles`**.
+- **`registrationExpiresAt` outlives the registration.** The list card must not render it as *"valid until"* for an `expired` or `revoked` aircraft — a revoked registration read as valid for three more years. `approved` → *valid until*, `expired` → *expired on*, `revoked` → no date.
+- **A reviewer's quoted reason needs `dir="auto"`.** It is the one string on the page whose direction is not the page's; inherited direction mis-sets the punctuation of the other language.
+- **Delete confirms in markup, never `window.confirm`** — a native confirm speaks the browser's language, the same trap as `<input type="date">` in F17.
+- **`/drones/[id]` is the owner's surface and 404s for a reviewer**, proven over HTTP. Reviewing is F22's job with F22's screen.
+
+### Criteria met by F18b
+
+Every criterion under **States** and **Ownership & UI** is met, except:
+
+- *"an approved drone shows … a scannable QR"* — **F19's**, as the F18a corrections already recorded.
+- *"a declared module can be added with a PDF"* — **F19's**, likewise.
+- *"resubmitting increments `rejectionCount`"* is met, but the accompanying property *"the trail keeps the reason the row cleared"* was **not re-shown this session**: F18b's `rejected` row was seeded with raw SQL and so had no prior audit event. F14 proved it 34/34.

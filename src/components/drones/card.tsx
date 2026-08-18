@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { DroneStatusBadge } from "./status-badge";
 import { formatDate } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
@@ -114,7 +115,21 @@ export function DroneCard({
         </p>
       ) : null}
 
-      {drone.registrationExpiresAt ? (
+      {/**
+       * **The date means different things in different statuses, and the card
+       * said the same thing for all of them.** `registrationExpiresAt` outlives
+       * the registration it belonged to — it is still set on an expired row and
+       * on a revoked one — so rendering it unconditionally printed *"valid
+       * until 11 July 2029"* on a **revoked** aircraft whose Remote ID has been
+       * suspended, and *"valid until 30 June 2026"* on one that had already
+       * lapsed. A card is the surface a pilot glances at; telling them a
+       * revoked registration is valid for three more years is the worst thing
+       * on this page to get wrong.
+       *
+       * Found by opening the list against the seeded statuses. `typecheck`,
+       * `lint`, `build` and 586 tests were all green — open thread 11 again.
+       */}
+      {drone.registrationExpiresAt && drone.status === "approved" ? (
         <p className="text-muted-foreground text-xs">
           {t("validUntil", {
             date: formatDate(drone.registrationExpiresAt, locale),
@@ -122,11 +137,35 @@ export function DroneCard({
         </p>
       ) : null}
 
+      {drone.registrationExpiresAt && drone.status === "expired" ? (
+        <p className="text-muted-foreground text-xs">
+          {t("expiredOn", {
+            date: formatDate(drone.registrationExpiresAt, locale),
+          })}
+        </p>
+      ) : null}
+
       {/**
-       * **No link to `/drones/[id]` yet.** F18b builds that page; linking to it
-       * now would ship a card whose only affordance is a 404, which is worse
-       * than a card that does not claim to go anywhere.
+       * A revoked registration gets **no date at all**. Neither "valid until"
+       * nor "expired on" is true of it: it was ended by a decision, not by the
+       * calendar, and the panel on the detail page is where that decision and
+       * its reason belong.
        */}
+
+      {/**
+       * The card's one affordance, and F18b is what made it real — F18a
+       * deliberately shipped no link rather than one that 404s.
+       *
+       * A link, not a whole-card click target: a card wrapped in an `<a>`
+       * swallows the photograph and every line of text into one enormous link
+       * label, which a screen reader then reads out in full before offering it.
+       * The name of the aircraft is what the pilot is choosing.
+       */}
+      <div>
+        <Link href={`/drones/${drone.id}`} className="text-sm underline">
+          {t("viewDrone", { nickname: drone.nickname })}
+        </Link>
+      </div>
     </li>
   );
 }

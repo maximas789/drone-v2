@@ -11,12 +11,30 @@ import {
 } from "./codec";
 
 /**
- * The batch the alphabet and collision criteria are asserted against. A
- * hundred thousand is not a round number chosen for looks: at that count the
- * per-insert collision probability is ~9 × 10⁻⁸, so a duplicate here would mean
- * the generator is broken rather than unlucky.
+ * The batch the alphabet and collision criteria are asserted against.
+ *
+ * **The original comment here did the arithmetic per insert and then drew a
+ * conclusion about the batch** — ~9 × 10⁻⁸ is the chance that *one* code
+ * collides with those already drawn, but there are 10⁵ draws. The batch figure
+ * is the birthday bound, n²/2N = (10⁵)² / (2 × 2⁴⁰) ≈ **4.6 × 10⁻³**: about one
+ * run in 220 sees a duplicate. `expect(size).toBe(BATCH)` was therefore a test
+ * that fails on its own terms roughly every 220 runs, and it did — F18b's
+ * session hit it.
+ *
+ * It was also arguing against the code it tests: `issueRemoteId` carries a
+ * savepoint retry loop *because* collisions happen, and F10 proved that loop by
+ * forcing one.
  */
 const BATCH = 100_000;
+
+/**
+ * Expected collisions in a batch is ~0.0046, so four or more is a
+ * ~10⁻¹¹ event — while a generator that had lost entropy (an off-by-one in the
+ * bit shift leaving 20 bits, say) would produce thousands. The threshold
+ * discriminates cleanly between "unlucky" and "broken", which the exact
+ * equality did not.
+ */
+const MAX_TOLERATED_DUPLICATES = 3;
 
 function batch(): string[] {
   return Array.from({ length: BATCH }, () => generateCode());
@@ -44,8 +62,9 @@ describe("generateCode", () => {
     expect(strange).toBeUndefined();
   });
 
-  it("produces no duplicates across 100 000 codes", () => {
-    expect(new Set(codes).size).toBe(BATCH);
+  it("draws from the whole 40-bit space across 100 000 codes", () => {
+    const duplicates = BATCH - new Set(codes).size;
+    expect(duplicates).toBeLessThanOrEqual(MAX_TOLERATED_DUPLICATES);
   });
 
   it("uses every symbol in the alphabet", () => {

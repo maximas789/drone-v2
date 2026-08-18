@@ -20,15 +20,22 @@ import type { Locale } from "@/lib/locale";
  * page hands the grid the rows the database actually holds. Inventing a local
  * id would put a row in the grid that no delete could ever address.
  */
+const EMPTY: Problems = new Set();
+
 export function StepPhotos({
   droneId,
   photos,
-  problems,
+  /**
+   * Optional, because `/drones/[id]/edit` renders the identical block and has
+   * no refusal to show — a server page cannot hand a `Set` across the RSC
+   * boundary anyway, so the default is constructed on this side.
+   */
+  problems = EMPTY,
   locale,
 }: {
   droneId: string;
   photos: PhotoRow[];
-  problems: Problems;
+  problems?: Problems;
   locale: Locale;
 }) {
   const t = useTranslations("drones");

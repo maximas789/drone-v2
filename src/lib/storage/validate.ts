@@ -7,6 +7,8 @@
  * that has to keep working.
  */
 
+import { isDroneEditable } from "@/lib/validation/drone";
+
 /** Every kind of file the app stores. `qr` is written by F08, never uploaded. */
 export const UPLOAD_KINDS = [
   "overall",
@@ -170,9 +172,15 @@ export function declarationPrefix(declarationId: string): string {
  * A `pending` drone is in front of a reviewer, and a photo appearing underneath
  * them mid-decision means they approved something they did not see. `approved`
  * is a registration record, not a draft.
+ *
+ * **The list moved to `src/lib/validation/drone.ts` in F18b** and this is a
+ * re-export, not a second copy. Whether a photograph may be added and whether a
+ * weight may be corrected are the same question about the same row, and F18a
+ * proved they can drift: it wrote `status !== "draft"` for the fields while
+ * this list already said `rejected` was editable.
  */
-export const EDITABLE_DRONE_STATUSES = ["draft", "rejected"] as const;
+export { EDITABLE_DRONE_STATUSES } from "@/lib/validation/drone";
 
 export function acceptsUploads(status: string): boolean {
-  return (EDITABLE_DRONE_STATUSES as readonly string[]).includes(status);
+  return isDroneEditable(status);
 }

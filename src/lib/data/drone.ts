@@ -31,6 +31,37 @@ export async function getDroneById(session: Session, id: string) {
   return row;
 }
 
+/**
+ * A drone the signed-in pilot **owns**, with its photographs and its Remote ID.
+ *
+ * Deliberately *not* `getDroneById`, which also answers for a reviewer. This is
+ * the pilot's own surface: it offers Submit, Edit, Renew and Delete, and a
+ * reviewer opening somebody else's aircraft here would be handed the owner's
+ * controls over a registration that is not theirs. Reviewing is F22's job and
+ * F22 owns the screen for it — so this reader asks the narrower question, and
+ * `/drones/[id]` 404s for everybody else including staff.
+ *
+ * One ownership check, then two scoped reads. The three-call version
+ * (`getDroneById` + `getDronePhotos` + `getRemoteIdForDrone`) re-runs the
+ * ownership query three times for one page.
+ */
+export async function getMyDroneDetail(session: Session, id: string) {
+  const row = await db.query.drone.findFirst({
+    where: and(eq(drone.id, id), eq(drone.ownerUserId, session.user.id)),
+  });
+  if (!row) return null;
+
+  const [photos, rid] = await Promise.all([
+    db.query.dronePhoto.findMany({
+      where: eq(dronePhoto.droneId, id),
+      orderBy: [asc(dronePhoto.sortOrder)],
+    }),
+    db.query.remoteId.findFirst({ where: eq(remoteId.droneId, id) }),
+  ]);
+
+  return { drone: row, photos, remoteId: rid ?? null };
+}
+
 export async function getDronePhotos(session: Session, droneId: string) {
   const owned = await getDroneById(session, droneId);
   if (!owned) return [];

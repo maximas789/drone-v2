@@ -40,6 +40,32 @@ export type DroneProblem =
   | "serial_not_applicable"
   | "text_too_long";
 
+// --- What may still be changed --------------------------------------------
+
+/**
+ * The statuses in which a pilot may still change their own registration.
+ *
+ * **One list, because there is one rule.** F07 wrote it for uploads and F18a
+ * wrote `status !== "draft"` for the fields, and the two disagreed: a rejected
+ * drone accepted new photographs but refused a corrected weight, so a pilot
+ * told "the declared weight does not match the airframe" had no way to act on
+ * it. A rejection that cannot be answered is the dead end F18 exists to
+ * prevent.
+ *
+ * `pending` is out because a form changing underneath a reviewer means they
+ * decided on something they did not see. `approved`, `expired` and `revoked`
+ * are out because those are registration records, not drafts — an expired
+ * registration is renewed, which resubmits the aircraft as it was registered.
+ *
+ * It lives **here**, in the pure module, so a client component can ask the
+ * question without pulling `src/lib/storage` into the browser bundle.
+ */
+export const EDITABLE_DRONE_STATUSES = ["draft", "rejected"] as const;
+
+export function isDroneEditable(status: string): boolean {
+  return (EDITABLE_DRONE_STATUSES as readonly string[]).includes(status);
+}
+
 // --- Weight ---------------------------------------------------------------
 
 /**

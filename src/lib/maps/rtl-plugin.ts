@@ -1,5 +1,6 @@
 import { getRTLTextPluginStatus, setRTLTextPlugin } from "maplibre-gl";
 import { RTL_PLUGIN_URL } from "./config";
+import { setMapWorkerUrl } from "./worker-url";
 
 /**
  * `setRTLTextPlugin`, called **exactly once per document**.
@@ -36,6 +37,17 @@ const PLUGIN_TIMEOUT_MS = 5000;
 let pending: Promise<void> | null = null;
 
 export function ensureRtlTextPlugin(): Promise<void> {
+  /**
+   * **First, and before the guard below.** Registering the plugin is a message
+   * to MapLibre's worker, so this call is what brings the worker pool into
+   * existence — and the pool is built once, from whatever worker URL is set at
+   * that moment. Set it afterwards and it is ignored; set it never and the pool
+   * is built from a 404 and silently answers nothing. This runs on every call
+   * because it is an idempotent string assignment, and because a caller that
+   * hits the short-circuit still needs the URL to have been pinned.
+   */
+  setMapWorkerUrl();
+
   if (pending) return pending;
 
   /**

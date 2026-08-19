@@ -60,6 +60,18 @@ export function DecisionReasons({
   const t = useTranslations("airspace");
   if (reasons.length === 0) return null;
 
+  /**
+   * The per-reason zone caption earns its place only when the reasons cite
+   * **more than one** zone — a no-fly overlay refusing a point inside a
+   * permitted carve-out, say. With a single zone it repeats whatever named the
+   * zone above, and the map's panel does exactly that: the reader was shown
+   * *العمارية* as the heading and then *العمارية* again under every line.
+   * Found by opening the page.
+   */
+  const distinctZones = new Set(
+    reasons.map((reason) => reason.zoneId).filter(Boolean),
+  ).size;
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium">{t("reasonsTitle")}</h3>
@@ -83,7 +95,7 @@ export function DecisionReasons({
                 ),
               )}
             </p>
-            {reason.zoneNameAr && reason.zoneNameEn ? (
+            {distinctZones > 1 && reason.zoneNameAr && reason.zoneNameEn ? (
               <p className="text-muted-foreground mt-1 text-xs">
                 {locale === "ar" ? reason.zoneNameAr : reason.zoneNameEn}
               </p>

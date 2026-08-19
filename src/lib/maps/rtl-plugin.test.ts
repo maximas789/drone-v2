@@ -13,7 +13,7 @@ import { RTL_PLUGIN_URL } from "./config";
  * the old build, and the failure would show up as *Arabic labels rendering
  * subtly wrong* — which nobody reviewing an English diff would ever catch.
  *
- * So the check is mechanical. Re-run `pnpm vendor:rtl` when this fails.
+ * So the check is mechanical. Re-run `pnpm vendor:map` when this fails.
  */
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
@@ -31,7 +31,7 @@ describe("vendored RTL text plugin", () => {
 
     expect(
       vendored,
-      "public/vendor is stale — run `pnpm vendor:rtl`",
+      "public/vendor is stale — run `pnpm vendor:map`",
     ).toBe(installed);
   });
 

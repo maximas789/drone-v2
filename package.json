@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "i18n:check": "node scripts/i18n-check.mts",
-    "vendor:rtl": "node scripts/vendor-rtl-plugin.mts",
+    "vendor:map": "node scripts/vendor-map-assets.mts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",

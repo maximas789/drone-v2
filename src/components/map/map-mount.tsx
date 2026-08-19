@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { Locale } from "@/lib/locale";
-import type { DrawableZone } from "@/lib/maps/layer-styles";
+import type { ComponentProps } from "react";
+import type { AirspaceMap } from "./airspace-map";
 
 /**
  * Loads the map **client-side only**.
@@ -16,8 +16,14 @@ import type { DrawableZone } from "@/lib/maps/layer-styles";
  * of Next, `ssr: false` is not allowed in a Server Component, so a server page
  * cannot call `dynamic` directly. Putting the boundary here means `/zones`
  * stays a server component and the whole zone list is still server-rendered.
+ *
+ * **It is a pass-through and nothing else.** The state — the tapped point, the
+ * altitude, the chosen aircraft and time, and the decision — belongs to
+ * `AirspaceExplorer`, which is an ordinary client component and therefore
+ * renders the panel and the controls on the server pass as well. Only the map
+ * itself has to wait for the browser, and only the map does.
  */
-const AirspaceMap = dynamic(
+const LazyAirspaceMap = dynamic(
   () => import("./airspace-map").then((module) => module.AirspaceMap),
   {
     ssr: false,
@@ -27,11 +33,6 @@ const AirspaceMap = dynamic(
   },
 );
 
-export function MapMount(props: {
-  initialZones: readonly DrawableZone[];
-  locale: Locale;
-  labels: { tileFailure: string; loading: string; mapLabel: string };
-  className?: string;
-}) {
-  return <AirspaceMap {...props} />;
+export function MapMount(props: ComponentProps<typeof AirspaceMap>) {
+  return <LazyAirspaceMap {...props} />;
 }

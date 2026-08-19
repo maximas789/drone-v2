@@ -8,6 +8,11 @@ import {
   type Reason,
 } from "@/lib/actions/result";
 import { evaluateAirspace } from "@/lib/airspace/evaluate";
+import {
+  isFlightPurpose,
+  validateCopilots,
+  type CopilotInput,
+} from "@/lib/validation/booking";
 import { buildDayContext } from "@/lib/airspace/query";
 import { riyadhDayBounds, riyadhYmd } from "@/lib/airspace/time";
 import type {
@@ -134,6 +139,13 @@ export type CreateBookingActionInput = {
   purpose?: string | null;
   purposeNote?: string | null;
   plannedAltitudeM?: number | null;
+  /**
+   * Up to three, and **re-validated here.** The wizard runs the same
+   * `validateCopilots` for an early answer; this is not that check moved
+   * client-side, it is the check — the action is an ordinary POST and reachable
+   * without the form.
+   */
+  copilots?: readonly CopilotInput[];
 };
 
 export type BookingCreated = {
@@ -242,6 +254,21 @@ export async function createBookingAction(
   if (!remoteId) return { ok: false, reasons: [{ code: "no_remote_id" }] };
 
   /**
+   * `booking.purpose` is a plain `text` column, so this whitelist is the only
+   * thing standing between a hand-made POST and an arbitrary string rendered
+   * back on the detail page and in the reviewer's queue. An absent purpose is
+   * allowed; an invented one is not.
+   */
+  if (input.purpose != null && input.purpose !== "" && !isFlightPurpose(input.purpose)) {
+    return { ok: false, reasons: [{ code: "invalid_purpose" }] };
+  }
+
+  const crew = validateCopilots(input.copilots ?? []);
+  if (!crew.ok) {
+    return { ok: false, reasons: crew.problems.map((code) => ({ code })) };
+  }
+
+  /**
    * Two conditions, both required. The **zone** says no human is needed here;
    * the **pilot** has not repeatedly taken a slot and failed to turn up. A zone
    * that trusts everybody plus a pilot who no-shows weekly is how capacity gets
@@ -266,6 +293,7 @@ export async function createBookingAction(
     purpose: input.purpose?.trim().slice(0, MAX_TEXT_LENGTH) || null,
     purposeNote: input.purposeNote?.trim().slice(0, MAX_TEXT_LENGTH) || null,
     plannedAltitudeM: altitude,
+    copilots: crew.copilots,
     decisionSnapshot: decision,
     actor: actorFrom(session),
     autoApprove: eligible

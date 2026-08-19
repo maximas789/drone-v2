@@ -16,11 +16,29 @@
 export const TILE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 /**
- * Served from our own origin, not a CDN — see `scripts/vendor-rtl-plugin.mts`.
+ * Served from our own origin, not a CDN — see `scripts/vendor-map-assets.mts`.
  * MapLibre's worker loads this with `importScripts`, so it must be a URL rather
  * than a bundled import.
  */
 export const RTL_PLUGIN_URL = "/vendor/mapbox-gl-rtl-text.js";
+
+/**
+ * **MapLibre's own worker, served by us rather than found by the bundler.**
+ *
+ * `maplibre-gl.mjs` computes this URL from its own `import.meta.url`, expecting
+ * `maplibre-gl-worker.mjs` to be its neighbour on disk. Bundled, it is not: the
+ * module becomes a hashed chunk, the computed URL is
+ * `/_next/static/chunks/maplibre-gl-worker.mjs`, and that 404s. MapLibre does
+ * not listen for `error` on the `Worker` it has just constructed, so this
+ * throws nothing and logs nothing — **the worker simply never answers.** A
+ * GeoJSON source stays mid-update for ever, which keeps `style.loaded()` false
+ * for ever, which means MapLibre never completes a render pass and the canvas
+ * stays blank even though the basemap loaded perfectly. That was open thread 53.
+ *
+ * Passing this to `setWorkerUrl` removes the bundler from the path. The
+ * directory matters: the worker `import`s `./maplibre-gl-shared.mjs` beside it.
+ */
+export const MAP_WORKER_URL = "/vendor/maplibre/maplibre-gl-worker.mjs";
 
 /** Riyadh. Matches the seeded city so the map opens on the authored airspace. */
 export const DEFAULT_CENTER: [lng: number, lat: number] = [46.68, 24.72];

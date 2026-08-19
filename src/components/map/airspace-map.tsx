@@ -7,11 +7,15 @@ import {
   type ErrorEvent,
   type GeoJSONSource,
   type LayerSpecification,
+  type MapMouseEvent,
   type StyleSpecification,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ZoneRule } from "@/lib/airspace/types";
+import type { DecisionStatus } from "@/lib/airspace/types";
+import type { Position } from "@/lib/geo";
+import { computeBbox } from "@/lib/geo/bbox";
+import { unionBounds } from "@/lib/geo/project";
 import type { Locale } from "@/lib/locale";
 import { resolveZoneColors } from "@/lib/maps/color-resolve";
 import {
@@ -28,12 +32,16 @@ import {
 import {
   DRAW_ORDER,
   HATCH_IMAGE_ID,
+  PROBE_SOURCE_ID,
   ZONE_SOURCE_ID,
   createHatchImage,
   fillLayer,
   hatchLayer,
   labelLayer,
   outlineLayer,
+  probeGeoJson,
+  probeHaloLayer,
+  probeMarkerLayer,
   zonesToGeoJson,
   type DrawableZone,
 } from "@/lib/maps/layer-styles";
@@ -42,15 +50,12 @@ import { ensureRtlTextPlugin } from "@/lib/maps/rtl-plugin";
 /**
  * The interactive airspace map.
  *
- * **NOT MOUNTED YET — see open thread 53.** This component is complete and its
- * pure parts are tested, but it does not render: the `ajniha-zones` GeoJSON
- * source never reports loaded, which keeps `style.loaded()` false forever, and
- * MapLibre therefore never completes a render pass — so the basemap comes up
- * blank too, with no error on the `error` event. The basemap's own vector and
- * raster sources both load fine in the same worker, which is what makes the
- * GeoJSON path the suspect. Reproduced identically against `next build` +
- * `next start`, so it is not a Turbopack-dev artefact. `/zones` keeps F16b's
- * SVG until this is resolved.
+ * **It needs `setMapWorkerUrl()` before it is constructed**, which
+ * `ensureRtlTextPlugin` does — see `src/lib/maps/worker-url.ts`. Without it
+ * MapLibre builds its worker pool from a URL that 404s after bundling and every
+ * worker round-trip hangs silently, which draws a blank canvas over a perfectly
+ * healthy basemap and reports no error at all. That was thread 53 and it cost a
+ * session; the ordering is not incidental.
  *
  * **F20a draws; F20b answers.** This renders the seeded zones over a real
  * basemap and nothing more — there is no tap-to-evaluate here yet, because the
@@ -74,21 +79,41 @@ import { ensureRtlTextPlugin } from "@/lib/maps/rtl-plugin";
 type MapStatus = "loading" | "ready" | "tiles-failed";
 
 export function AirspaceMap({
-  initialZones,
+  zones,
   locale,
   labels,
+  probePoint,
+  probeStatus,
+  onPointSelected,
+  onViewportChange,
   className,
 }: {
   /**
-   * Drawn on first paint, from the server render. Not an optimisation: it means
-   * a reader whose `/api/zones/geojson` call fails still sees the airspace, in
-   * the same way the fallback style means a reader whose *tiles* fail still
-   * sees it. The two degradations are independent and both are covered.
+   * **Controlled.** The zones come from `AirspaceExplorer`, which owns them
+   * because it also has to *evaluate* against them — two components holding
+   * their own copy is how a map ends up drawing one set of polygons and
+   * answering questions about another.
+   *
+   * The first value is server-rendered, which is not an optimisation: a reader
+   * whose `/api/zones/geojson` call fails still sees the airspace, in the same
+   * way the fallback style covers a reader whose *tiles* fail. The two
+   * degradations are independent and both are handled.
    */
-  initialZones: readonly DrawableZone[];
+  zones: readonly DrawableZone[];
   locale: Locale;
   /** Pre-translated: this is a client component and the map has no provider. */
   labels: { tileFailure: string; loading: string; mapLabel: string };
+  /** Where the reader last tapped, and the verdict that paints its halo. */
+  probePoint: Position | null;
+  probeStatus: DecisionStatus;
+  onPointSelected: (point: Position) => void;
+  /**
+   * `minLng,minLat,maxLng,maxLat` rounded to three decimals — ~100 m, far finer
+   * than a zone edge and coarse enough that a one-pixel drag is not a new
+   * viewport. Debounced here because the debounce is about map *gestures*; what
+   * the explorer does with the box is its own business.
+   */
+  onViewportChange: (bbox: string) => void;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -96,31 +121,37 @@ export function AirspaceMap({
   const [status, setStatus] = useState<MapStatus>("loading");
 
   /**
-   * The zones currently drawn, and a ref beside the state because the MapLibre
-   * event handlers below are registered once and would otherwise close over the
-   * first render's value for the life of the map.
+   * Live mirrors of the props, because **the MapLibre handlers below are
+   * registered exactly once** and would otherwise close over the first render's
+   * values for the life of the map. A stale `onPointSelected` is the subtle
+   * version of that bug: the map keeps working and every tap is reported to a
+   * callback holding last week's state.
    */
-  const zonesRef = useRef<readonly DrawableZone[]>(initialZones);
+  const zonesRef = useRef<readonly DrawableZone[]>(zones);
+  const selectRef = useRef(onPointSelected);
+  const viewportRef = useRef(onViewportChange);
 
-  /**
-   * Viewport results keyed by rounded bbox. Panning back to somewhere already
-   * visited must not re-fetch — a pilot comparing two sites goes back and forth
-   * between them.
-   */
-  const cacheRef = useRef(new Map<string, ZoneRule[]>());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const draw = useCallback(
-    (map: MapLibreMap, zones: readonly DrawableZone[]) => {
-      const source = map.getSource(ZONE_SOURCE_ID);
-      if (source && "setData" in source) {
-        (source as GeoJSONSource).setData(
-          zonesToGeoJson(zones, locale) as never,
-        );
-      }
-    },
-    [locale],
-  );
+  /**
+   * The probe, mirrored for the same reason as the zones: `installZoneLayers`
+   * runs inside a MapLibre event handler and needs the *current* marker, not
+   * the one that existed when the style started loading.
+   */
+  const probeRef = useRef({ point: probePoint, status: probeStatus });
+
+  /**
+   * Refreshed after **every** render, deliberately without a dependency array.
+   * Writing a ref during render is what React's rules forbid, and the initial
+   * `useRef` values already cover the window before the first effect runs —
+   * which is before MapLibre exists, let alone fires a handler.
+   */
+  useEffect(() => {
+    zonesRef.current = zones;
+    selectRef.current = onPointSelected;
+    viewportRef.current = onViewportChange;
+    probeRef.current = { point: probePoint, status: probeStatus };
+  });
 
   /**
    * Adds the zone source, the hatch image and every zone layer to whatever
@@ -170,6 +201,20 @@ export function AirspaceMap({
       // its texture.
       if (hatch) add(hatchLayer());
       add(labelLayer(colors));
+
+      /**
+       * The probe goes on **last, so it is on top of everything.** A marker
+       * hidden under a no-fly fill would be a map that will not show you where
+       * you just asked, in precisely the case where the answer matters most.
+       */
+      if (!map.getSource(PROBE_SOURCE_ID)) {
+        map.addSource(PROBE_SOURCE_ID, {
+          type: "geojson",
+          data: probeGeoJson(probeRef.current.point, probeRef.current.status) as never,
+        });
+      }
+      add(probeHaloLayer(colors));
+      add(probeMarkerLayer(colors));
     },
     [locale],
   );
@@ -202,49 +247,37 @@ export function AirspaceMap({
     [locale],
   );
 
-  const fetchViewport = useCallback(
-    async (map: MapLibreMap) => {
-      const bounds = map.getBounds();
-      // Three decimals is ~100 m — far finer than a zone edge, and coarse
-      // enough that a one-pixel drag is a cache hit rather than a fetch.
-      const key = [
-        bounds.getWest().toFixed(3),
-        bounds.getSouth().toFixed(3),
-        bounds.getEast().toFixed(3),
-        bounds.getNorth().toFixed(3),
-      ].join(",");
+  /**
+   * Opens on the airspace, rather than on a fixed centre that happens to be
+   * near it.
+   *
+   * `DEFAULT_CENTER` and `DEFAULT_ZOOM` are a sane starting camera, but they are
+   * a *guess* about the seed — and at zoom 9 they cut off the northern and
+   * southern zones, so a page whose entire purpose is to publish the airspace
+   * opened showing about three quarters of it. The extent is derived from the
+   * same rows being drawn, so it cannot disagree with them, and re-seeding with
+   * different geometry moves the camera with it.
+   *
+   * **Once, on first load only.** Refitting after the viewport refetch would
+   * yank the camera back every time a pilot panned, and refitting after a
+   * fallback style swap would move the ground under someone already reading it.
+   */
+  const fitToZones = useCallback((map: MapLibreMap) => {
+    const bounds = unionBounds(
+      zonesRef.current.map((zone) => computeBbox(zone.geometry)),
+    );
+    if (!bounds) return;
 
-      const cached = cacheRef.current.get(key);
-      if (cached) {
-        zonesRef.current = cached;
-        draw(map, cached);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `/api/zones/geojson?bbox=${encodeURIComponent(key)}`,
-        );
-        if (!response.ok) return;
-        const body = (await response.json()) as {
-          ok: boolean;
-          data?: { zones: ZoneRule[] };
-        };
-        if (!body.ok || !body.data) return;
-
-        cacheRef.current.set(key, body.data.zones);
-        zonesRef.current = body.data.zones;
-        draw(map, body.data.zones);
-      } catch {
-        /**
-         * Keep whatever is already drawn. A failed refresh must not erase the
-         * airspace a pilot is looking at — stale zones are useful, an empty map
-         * is not, and the next `moveend` will try again.
-         */
-      }
-    },
-    [draw],
-  );
+    map.fitBounds(
+      [
+        [bounds.minLng, bounds.minLat],
+        [bounds.maxLng, bounds.maxLat],
+      ],
+      // Padding in pixels, so the outermost zone edge is not flush against the
+      // frame. `animate: false` because this is the first paint, not a move.
+      { padding: 32, animate: false, maxZoom: MAX_ZOOM },
+    );
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -258,6 +291,8 @@ export function AirspaceMap({
      * using it let an error in that window re-enter the fallback path.
      */
     let styleLoaded = false;
+    /** See `fitToZones` — the camera is placed once, not on every style load. */
+    let fitted = false;
     let tileTimer: ReturnType<typeof setTimeout> | null = null;
 
     /**
@@ -339,6 +374,10 @@ export function AirspaceMap({
         try {
           relabelBasemap(map);
           installZoneLayers(map);
+          if (!fitted) {
+            fitted = true;
+            fitToZones(map);
+          }
         } catch (error) {
           console.error("[map] could not install zone layers", error);
         }
@@ -346,7 +385,6 @@ export function AirspaceMap({
         setStatus((current) =>
           current === "tiles-failed" ? current : "ready",
         );
-        void fetchViewport(map);
       });
 
       map.on("error", (event: ErrorEvent) => {
@@ -373,9 +411,29 @@ export function AirspaceMap({
       map.on("moveend", () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          void fetchViewport(map);
+          const bounds = map.getBounds();
+          viewportRef.current(
+            [
+              bounds.getWest().toFixed(3),
+              bounds.getSouth().toFixed(3),
+              bounds.getEast().toFixed(3),
+              bounds.getNorth().toFixed(3),
+            ].join(","),
+          );
         }, VIEWPORT_DEBOUNCE_MS);
       });
+
+      /**
+       * **The tap is the whole interaction.** `click` fires for a touch tap as
+       * well as a mouse click, and MapLibre suppresses it after a drag — so a
+       * pan does not land a marker where the finger came to rest.
+       */
+      map.on("click", (event: MapMouseEvent) => {
+        selectRef.current([event.lngLat.lng, event.lngLat.lat]);
+      });
+
+      // A crosshair, because the map is now a thing you ask questions of.
+      map.getCanvas().style.cursor = "crosshair";
     });
 
     return () => {
@@ -385,7 +443,33 @@ export function AirspaceMap({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [fetchViewport, installZoneLayers, relabelBasemap]);
+  }, [fitToZones, installZoneLayers, relabelBasemap]);
+
+  /**
+   * Push new zones into the source when the explorer replaces them.
+   *
+   * Separate from the mount effect on purpose: re-running *that* would tear
+   * down and rebuild the map — and its camera — every time a viewport fetch
+   * came back, which is the opposite of what a pan should do.
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    const source = map?.getSource(ZONE_SOURCE_ID);
+    if (source && "setData" in source) {
+      (source as GeoJSONSource).setData(zonesToGeoJson(zones, locale) as never);
+    }
+  }, [zones, locale]);
+
+  /** Same, for the marker and its halo. */
+  useEffect(() => {
+    const map = mapRef.current;
+    const source = map?.getSource(PROBE_SOURCE_ID);
+    if (source && "setData" in source) {
+      (source as GeoJSONSource).setData(
+        probeGeoJson(probePoint, probeStatus) as never,
+      );
+    }
+  }, [probePoint, probeStatus]);
 
   return (
     <div className={className}>

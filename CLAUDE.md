@@ -96,6 +96,7 @@ pnpm build          # runs db:migrate first
 - **A `next dev` 404 embeds a stack trace naming the guard; `next start` does not.** Route-protection checks are only meaningful against a production serve.
 - **QR codes embed `APP_URL` at render time.** If it still says `localhost` in production, every printed sticker is dead. The system page checks for this.
 - **`setRTLTextPlugin()` must be called exactly once**, before the first map instance, or Arabic labels render disconnected and reversed. Calling it twice throws.
+- **MapLibre's worker must be pointed at `public/vendor/maplibre/` with `setWorkerUrl`, before anything touches the worker pool.** Bundled, MapLibre resolves its own worker against a hashed chunk URL that 404s, and it never listens for `error` on the `Worker` it just made — so the pool answers *nothing*, silently, and the map draws a blank canvas with a clean console. `ensureRtlTextPlugin` does this first; go through it rather than constructing a `Map` directly. `pnpm vendor:map` copies the worker **and** `maplibre-gl-shared.mjs`, which it imports relatively. Re-run it after any `maplibre-gl` bump.
 - **Map labels need `["coalesce", ["get", "name:ar"], ["get", "name"]]`** — without the fallback, features with no Arabic name render blank.
 - **`robots.txt` must disallow `/*/rid/`.** Indexing the Remote ID scan page turns it into a browsable national drone registry.
 - **Editing `src/lib/auth.ts`** means re-running the Better Auth CLI → `db:generate` → `db:migrate`. Both the email and rate-limiting features touch that file.

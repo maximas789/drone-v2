@@ -1,10 +1,11 @@
 import type {
+  CircleLayerSpecification,
   FillLayerSpecification,
   LineLayerSpecification,
   SymbolLayerSpecification,
 } from "maplibre-gl";
-import type { ZoneKindValue } from "@/lib/airspace/types";
-import type { Geometry } from "@/lib/geo";
+import type { DecisionStatus, ZoneKindValue } from "@/lib/airspace/types";
+import type { Geometry, Position } from "@/lib/geo";
 import type { Locale } from "@/lib/locale";
 import type { ZoneColors } from "./color-resolve";
 import { DRAW_ORDER } from "./zone-palette";
@@ -249,6 +250,129 @@ export function labelLayer(colors: ZoneColors): SymbolLayerSpecification {
        */
       "text-halo-color": "rgba(255,255,255,0.9)",
       "text-halo-width": 1.6,
+    },
+  };
+}
+
+// --- The probe: the tapped point and its verdict ---------------------------
+
+export const PROBE_SOURCE_ID = "ajniha-probe";
+
+/**
+ * The verdict, as a feature property.
+ *
+ * Carried on the feature rather than swapped with `setPaintProperty` because a
+ * `match` expression re-evaluates on the next frame with no repaint dance, and
+ * because it keeps the marker's appearance a function of the data — the same
+ * property that decides the panel's colour decides the halo's.
+ */
+export type ProbeFeatureProperties = { status: DecisionStatus };
+
+export type ProbeFeatureCollection = {
+  type: "FeatureCollection";
+  features: {
+    type: "Feature";
+    properties: ProbeFeatureProperties;
+    geometry: { type: "Point"; coordinates: Position };
+  }[];
+};
+
+/**
+ * The tapped point, or nothing at all.
+ *
+ * An empty collection rather than a hidden layer: `setData` with no features
+ * is one code path for "no probe yet", "the reader cleared it" and "the map
+ * just mounted", and none of them can leave a stale marker behind.
+ */
+export function probeGeoJson(
+  point: Position | null,
+  status: DecisionStatus,
+): ProbeFeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: point
+      ? [
+          {
+            type: "Feature",
+            properties: { status },
+            geometry: { type: "Point", coordinates: point },
+          },
+        ]
+      : [],
+  };
+}
+
+/**
+ * `allowed | needs_review | denied` → the zone palette.
+ *
+ * **Deliberately the same three tokens the polygons use**, not a fourth set of
+ * status colours. Green already means "you may fly here" everywhere else in
+ * this app; a halo in a different green would be asking the reader to learn the
+ * scheme twice. `needs_review` takes the restricted amber, which is the same
+ * claim in a different place: permission exists but is not automatic.
+ */
+function statusColorExpression(colors: ZoneColors): unknown[] {
+  return [
+    "match",
+    ["get", "status"],
+    "allowed",
+    colors.permitted,
+    "needs_review",
+    colors.restricted,
+    "denied",
+    colors.no_fly,
+    colors.no_fly,
+  ];
+}
+
+/**
+ * The halo — a wide, soft disc under the marker.
+ *
+ * Radius is zoom-interpolated so it stays a *halo* rather than becoming a zone
+ * of its own when you zoom in. It carries no meaning about size: it is not a
+ * radius of effect, and drawing it in ground units would imply one.
+ */
+export function probeHaloLayer(colors: ZoneColors): CircleLayerSpecification {
+  return {
+    id: `${PROBE_SOURCE_ID}-halo`,
+    type: "circle",
+    source: PROBE_SOURCE_ID,
+    paint: {
+      "circle-color": statusColorExpression(colors) as never,
+      "circle-opacity": 0.25,
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        6,
+        12,
+        16,
+        28,
+      ],
+      "circle-stroke-color": statusColorExpression(colors) as never,
+      "circle-stroke-width": 2,
+      "circle-stroke-opacity": 0.9,
+    },
+  };
+}
+
+/**
+ * The marker itself: a small opaque dot with a white ring.
+ *
+ * White, not a token, for `labelLayer`'s reason — it sits on the basemap, whose
+ * colour is not ours and changes with zoom. A dot that vanished over a pale
+ * tile would lose the one thing the reader needs to see: **where** they asked.
+ */
+export function probeMarkerLayer(colors: ZoneColors): CircleLayerSpecification {
+  return {
+    id: `${PROBE_SOURCE_ID}-marker`,
+    type: "circle",
+    source: PROBE_SOURCE_ID,
+    paint: {
+      "circle-color": statusColorExpression(colors) as never,
+      "circle-radius": 5,
+      "circle-stroke-color": "rgba(255,255,255,0.95)",
+      "circle-stroke-width": 2,
     },
   };
 }

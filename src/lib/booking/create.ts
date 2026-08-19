@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import { db, type DbExecutor } from "@/lib/db";
-import { booking } from "@/lib/db/schema";
+import { booking, bookingCopilot } from "@/lib/db/schema";
 import { SEAT_HOLDING_STATUSES } from "@/lib/data/booking";
 import { uniqueViolationConstraint } from "@/lib/remote-id/issue";
 import { autoApproveBooking } from "@/lib/workflow/booking";
@@ -49,6 +49,17 @@ export type CreateBookingInput = {
   purpose?: string | null;
   purposeNote?: string | null;
   plannedAltitudeM?: number | null;
+  /**
+   * The crew, already validated by `validateCopilots`. Written **inside this
+   * transaction**: a booking that loses the seat race must not leave co-pilot
+   * rows pointing at nothing, and a crew that fails to write must take the
+   * booking with it rather than authorising a flight with an unrecorded crew.
+   */
+  copilots?: readonly {
+    fullNameAr: string;
+    fullNameEn: string;
+    mobileE164: string | null;
+  }[];
   /** The decision as it stood, including the zone's `geometryVersion`. */
   decisionSnapshot: AirspaceDecision;
   actor: Actor;
@@ -161,6 +172,27 @@ async function claim(
       }
       if (constraint === SEAT_CONSTRAINT) continue;
       throw caught;
+    }
+
+    /**
+     * The crew, once the seat is won and **outside the retry's `try`.**
+     *
+     * Outside deliberately: that `catch` reads a unique violation as seat
+     * contention and loops. A crew insert cannot hit those constraints today,
+     * but putting a second statement under a catch that means "try the next
+     * seat" is how a future index turns one booking into several. Still inside
+     * the transaction, so a crew that fails to write takes the booking with it
+     * rather than authorising a flight whose crew was never recorded.
+     */
+    if (input.copilots?.length) {
+      await tx.insert(bookingCopilot).values(
+        input.copilots.map((copilot) => ({
+          bookingId,
+          fullNameAr: copilot.fullNameAr,
+          fullNameEn: copilot.fullNameEn,
+          mobileE164: copilot.mobileE164,
+        })),
+      );
     }
 
     await audit(tx, {

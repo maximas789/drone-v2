@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–21).** **F16, F17, F18 and F19 done.** **F20a is partial — the map does not render (thread 53)**; F20b and **F21** remain, and F21 is blocked on F20. |
+| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–24).** **F16–F20 done, and F21a** — a pilot can go from the map to a booked seat. **F21b** (the `/bookings` list and the pilot dashboard) is all that remains in this wave. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -144,7 +144,11 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 49 | **A declaration's `validFrom` / `validUntil`, `verifiedAt` and `rejectedAt` are written by nobody.** F19b's form deliberately does not collect them — a pilot typing a certificate's validity before anyone has read the certificate would put an unchecked claim on the card beside the verified ones. So the card renders only the *unverified* state, and `moduleVerified` / `moduleRejected` have catalogue keys that have never been shown. **F22 owns all four.** | F19b | F22 |
 | 50 | **`CLAUDE.md` says GACA registration *requires* a manufacturer serial number. GACA's own documents do not.** E-Book Volume 18, Table 1 makes the serial essential information for the **Specific Category only**; Note 3 asks for it in the Open Category *"if this information is available"* and says the displayed identifier is *"either the GACA registration certificate number or the UAS serial number"*. **The product is unaffected and the pitch is stronger for it** — `/remote-id` argues the accurate version, that the regulator already contemplates an authority-issued identifier standing in for a serial, and that from 1 January 2026 what must be *broadcast* under DRI is a registration number, not a factory marking. But `CLAUDE.md`'s opening paragraph still states the unverified version, and it is the file every session reads first. **The correction is the user's to make.** | F16b | `CLAUDE.md`, F26, F27, F30 |
 | 51 | **The three-year registration validity is uncited.** GACAR Part 48 could not be retrieved under any filename tried, and the three-year periods that *do* appear in Part 107 are the UAS Operator Certificate's duration (§ 107.131) and a record-retention rule — neither is a drone registration. `remoteId.validity` (*"Registration is valid for three years"*) is therefore **a product decision, not a regulatory fact**, and `/remote-id` deliberately does not present it as one. Anything that later attributes it to GACA needs Part 48 first. | F16b | F26, F27 |
-| 53 | **The MapLibre map renders nothing, and the cause is narrowed but not fixed.** All 8 zone layers are added and the basemap's own sources report `loaded: true` — but **our `ajniha-zones` GeoJSON source never reports loaded**, which keeps `style.loaded()` false forever, so MapLibre never completes a render pass and even the basemap stays blank. No `error` event fires. Replacing the data with a trivially valid one-polygon FeatureCollection does not help, so it is **not our GeoJSON**. Vector *tiles* parse fine in the same worker, which is what makes the worker's GeoJSON path the suspect. **Reproduced identically against `next build` + `next start`, so it is not a Turbopack-dev artefact.** Bypassing the RTL plugin flips `areTilesLoaded()` to true but does not fix the GeoJSON source, so there may be two issues stacked. Untried: `setWorkerUrl` pointed at MapLibre's own vendored `maplibre-gl-worker.mjs` (same trick as the RTL plugin), and `lazy: true` on the plugin. **`/zones` keeps F16b's SVG until this is fixed**; `MapMount` is wired and one import away. `window.__ajnihaMap` is a dev-only handle for probing the live map. | F20a | F20, F21, F23 |
+| 54 | **In dark mode the map panel stays light.** The zone fills switch to the `.dark` `--zone-*` values and stay legible, but OpenFreeMap's `liberty` basemap has no dark variant, so a dark page frames a light rectangle. Switching to a dark style needs a theme signal the app does not have — **thread 48**, no toggle and no `prefers-color-scheme` hook — and reading the theme at map init only would leave the map stale after a toggle that does not yet exist. Cosmetic, and the seam is only visible to somebody who added `.dark` by hand. | F20a | F20b, thread 48 |
+| 55 | **A zone query cannot see a no-fly overlay, so `createBookingAction` cannot either.** A `booking` row has no coordinate, so that action asks `evaluateAirspace` about a *zone id*; containment is untestable from a name, and a no-fly zone sitting inside a permitted one is therefore invisible to the booking path while the map — which always has a point — refuses. The direction is the safe one (**the map is stricter**, so it never shows green where booking refuses) and `map-consistency.test.ts` pins it. Two consequences: **F23 must refuse to publish a permitted zone overlapping a no-fly zone**, and **F21 should carry the tapped point into the booking**, not only the zone. The seeded data does not currently overlap this way. | F20b | F21, F23 |
+| 56 | **There is no signed-in `/map` surface, and `nav.map` has pointed at nothing since F16a.** F20's file list names `src/app/[locale]/(app)/map/page.tsx`; F20 shipped the map on the public `/zones` instead, because that is where the airspace is published and a second route showing the same map would be two pages to keep in sync. What `/zones` deliberately does **not** have is F20's mobile layout — a full-screen map with a drag-up bottom sheet — because `/zones` is a document with a map in it, not a map application. **F21 needs that surface to book from and should build it**, with the sheet, and wire `nav.map` to it. | F20b | F21 |
+| 57 | **The last-seat race has never been run in a browser.** `createBookingWithSeat` retries against `booking_seat_uniq` and `createBookingAction` answers `slot_full` with three alternatives, which F21a's wizard renders as one-click buttons — but seeded capacity is 4–6 and no seat has actually been contended by two concurrent pilots. F13's suite covers the transaction; **the alternatives UI is code that has been read, not run.** Needs two sessions booking the same seat at once, or an injected `pickSeat`. | F21a | F31 |
+| 58 | **Ownership was proved only in the "does not exist" direction.** `/bookings/[id]` 404s for a well-formed id that is not this pilot's *or* does not exist — `getBookingById` returns `null` for both, deliberately, so the split cannot enumerate other pilots' flights. Verifying the *other pilot's booking* case needs a second account, and **the first account created becomes admin**, so a probe account is forbidden here. Same gap applies to F18's drones. | F21a | F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -306,6 +310,248 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 24 — Wave 6 · F21a Booking wizard, submission and booking detail
+
+**Date:** 2026-08-19
+**Status:** ⚠️ done with deviations · **F21 is split; F21a is complete.** Ran straight on from Session 23 without a `/clear`, at the user's request.
+
+**F21 is split, and this is the seam.** F21a is *making a booking* — the wizard, the submission, and the detail page a confirmation lands on. **F21b is living with them** — the `/bookings` list with its four tabs, and the pilot dashboard. The split is where it is because nothing in F21a points at a route that does not exist: the confirmation links to `/bookings/[id]`, which this session built. Same precedent as F16a/b, F19a/b and F20a/b.
+
+**Almost all of F21's server side already existed.** F13 and F14 shipped `listSlotsAction`, `createBookingAction`, `cancelBookingAction` and `checkInBookingAction`, and `createBookingAction` already ended with `revalidatePath("/[locale]/bookings")` for a route nothing had built yet. **The one gap was the crew** — `booking_copilot` had a table, a reader and no writer, which is the unreachable-code shape F19b found in the declaration upload. It is written now.
+
+**Built:**
+
+- `/[locale]/(app)/bookings/new` + `src/components/booking/{wizard,new-booking,date-strip,slot-picker,capacity-meter,drone-select,copilots,safety-ack,confirmation}.tsx` — six steps.
+- `/[locale]/(app)/bookings/[id]` + `{booking-actions,status-timeline}.tsx` — the detail page, its timeline, check-in and cancel.
+- `src/lib/validation/booking.ts` + 21 tests — the purpose whitelist, the crew rules, and Saudi mobile normalisation.
+- `createBookingAction` now takes `copilots` and re-validates them; `createBookingWithSeat` writes them **inside the seat transaction**.
+- **The map's *Book this zone* button**, deferred in F20b, now exists and carries zone, altitude, slot and aircraft into the wizard as query parameters.
+- 100 catalogue keys (**1113**).
+
+**The crew insert is outside the retry's `catch`, deliberately.** That `catch` reads a unique violation as seat contention and loops to the next seat. A `booking_copilot` insert cannot hit those constraints today — but a second statement under a catch that means *"try the next seat"* is how a future index turns one booking into several. It stays inside the transaction, so a crew that fails to write takes the booking with it rather than authorising a flight whose crew was never recorded.
+
+**Deviations, each with its reason:**
+
+- **Both co-pilot names are required, or the row is dropped.** `full_name_ar` and `full_name_en` are both `NOT NULL`. The alternative — copying whichever was given into the other column — puts Latin letters in an Arabic field and makes the pair a lie the first time a reviewer reads it. A *wholly* empty row is dropped rather than refused, because most flights have no crew and treating the commonest case as an error is the wrong default.
+- **Co-pilot rows are added on request, not rendered three deep.** Six empty fields tell every solo pilot they have left something blank.
+- **Mobile numbers are Saudi-only and normalised.** `05…`, `00966…`, `+966 5x …` all become `+9665xxxxxxxx`. A permissive international regex would accept a mistyped local number nobody can ever call, and a co-pilot is somebody standing in the same field as the pilot.
+- **`booking.purpose` is a plain `text` column**, so the action whitelists against `FLIGHT_PURPOSES`. Without it a hand-made POST puts an arbitrary string on the detail page and in the reviewer's queue.
+- **The wizard opens on the first step the map has *not* answered.** Arriving with a slot and an aircraft opens on step 4. Pressing "next" four times past questions already answered is the failure the pre-fill exists to prevent.
+- **Unavailable slots and ineligible aircraft are real `disabled` controls, not dimmed divs.** A keyboard skips them and a screen reader announces them; F20's criterion is "never merely dimmed". Each carries *which* kind of unavailable it is — passed, closed, full, or already held by this pilot.
+- **The detail page draws the zone, not a point.** `booking` has no coordinate column: a seat is in a zone. Drawing a marker would invent a location the record does not hold. It reuses F16b's SVG with a single zone.
+- **The cancellation cutoff is printed as an absolute instant**, not "two hours before". A pilot reading the relative form has to do arithmetic about a slot in a timezone that may not be their phone's.
+- **No zone picker beyond a `<select>`.** F21 says the zone is "changeable"; it is, from a list of active permitted zones. Restricted and no-fly zones are not offered — they have no slot grid, and listing one so it can refuse is a control that exists to say no.
+
+**Verified — in Chrome, over HTTP, both locales:**
+
+| Criterion | Result |
+|---|---|
+| **The date strip is exactly `maxAdvanceDays`** | OK — 15 buttons for a zone with `maxAdvanceDays: 14`, today first |
+| **Full, closed and past slots are distinct and unclickable** | OK — passed slots render dashed, struck through and `disabled` with *"Already passed"*; the available one carries `0 / 6` |
+| **`blocked` is its own state** | OK, and found by using it: after booking 15:00 in Thumamah, the 15:00 slot in **Ammariyah** read *"You already hold this time"* rather than "full". That is `pilotBusySlots` reaching the picker through `listSlotsAction` |
+| **The capacity meter shows real counts** | OK — `0 / 6`, `dir="ltr"` so it does not reorder to `6 / 0` in Arabic |
+| **Ineligible aircraft are disabled with the reason** | OK — revoked, expired and not-yet-approved drones all listed, greyed, each with its own sentence; bookable ones first with their Remote ID |
+| **The acknowledgement starts unchecked and blocks submission** | OK — "next" was `disabled: true` before the tick and `false` after |
+| **The safety card restates the zone's own rules** | OK — ceiling 120 m, and **the chosen day's** hours: `06:00 – 11:00, 15:00 – 18:00` on a Wednesday, `06:00 – 11:00, 15:00 – 20:00` on the Thursday |
+| **The review says which outcome is coming** | OK — Thumamah: *"This zone approves automatically"*; Ammariyah: *"…sends a request, and a GACA reviewer decides"* |
+| **Auto-approve lands `approved`, a normal zone lands `pending`** | OK — two bookings in `RUH-P-01` are `approved`, one in `RUH-P-06` is `pending`, and the audit table holds 3 × `booking.requested` + 2 × `booking.auto_approved` |
+| **The confirmation says which** | OK — *"Your flight is booked / The slot is yours"* against *"Your request has been sent / A GACA reviewer will decide"* |
+| **Refusals render in place with the form intact** | OK — a landline typed as a co-pilot mobile bounced from step 6 back to **step 4** with the message under the field and every other answer still set |
+| **The server refuses independently of the form** | OK — before the profile was verified, a form that passed every client check was refused by the action with `identity_unverified` **on the review step**, with its fix |
+| **Co-pilots are written** | OK — `سارة العتيبي` / `Sara Al-Otaibi`, and `0512345678` stored as `+966512345678` |
+| **The detail page leads with the Remote ID** | OK — `AJN-7Q4M-31KD`, monospace, `ltr`, above everything else |
+| **The timeline shows only what happened** | OK — requested and approved carry instants; checked-in and completed are present and unfilled |
+| **Cancel until `slotStart − 2h`, as an absolute time** | OK — a 15:00 slot showed *"until 19 August 2026 at 13:00"*; a 06:00 slot showed 04:00 |
+| **Check-in is absent outside the window** | OK — no check-in control on a slot starting six hours later |
+| **Someone else's booking is a 404** | OK — a well-formed but nonexistent id renders Next's 404, not a permission error |
+| **All times Riyadh, Gregorian, Latin numerals** | OK in both locales, throughout |
+| **375 px** | OK — via the iframe (thread 44): `scrollWidth === clientWidth` on the wizard and the detail page, nothing wider than the viewport |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (**1113**), `pnpm test` (**695**), `pnpm build` — all green.
+
+**The pilot profile was verified in the dev database, with the user's agreement.** `pilot_profile.verified_at` was `null`, which is correct — a human reviewer sets it and **F22's review queue does not exist** — but it meant `identity_unverified` refused every booking *and* every green map answer, so the happy path of both F20b and F21a was unreachable. One `UPDATE` on the local Docker database, which is exactly what F22's reviewer will do. It stays verified: that is the realistic demo state.
+
+**Not verified:**
+
+- **The last-seat race.** Capacity is 4–6 on the seeded zones and losing the race needs concurrent pilots; the alternatives UI is wired and F13's suite covers the transaction, but no seat was actually contended in a browser. **The `slot_full` toast with three alternatives is therefore code that has been read, not run.**
+- **Pilot B opening pilot A's booking.** A nonexistent id 404s, which exercises the same branch — but the *ownership* half needs a second account, and **the first account created becomes admin**, so probe accounts are forbidden here.
+- **Rate-limited booking attempts.** The countdown toast is wired to `errors.rateLimited`; no burst was staged against `booking.create`.
+- **A rejected or authority-cancelled booking rendering its reason verbatim.** Both need a reviewer, which is F22.
+- **Check-in inside the window.** It needs a slot starting within fifteen minutes; the window is computed on the server clock and the control was confirmed absent outside it, but never seen present.
+- **Dark mode and 1440 px** on these two screens.
+
+**Next session should know:**
+
+- **F21b finishes Wave 6**: `/bookings` with its four tabs, and the pilot dashboard — action-required, next flight with a countdown, drone summary, recent bookings, and the day-one onboarding state. `listMyUpcomingBookings` and `listMyPastBookings` already exist in `src/lib/data/booking.ts`.
+- **Three real bookings now sit in the dev database** (two approved in Thumamah, one pending in Ammariyah, one with a co-pilot). The dashboard and the list have data to render on their first run, which the empty states will need to be checked *around* rather than instead of.
+- **`validateCopilots` and `FLIGHT_PURPOSES` are pure and shared.** F22's reviewer screen shows both; read them from `src/lib/validation/booking.ts` rather than restating the purpose list.
+- **F22 is what makes `verified_at`, rejections and cancellations reachable**, and four of this session's unverified items are waiting on it.
+- **The profile's ID number is still fabricated** (`1055512345`), and threads 50 and 51 are open. All three are the user's to resolve.
+
+---
+
+### Session 23 — Wave 6 · F20b Tap-to-evaluate, the status panel and the controls (**F20 complete**)
+
+**Date:** 2026-08-19
+**Status:** ⚠️ done with deviations · **F20 is complete.** Ran straight on from Session 22 without a `/clear`, at the user's request. **F21 is now unblocked and is the last feature in Wave 6.**
+
+**The map answers now.** Tap a point and the panel says allowed, needs review, or denied, with the zone's ceiling, capacity and today's hours — or with every reason it refused and what would fix each one.
+
+**Two evaluations, and they are the same function.** Every change runs `evaluateAirspace` in the browser against the zones already in memory, so the panel answers on the frame of the tap; 250 ms later `checkAirspaceAction` runs the identical function on the server over a context it assembles itself, and its answer replaces the local one. This is the whole reason `evaluate.ts` is pure, and it is what F20's consistency claim rests on.
+
+**What the local pass is short of, and why that is safe.** It has the zones, the aircraft and the pilot; it does **not** have `availability`, `pilotBusySlots` or `pilotBookingsOnDay` — facts about *other people's bookings* that no browser should hold. Every reason those three produce is a refusal, so their absence can only make the local answer **more permissive**, never less. `map-consistency.test.ts` asserts that direction rather than leaving it as a claim, and it is why a green panel still says *"confirming with the server"*.
+
+**Built:**
+
+- `src/components/map/airspace-explorer.tsx` — the one owner of point, altitude, aircraft, time, zones and decision. `AirspaceMap` became a **controlled renderer**: the viewport fetch and its bbox cache moved up here, because a component that draws zones and a component that evaluates against them holding separate copies is how a map ends up answering about polygons it is not showing.
+- `src/components/map/status-panel.tsx` — the three states, and `DecisionReasons` (F12's shared component) gets its **first consumer**, exactly as its docstring anticipated.
+- `src/components/map/map-controls.tsx` — altitude slider, aircraft select, day + time selects.
+- `src/components/ui/slider.tsx` — a **native** `<input type="range">`, styled. Same argument as `Select`: the browser reverses the track under `dir="rtl"` by itself, the touch target is the platform's, and arrow keys / Home / End / `aria-valuenow` come free. A div-and-pointer-maths slider gets RTL wrong in exactly one language, and it is this app's primary one.
+- `src/lib/maps/probe.ts` + 16 tests — day options, the time grid, and `selectionForInstant`. Pure, and built on `deriveSlots` / `riyadhInstant` rather than a second date arithmetic written for the map.
+- `probeGeoJson` / `probeHaloLayer` / `probeMarkerLayer` in `layer-styles.ts` — the marker and its halo, coloured by a `match` on the decision status using **the same three `--zone-*` tokens the polygons use**. Green already means "you may fly here" everywhere else; a fourth palette would ask the reader to learn the scheme twice.
+- `src/lib/airspace/map-consistency.test.ts` — 12 tests, below.
+- 22 catalogue keys (**1010**).
+
+**The consistency proof, and the one place the two paths cannot agree.**
+
+`map-consistency.test.ts` runs the map's query (`point` + altitude + slot) and `createBookingAction`'s query (`zoneId` + the same altitude and slot) over **one** context, and asserts the same status *and the same reason codes* for allowed, needs-review, and six denials — above the ceiling, outside opening hours, off the slot grid, weight class, build type, and a suspended zone.
+
+**They differ in exactly one case, and it is a property of the data.** A `booking` row has no coordinate, so the booking action names a zone — and a zone query cannot test containment, so a **no-fly overlay inside a permitted zone is invisible to it** while the map, which always has a point, refuses. The direction is the safe one: the map is *stricter*, so it never shows green where booking would refuse. The inverse is real, and the test pins it, because it is the argument for **F23 refusing to publish a permitted zone that overlaps a no-fly one**, and for F21 carrying the point forward rather than only the zone.
+
+**A fixture that was wrong, and the engine that was right.** The first draft anchored every case at 06:00 and everything failed. On 15 March, sunrise in Riyadh is 06:04 — so a 06:00 slot begins four minutes before dawn and `night_operation_not_permitted` rode along with whatever each case meant to test. The suite moved to the 15:00 afternoon anchor and says why.
+
+**Deviations, each with its reason:**
+
+- **The time control offers the whole day, not only bookable slots.** Two `<optgroup>`s: the zone's real grid anchors first, then every other half hour. A control that only permitted valid times could never produce *"the zone is closed at this time, it next opens at…"*, which is one of F20's acceptance criteria and is the answer a pilot most often wants. The off-grid times are honest too: `slot_not_on_grid`'s fix says *"choose a slot from the grid shown"*, and the grid is literally the group above it.
+- **The time defaults to "any time", not to the next open slot.** Before a tap there is no zone, so there is no slot grid to default into, and forcing a time would answer a question the reader has not asked. Instead the panel turns the engine's own `nextOpenAt` into a button — *"use the next opening"* — which sets the day and time in one press. That is the F20 intent with the ordering fixed.
+- **The aircraft selector defaults to the pilot's only approved drone — and only when there is exactly one.** With two or more it opens on "no aircraft", because the answer changes with the airframe and picking the first of several answers for a drone nobody chose.
+- **Every drone is listed, not only the approved ones**, with its status in the label. Choosing a rejected airframe is how a pilot finds out that `drone_not_approved` — rather than the airspace — is what stands in their way.
+- **The altitude slider stops at 400 m and marks 120 m rather than enforcing it.** The engine refuses on the *zone's* ceiling, which is often lower — Wadi Namar's is 80 m. A slider capped at the national limit would hide that; one that said nothing would let a pilot drift past it.
+- **No "Book this zone" button.** Settled with the user beforehand: F21 does not exist, and a button to a route that 404s is worse than none. The allowed panel names the next step in words. Same call as F16a's footer.
+- **No full-screen map with a bottom sheet at 375 px.** F20 asks for one; `/zones` is a *document with a map in it* — header, disclaimer, legend, and the full zone table — and a full-screen map with a drag-up sheet fights every one of those. The panel stacks under the map instead and works at 375 px. The bottom sheet belongs to the signed-in `/map` surface in F20's file list, which this build has not created; **F21 needs that surface and should build it there.**
+- **`/zones` reads the zones twice.** `zonesForViewport` returns full `ZoneRule`s because the browser evaluates against them; `listActiveZones` returns the display rows the list has always used, which carry the district and the notes. Same table, same filter, two projections — collapsing them means either pushing prose into the engine's context or dropping it from the page.
+
+**Two defects found by opening the page:**
+
+1. **The zone name was printed twice in every refusal.** `DecisionReasons` captions each reason with its zone, which is right for F21's list where reasons can cite *different* zones — but the map's panel already names the zone as its heading, so a reader saw *العمارية* and then *العمارية* again under each line. The caption now appears only when the reasons cite more than one distinct zone, which is better everywhere.
+2. **The fixture-level one above** — recorded here too because it is the same class: a check that looked broken and was the code being right.
+
+*(A third was investigated and was not a defect: the tab appeared to freeze after the first tap, and a screenshot timed out. Network showed **one** request for one tap, no loop; the renderer was busy with a dev-mode RSC refresh and the WebGL canvas screenshots blank mid-repaint. Recorded because "the map froze" was one step from becoming a second thread 53.)*
+
+**Verified — in Chrome, on the dev server *and* on a production `next start`:**
+
+| Criterion | Result |
+|---|---|
+| **Tap a permitted zone** | OK — **مسموح**, with the zone name, ceiling 120 m, requested altitude, capacity *6 aircraft per slot*, and Wednesday's hours `06:00 – 11:00, 15:00 – 18:00` |
+| **The third state exists and is distinct** | OK — Ammariyah (`autoApprove: false`) gives **يحتاج مراجعة** with the "a GACA reviewer decides" note, visibly different from both green and red |
+| **Default-deny is visible** | OK — empty desert gives `outside_permitted_zone` with "pick a point inside a permitted zone", and **no zone name**, because there is no zone |
+| **A no-fly zone** | OK — KKIA CTR gives `inside_no_fly_zone`, *"there is no exception here"* |
+| **The restricted ground** | OK — Greater Riyadh gives `inside_restricted_zone` |
+| **Above the ceiling** | OK — 400 m over Ammariyah: *"the requested 400 m exceeds the zone ceiling of 120 m"*, fix *"reduce to 120 m or below"*. Wadi Namar refuses **120 m** against its own 80 m ceiling, which is the whole reason the slider does not enforce the national limit |
+| **Outside operating hours** | OK — 03:00 gives `zone_closed_now` **and** `slot_in_past`, with the next opening as **19 أغسطس 2026 في 15:00** — Gregorian, Latin numerals, inside an Arabic page |
+| **The fix is an action** | OK — *"use the next opening"* moved the day and time to 19 Aug / 15:00, **and 15:00 landed in the "bookable slots" group**, so the control's grid and the engine's `nextOpenAt` agree |
+| **The aircraft selector changes the answer** | OK — the revoked drone adds `drone_revoked` + `remote_id_not_active` with their fixes; the approved one clears both |
+| **Every denial offers a next step** | OK — every refusal seen rendered its `airspace.fixes.*` line |
+| **Panning fires one debounced fetch** | OK — one request per tap and per gesture; no per-frame traffic |
+| **375 px** | OK — via the iframe (thread 44): `scrollWidth === clientWidth`, nothing wider than the viewport, tap works inside the frame, panel and controls legible and mirrored |
+| **English** | OK — a real translation throughout, including the optgroup labels |
+| **Dark mode** | OK for the panel and controls, by adding `.dark` by hand (thread 48): lifted status edge, legible reasons, slider and selects styled. The **basemap** stays light — thread 54, unchanged |
+| **Production** | OK — the same tap, the same local-then-confirmed answer, and `window.__ajnihaMap` still `undefined` |
+| **Console** | OK — zero errors from the app (two from an unrelated Chrome extension) |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (**1010**), `pnpm test` (**674**), `pnpm build` — all green.
+
+**Not verified:**
+
+- **A green answer end to end as this signed-in pilot.** The seeded profile is not identity-verified, so `identity_unverified` accompanies every answer for this account — correct behaviour, and it means the allowed and needs-review panels were confirmed by **temporarily** rendering the page with `pilot={null}` (the signed-out path) and reading the local decision inside the 250 ms confirmation window. The edit was reverted in the same session. **F22's review queue is what makes this reachable normally.**
+- **Rate limiting under rapid tapping.** The debounce means a burst of taps produces one request per settled point, but no burst was actually staged against `airspace.check`'s limit.
+- **`slot_full`, `duplicate_booking` and `max_slots_per_day` in the browser.** They need real bookings in the slot; they are covered by `map-consistency.test.ts` and by F13's suite, and the server confirmation is what would surface them.
+- **The cache invalidation criterion.** It names F23, which does not exist.
+- **1440 px was looked at by me only.**
+
+**Next session should know:**
+
+- **F21 is the last feature in Wave 6 and nothing blocks it.** The explorer already holds the point, altitude, aircraft and slot in the shape `createBookingAction` wants; the *Book this zone* control is the only thing deliberately missing.
+- **F21 should build the signed-in `/map` surface**, and put the full-screen-plus-bottom-sheet layout there. `nav.map` has existed in both catalogues since F16a and still points at nothing.
+- **`AirspaceMap` is controlled now.** It takes `zones`, `probePoint`, `probeStatus` and reports `onPointSelected` / `onViewportChange`. Do not give it state of its own again.
+- **F23 must refuse a permitted zone that overlaps a no-fly zone.** `map-consistency.test.ts` documents why: a zone query has no point, so the overlay is invisible to the booking path.
+- **The profile's ID number is still fabricated** (`1055512345`), and threads 50 and 51 are open. All three are the user's to resolve.
+
+---
+
+### Session 22 — Wave 6 · F20a Airspace Map (**thread 53 closed — the map draws**)
+
+**Date:** 2026-08-19
+**Status:** ✅ **F20a is done.** `/zones` renders the interactive MapLibre map; F20b (tap-to-evaluate, the three-state panel, the controls) is untouched and is the next feature.
+
+**The bug was one line of MapLibre's, and it was invisible from every angle the last session looked from.**
+
+`maplibre-gl.mjs` locates its own worker by resolving `./maplibre-gl-worker.mjs` against its `import.meta.url`. Bundled, that module is a hashed chunk, so the computed URL is `/_next/static/chunks/maplibre-gl-worker.mjs` — **404**. MapLibre attaches no `error` listener to the `Worker` it has just constructed, so nothing throws and nothing logs: the worker pool exists, and answers nothing, for ever. Every symptom followed from that:
+
+- `ajniha-zones` sat at `_isUpdatingWorker: true` with a `_pendingWorkerUpdate` that never resolved, so `GeoJSONSource.loaded()` was false for ever.
+- `Style.loaded()` is `_loaded && no updated sources && every tile manager loaded && imageManager.isLoaded()`, so it was false for ever too.
+- **`openmaptiles` reporting `loaded: true` was a false negative, not a clue.** A vector source with *zero* requested tiles is trivially loaded — and no tiles were ever requested, because nothing rendered. Last session read that as "vector tiles parse fine in the same worker", which pointed the search at the GeoJSON path, and the GeoJSON path was innocent. **A `loaded()` that is true because nothing was asked for looks exactly like a `loaded()` that is true because everything succeeded.**
+- Bypassing the RTL plugin flipped `areTilesLoaded()` because registering the plugin is itself a worker round-trip. Two symptoms, one cause — not two issues stacked.
+
+**Proved before fixing**, by fetching the URL MapLibre computes: `/_next/static/chunks/maplibre-gl-worker.mjs` → 404, while the four chunks the bundler *did* emit for `maplibre-gl` are all present under mangled names.
+
+**The fix — `setWorkerUrl` at a vendored copy**, which was untried step 1 in the thread.
+
+- `scripts/vendor-rtl-plugin.mts` became **`scripts/vendor-map-assets.mts`** (`pnpm vendor:map`, replacing `pnpm vendor:rtl`) and now copies three files, not one: the RTL plugin as before, plus `maplibre-gl-worker.mjs` **and `maplibre-gl-shared.mjs`** into `public/vendor/maplibre/`. The pair is not optional — the worker's first line is `import … from "./maplibre-gl-shared.mjs"`, and vendoring the worker alone reproduces the same silent hang one directory along.
+- `src/lib/maps/worker-url.ts` — `setMapWorkerUrl()`, called as the **first statement of `ensureRtlTextPlugin`, before its own guard**. The ordering is load-bearing and is not obvious: the pool is built once from whatever URL is set at that moment, and `setRTLTextPlugin` is what builds it. Set it after and it is ignored.
+- `src/lib/maps/worker-url.test.ts` — the vendored worker and shared module are byte-identical to the installed package, the worker still carries the relative import, and the URL is same-origin and not the `-dev` build.
+
+**`pnpm vendor:rtl` no longer exists.** Earlier entries in this log that name it describe what was true then; the command today is `pnpm vendor:map`.
+
+**Then the map was mounted, and opening it found one more defect** — thread 11 again, and one more page that was wrong with every check green:
+
+- **`DEFAULT_CENTER` / `DEFAULT_ZOOM` cut off the airspace.** At zoom 9 on `[46.68, 24.72]` the northern and southern zones fell outside the frame, so a page whose entire job is to publish the airspace opened showing about three quarters of it. The camera now fits the union of the zones actually being drawn (`fitToZones`, from `computeBbox` + `unionBounds` — the same primitives the SVG uses), **once, on first style load only**: refitting on the viewport refetch would yank the camera back on every pan, and refitting after a fallback style swap would move the ground under somebody already reading it.
+
+**Built / changed:**
+
+- `/zones` renders `MapMount` + `ZoneLegend` in place of `ZoneDrawing`. **The zone list, its hours and its permissions are untouched**, as F16b said they should be. The landing page keeps the SVG.
+- `map.ariaLabel` and `map.tileFailure` added to both catalogues (**988**). The three map strings are passed in pre-translated — `MapMount` is a client component with no next-intl provider — and they come from the `map` namespace rather than `zones`, because F20b's panel will read the same one.
+- `AirspaceMap`'s docstring no longer says it does not render.
+
+**Verified — in Chrome, on the dev server *and* on a production `next start`:**
+
+| Criterion | Result |
+|---|---|
+| **The map draws at all** | OK — and **in production**, which is where last session reproduced the failure. `/vendor/maplibre/*.mjs` both 200 with `application/javascript` |
+| **All 12 seeded zones** | OK — `querySourceFeatures` returns 12 distinct codes: 7 permitted, 4 no-fly, 1 restricted |
+| **KKIA's interior ring is a hole** | OK — the annulus renders as a ring, over tiles and over the fallback ground |
+| **Arabic labels connected and in order** | OK — *نطاق مطار الملك خالد الدولي* reads correctly. This is `setRTLTextPlugin` working, from the vendored copy |
+| **The `coalesce` fallback** | OK, in both directions — every basemap symbol layer is rewritten to the coalesce expression, an English page shows *طريق الملك عبد العزيز* for a feature with no `name:en`, and an Arabic page shows *Eastern Ring Road* for one with no `name:ar`. Without the fallback both would render blank |
+| **Colours match the tokens** | OK — resolved to `#e4a339` / `#3d9c5e` / `#d73337` through the canvas pixel read-back, matching the legend swatches beside them |
+| **Tile failure** | OK — `fetch` to `tiles.openfreemap.org` rejected and the map remounted: plain ground, **all 12 zones still drawn with the no-fly hatch and KKIA's hole**, bilingual notice below, exactly one console error and it is our own diagnostic |
+| **375 px** | OK — via the iframe (thread 44): `scrollWidth === clientWidth`, no element wider than the viewport, whole extent visible, legend mirrored |
+| **Dark mode** | Partly — by adding `.dark` by hand and soft-navigating to force a remount (thread 48). Zone fills take the dark `--zone-*` values and stay legible; **the basemap does not**, see thread 54 |
+| **`dir="ltr"` container** | OK — geography not mirrored in Arabic; the chrome around it is |
+| **The dev-only map handle** | OK — `window.__ajnihaMap` is `undefined` on the production serve |
+| **The landing page is unchanged** | OK — 12 SVG paths, **zero** map or vendor requests. The two-renderer split holds |
+| **No API key** | OK — nothing added to `.env`; the tile host, the fonts, the sprite and now the worker are all keyless |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (**988**), `pnpm test` (**646**), `pnpm build` — all green.
+
+**Not verified:**
+
+- **Everything under F20's *Interaction* heading**, which is F20b: tap-to-evaluate, the three-state panel, the altitude slider, the drone selector, the time selector, and the map-versus-`createBooking` consistency proof.
+- **The mobile bottom sheet.** 375 px was checked for overflow and legibility; the full-screen-map-plus-sheet layout is F20b's, because the sheet *is* the panel.
+- **A cold tile failure.** The fallback was exercised in a tab that had already fetched the glyph ranges, so its labels drew. On a genuinely cold failure the glyph host is unreachable too and the zone labels will be absent — which `FALLBACK_STYLE`'s comment already accepts, but it has not been seen.
+- **MapLibre's attribution control wraps to two lines at 375 px** and covers the scale bar. It is MapLibre's own control and the attribution stays legible, which is what ODbL asks for, but nobody has decided it looks right.
+
+**A trap that cost time and will again:** a **stale production server on 3002** answered the first probe of this session, serving a build from before the vendoring — which looked exactly like the fix failing in production. It was the previous session's process, still running from the day before. `next start` will not serve a `public/` file that appeared after its own build, so check *which* server is answering before believing a 404.
+
+**Next session should know:**
+
+- **F20b is next, and F21 is blocked on it.** `evaluate.ts` is pure and the map already holds the viewport's `ZoneRule`s in `cacheRef`, so the tap handler has everything it needs without a round trip.
+- **`src/lib/maps/worker-url.ts` is not optional and its call order is not decorative.** Any second map surface — F23's terra-draw admin map — must go through `ensureRtlTextPlugin` (which sets it) rather than constructing a `Map` directly, or it will hang exactly the way this did.
+- **Re-run `pnpm vendor:map` after any `maplibre-gl` or `@mapbox/mapbox-gl-rtl-text` bump.** The tests fail loudly if you forget; a stale worker would not.
+- **`/zones` reads the `map` namespace for the map's own strings.** F20b's panel keys belong there, not under `zones`.
+- **The profile's ID number is still fabricated** (`1055512345`) — unchanged, and the user's to resolve. So are threads 50 and 51.
 
 ---
 

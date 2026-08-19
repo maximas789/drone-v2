@@ -1,5 +1,16 @@
 import type { BoundingBox, Geometry, LinearRing, Position } from "@/lib/geo";
 import { computeBbox } from "@/lib/geo/bbox";
+import { segmentsIntersect } from "@/lib/geo/segments";
+
+/**
+ * **`segmentsIntersect` moved to `src/lib/geo/segments.ts` in F23a** and is
+ * re-exported here so F12's callers keep the import they have. F23's
+ * self-intersection check needs the identical arithmetic, and this file already
+ * imports from `@/lib/geo` — putting it the other way round would have made a
+ * cycle, and a second copy would let "touching denies" and "this polygon is
+ * valid" drift apart on what an intersection is.
+ */
+export { segmentsIntersect };
 
 /**
  * Point-in-polygon, and the drawn-area predicates built on it. **Pure** — this
@@ -95,46 +106,6 @@ function ringsOf(geometry: Geometry): readonly LinearRing[] {
   return geometry.type === "Polygon"
     ? geometry.coordinates
     : geometry.coordinates.flat();
-}
-
-function orientation(a: Position, b: Position, c: Position): number {
-  const value = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1]);
-  if (value > 0) return 1;
-  if (value < 0) return -1;
-  return 0;
-}
-
-function onSegment(a: Position, b: Position, p: Position): boolean {
-  return (
-    Math.min(a[0], b[0]) <= p[0] &&
-    p[0] <= Math.max(a[0], b[0]) &&
-    Math.min(a[1], b[1]) <= p[1] &&
-    p[1] <= Math.max(a[1], b[1])
-  );
-}
-
-/** Proper or touching intersection of two segments. */
-export function segmentsIntersect(
-  a1: Position,
-  a2: Position,
-  b1: Position,
-  b2: Position,
-): boolean {
-  const o1 = orientation(a1, a2, b1);
-  const o2 = orientation(a1, a2, b2);
-  const o3 = orientation(b1, b2, a1);
-  const o4 = orientation(b1, b2, a2);
-
-  if (o1 !== o2 && o3 !== o4) return true;
-
-  // Collinear and overlapping counts: an area whose edge runs along a no-fly
-  // boundary is touching it, and touching denies.
-  if (o1 === 0 && onSegment(a1, a2, b1)) return true;
-  if (o2 === 0 && onSegment(a1, a2, b2)) return true;
-  if (o3 === 0 && onSegment(b1, b2, a1)) return true;
-  if (o4 === 0 && onSegment(b1, b2, a2)) return true;
-
-  return false;
 }
 
 function edgesCross(a: Geometry, b: Geometry): boolean {

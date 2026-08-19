@@ -11,7 +11,7 @@ import { Link } from "@/i18n/navigation";
  * therefore part of F22b, and every tab on it goes somewhere from the moment it
  * is drawn.
  *
- * **Three routes, not one page with a `?tab=`.** Each queue has its own filters,
+ * **Four routes, not one page with a `?tab=`.** Each queue has its own filters,
  * its own ordering and its own detail route; sharing a URL would mean one
  * page's `searchParams` carrying the other's controls, and a reviewer who
  * bookmarks "the bookings I have to decide" would get the drones.
@@ -31,7 +31,7 @@ export function QueueTabs({
   droneCount,
   bookingCount,
 }: {
-  active: "drones" | "bookings" | "pilots";
+  active: "drones" | "bookings" | "pilots" | "zones";
   droneCount: string;
   bookingCount: string;
 }) {
@@ -58,6 +58,17 @@ export function QueueTabs({
         */}
         <Tab href="/admin/pilots" current={active === "pilots"}>
           {t("tabPilots")}
+        </Tab>
+        {/*
+          **Zones is admin-only, and the tab is drawn for everybody.** A
+          reviewer following it gets the same 404 a pilot does, from
+          `requireAdmin` on the page and independently from every zone action.
+          Hiding it instead would mean this strip needed the session, and a
+          navigation control that changes shape by role is one more thing to get
+          wrong than a route that refuses.
+        */}
+        <Tab href="/admin/zones" current={active === "zones"}>
+          {t("tabZones")}
         </Tab>
       </ul>
     </nav>

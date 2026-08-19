@@ -2,6 +2,26 @@
 
 **Wave:** 7 · **Depends on:** [F20](./F20-airspace-map.md), [F14](./F14-workflow-and-audit.md) · **Admin only**
 
+## Split — settled in Session 29
+
+F23 is three sessions, not one — it is F22's size again. The seam is the same
+rule: **nothing in a part points at a route a later part builds.**
+
+| Part | Scope | Status |
+|---|---|---|
+| **F23a** | The **geometry layer** — winding, self-intersection, area, the vertex cap, the Saudi-bounds check and the GeoJSON parser, all pure and tested — plus `/admin/zones` (the list) and `/admin/zones/new` and `/admin/zones/[id]`: draw with terra-draw, the bilingual form, the rules with their explanations, and create/update of a **draft** zone. | ✅ Session 29 |
+| **F23b** | Operating hours (Sunday-first grid, overlap refusal), the live slot preview through the real `deriveSlots`, and the **publish lifecycle** — publish / suspend / archive with their impact warnings, plus the consequences of editing a published zone's geometry. | ⬜ |
+| **F23c** | `/admin/zones/[id]/closures` — the NOTAM analogue with its cancellation preview and fan-out — and `/admin/cities`. | ⬜ |
+
+**Everything F23a saves is a draft**, which is why the lifecycle can wait: a
+draft zone is invisible to pilots and produces no slots, so nothing F23a writes
+can affect a pilot until F23b gives somebody the button to publish it. That is
+also what makes the parts safe to ship separately.
+
+**Admin only, from the first line.** `requireReviewer` is not enough for any of
+this: drawing airspace is not reviewing a submission. Every route and every
+action in all three parts calls `requireAdmin`.
+
 ## Purpose
 
 Let GACA draw the airspace: carve permitted zones out of restricted airspace, mark no-fly areas, set the rules that apply inside each, and close a zone at short notice — with every boundary change recorded.

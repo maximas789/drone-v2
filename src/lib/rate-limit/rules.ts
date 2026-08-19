@@ -121,6 +121,14 @@ export const LIMITS = {
    */
   "review.presence": [{ window: MINUTE, max: 30 }],
   /**
+   * Not in F09's table — added by F23a, which lets an admin write the airspace
+   * itself. Tighter than `review.decide` because the legitimate rate is far
+   * lower: drawing a zone is minutes of work, and nobody saves thirty of them
+   * in a minute. What it stops is a compromised admin session redrawing the
+   * country before anybody notices.
+   */
+  "zone.write": [{ window: MINUTE, max: 10 }],
+  /**
    * Not in F09's table — added by F15. Marking a notification read fires on
    * every click-through in the list, so this is a flood-stop and nothing more.
    * Tight enough to matter, generous enough that clearing a full page one item

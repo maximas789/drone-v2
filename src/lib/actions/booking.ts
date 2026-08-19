@@ -434,7 +434,7 @@ export async function approveBookingAction(
       : refuse(outcome.reason);
   }
 
-  revalidatePath("/[locale]/admin", "page");
+  revalidateReviewSurfaces();
   return { ok: true, data: { status: outcome.to } };
 }
 
@@ -463,7 +463,7 @@ export async function rejectBookingAction(
   );
   if (!outcome.ok) return refuse(outcome.reason);
 
-  revalidatePath("/[locale]/admin", "page");
+  revalidateReviewSurfaces();
   return { ok: true, data: { status: outcome.to } };
 }
 
@@ -492,9 +492,24 @@ export async function cancelBookingByAuthorityAction(
   );
   if (!outcome.ok) return refuse(outcome.reason);
 
-  revalidatePath("/[locale]/admin", "page");
-  revalidatePath("/[locale]/bookings", "page");
+  revalidateReviewSurfaces();
   return { ok: true, data: { status: outcome.to } };
+}
+
+/**
+ * Every surface a reviewer's decision changes: the queue (its counts move), the
+ * bookings tab, the detail page they are standing on, and the pilot's own list.
+ *
+ * All four, for all three decisions. Before F22b only `/admin` was revalidated,
+ * which was right when `/admin` was the only reviewer surface and wrong the
+ * moment the booking screen existed — a reviewer who rejected a request and
+ * pressed back would have met the row still sitting in a cached queue.
+ */
+function revalidateReviewSurfaces(): void {
+  revalidatePath("/[locale]/admin", "page");
+  revalidatePath("/[locale]/admin/bookings", "page");
+  revalidatePath("/[locale]/admin/bookings/[id]", "page");
+  revalidatePath("/[locale]/bookings", "page");
 }
 
 /**

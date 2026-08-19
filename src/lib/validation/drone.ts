@@ -14,6 +14,21 @@ import type { droneBuildType, droneWeightClass } from "@/lib/db/enums";
 export type BuildType = (typeof droneBuildType.enumValues)[number];
 export type WeightClass = (typeof droneWeightClass.enumValues)[number];
 
+/**
+ * Every build type, in the order a form offers them — commercial first because
+ * it is the case the reader already has a mental model for, and the two the
+ * product exists for immediately after it.
+ *
+ * Exported here rather than declared per call site: F18's wizard and F22's
+ * queue filter both enumerate them, and two lists are two places for a fourth
+ * member to be added to only one.
+ */
+export const BUILD_TYPES: readonly BuildType[] = [
+  "commercial",
+  "self_built",
+  "fpv",
+];
+
 export const NICKNAME_MIN_LENGTH = 2;
 export const NICKNAME_MAX_LENGTH = 60;
 export const TEXT_MAX_LENGTH = 120;

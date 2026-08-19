@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Field, type Problems } from "@/components/form/field";
-import type { BuildType, TypeDraft } from "@/lib/validation/drone";
+import { BUILD_TYPES, type TypeDraft } from "@/lib/validation/drone";
 
 /**
  * Step 1: what this aircraft is, and who built it.
@@ -16,8 +16,6 @@ import type { BuildType, TypeDraft } from "@/lib/validation/drone";
  * the aircraft this product exists for. They must be as visible as the
  * commercial option, and read as first-class rather than as an "other".
  */
-
-const BUILD_TYPES: readonly BuildType[] = ["commercial", "self_built", "fpv"];
 
 export function StepType({
   values,

@@ -295,6 +295,43 @@ export function formatSeconds(seconds: number, locale: Locale): string {
   }).format(seconds);
 }
 
+/**
+ * `3 أيام` / `3 days` — how long a submission has been waiting.
+ *
+ * The unit is formatted **here** rather than as an ICU plural in the message
+ * catalogue, for the two reasons `formatSeconds` gives: CLDR already knows
+ * Arabic's six plural categories and English's two, so nobody writes them out;
+ * and `scripts/i18n-check.mts` cannot tell a plural branch body (`one {day}`)
+ * from a placeholder (`{day}`) and reports the first as drift (thread 23).
+ *
+ * It is also the route around thread 22 — a bare `{days}` reaching an ICU
+ * message is formatted by next-intl under the page locale and renders `٣`.
+ */
+export function formatDays(days: number, locale: Locale): string {
+  return numberFormat(locale, {
+    style: "unit",
+    unit: "day",
+    unitDisplay: "long",
+    maximumFractionDigits: 0,
+  }).format(days);
+}
+
+/**
+ * `24 ساعة` / `24 hours` — the width of a window, not a clock time.
+ *
+ * The sibling of `formatDays`, for the same three reasons, and used where a
+ * *threshold* is being explained rather than an instant: "a slot starting
+ * within 24 hours is flagged". An instant goes through `formatTime`.
+ */
+export function formatHours(hours: number, locale: Locale): string {
+  return numberFormat(locale, {
+    style: "unit",
+    unit: "hour",
+    unitDisplay: "long",
+    maximumFractionDigits: 0,
+  }).format(hours);
+}
+
 /** Altitude is always metres AGL in this app — never feet. */
 export function formatAltitude(metres: number, locale: Locale): string {
   return numberFormat(locale, {

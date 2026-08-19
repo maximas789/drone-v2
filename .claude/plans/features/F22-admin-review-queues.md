@@ -2,6 +2,26 @@
 
 **Wave:** 7 · **Depends on:** [F14](./F14-workflow-and-audit.md), [F18](./F18-drone-registration.md), [F21](./F21-booking-flow.md)
 
+## Split — settled in Session 26
+
+F22 is three sessions, not one. The seam is the rule F16/F19/F20/F21 were split
+by: **nothing in a part points at a route a later part builds.**
+
+| Part | Scope | Status |
+|---|---|---|
+| **F22a** | The queue shell and the **drones** tab (filters, search, age badges, counts), `/admin/drones/[id]` with photos + lightbox, the serial framing, the pilot panel, declared-module verify/reject, the audit trail, and the decision panel with reason templates. New: `src/lib/actions/review.ts`, `src/lib/workflow/declaration.ts`. | ✅ Session 26 |
+| **F22b** | The **bookings** tab (time-until-slot) and `/admin/bookings/[id]`: the live airspace re-run, the zone map, registration-validity-at-slot, slot occupancy, approve / reject / authority-cancel. **The tab strip arrives here.** | ✅ Session 27 |
+| **F22c** | `/admin/pilots` and its detail, `verifyIdentity`, the soft lock, the **four-eyes rule** (thread 42), and `drone_report` triage (thread 35). | ⬜ |
+
+**The tab strip arrives in F22b, not F22a.** A two-tab control whose second tab
+links to a route that does not exist yet is worse than one tab; F22a therefore
+renders the drone queue alone and F22b adds the strip around it.
+
+**Four-eyes is deliberately F22c's.** Every pending drone in the dev database is
+owned by the only account, which is also the only reviewer — so implementing the
+rule in F22a would have made every decision in this feature untestable. F22c
+adds it together with the second account that can verify it.
+
 ## Purpose
 
 The GACA side of the product, and the thing that makes v2 real rather than simulated: a human reviewer looking at a submission and deciding, with the decision and its reason permanently recorded.

@@ -5,8 +5,10 @@ import { AirspaceRecheck } from "@/components/admin/airspace-recheck";
 import { AuditTrail } from "@/components/admin/audit-trail";
 import { BookingDecisionPanel } from "@/components/admin/booking-decision-panel";
 import { BookingZoneMap } from "@/components/admin/booking-zone-map";
+import { OwnSubmissionNotice } from "@/components/admin/own-submission-notice";
 import { PilotHistoryPanel } from "@/components/admin/pilot-history";
 import { PilotIdentityReveal } from "@/components/admin/pilot-identity-reveal";
+import { ReviewPresence } from "@/components/admin/review-presence";
 import { SlotTime } from "@/components/booking/slot-time";
 import { BookingStatusBadge } from "@/components/booking/status-badge";
 import { Disclaimer } from "@/components/layout/disclaimer";
@@ -19,6 +21,7 @@ import { getBookingForReview, getPilotHistory } from "@/lib/data/review";
 import { listActiveZones } from "@/lib/data/zone";
 import { formatAltitude, formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import { isOwnSubmission } from "@/lib/workflow";
 
 /**
  * `/admin/bookings/[id]` — one flight request, and the decision.
@@ -87,6 +90,14 @@ export default async function AdminBookingReviewPage({
     booking.slotEnd,
   );
   const registrationProblem = registration !== "valid";
+  /**
+   * Four eyes — F22c. It covers the authority cancellation as well as the
+   * decision, and for a reason worth stating: an authority cancel has no
+   * lead-time limit, so a reviewer cancelling their own flight would be walking
+   * round `pilotMayCancel`'s two-hour cutoff with a power granted for somebody
+   * else's emergency. Their own booking is cancelled with the pilot control.
+   */
+  const own = isOwnSubmission(session.user.id, booking.pilotUserId);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
@@ -129,7 +140,16 @@ export default async function AdminBookingReviewPage({
       */}
       <AirspaceRecheck decision={decision} locale={locale} />
 
-      {booking.status === "pending" || booking.status === "approved" ? (
+      {/* Who else has this open right now. Advisory — see the component. */}
+      <ReviewPresence
+        entityType="booking"
+        entityId={booking.id}
+        locale={locale}
+      />
+
+      {(booking.status === "pending" || booking.status === "approved") && own ? (
+        <OwnSubmissionNotice />
+      ) : booking.status === "pending" || booking.status === "approved" ? (
         <BookingDecisionPanel
           bookingId={booking.id}
           status={booking.status}

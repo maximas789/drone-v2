@@ -103,6 +103,31 @@ export const auditEntityType = pgEnum("audit_entity_type", [
   "zone_closure",
   "booking",
   "city",
+  /**
+   * A filed report is a thing somebody **decides about** from F22c onwards, so
+   * it needs an entity of its own: auditing a triage decision against the
+   * reported `remote_id` would be wrong for the common case where the code
+   * resolved to nothing, and would file the reviewer's decision under the
+   * aircraft's history when the report may be about a different aircraft
+   * altogether.
+   */
+  "drone_report",
+]);
+
+/**
+ * What a reviewer did with a filed report (thread 35).
+ *
+ * Three members, and each one is written by a control that exists. `open` is
+ * the state every report is filed in; `actioned` means a reviewer took it
+ * somewhere — suspended a Remote ID, called somebody — and `dismissed` means
+ * they read it and it needed nothing. There is deliberately no `in_progress`:
+ * nothing would set it that "a reviewer has the page open" does not already
+ * say, and an enum member nothing writes is a lie about what the app does.
+ */
+export const droneReportStatus = pgEnum("drone_report_status", [
+  "open",
+  "actioned",
+  "dismissed",
 ]);
 
 export const notificationStatus = pgEnum("notification_status", [

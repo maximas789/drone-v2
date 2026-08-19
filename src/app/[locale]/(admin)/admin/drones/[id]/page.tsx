@@ -4,9 +4,11 @@ import { locale as localeParam } from "next/root-params";
 import { AuditTrail } from "@/components/admin/audit-trail";
 import { DecisionPanel } from "@/components/admin/decision-panel";
 import { ModuleReview } from "@/components/admin/module-review";
+import { OwnSubmissionNotice } from "@/components/admin/own-submission-notice";
 import { PhotoLightbox } from "@/components/admin/photo-lightbox";
 import { PilotHistoryPanel } from "@/components/admin/pilot-history";
 import { PilotIdentityReveal } from "@/components/admin/pilot-identity-reveal";
+import { ReviewPresence } from "@/components/admin/review-presence";
 import { DroneSpecTable } from "@/components/drones/spec-table";
 import { DroneStatusBadge } from "@/components/drones/status-badge";
 import { MaskedId } from "@/components/profile/masked-id";
@@ -18,6 +20,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 import { fileUrlFor } from "@/lib/storage";
 import { serialRequiredFor, type BuildType } from "@/lib/validation/drone";
+import { isOwnSubmission } from "@/lib/workflow";
 
 /**
  * `/admin/drones/[id]` — one submission, and the decision.
@@ -62,6 +65,14 @@ export default async function AdminDroneReviewPage({
 
   const history = await getPilotHistory(session, drone.ownerUserId, drone.id);
   const needsSerial = serialRequiredFor(drone.buildType as BuildType);
+  /**
+   * **Four eyes.** F22c's rule, and the reason F22a deferred it: every pending
+   * drone in the dev database belongs to the only account, which is also the
+   * only reviewer, so shipping this in F22a would have made every decision in
+   * the feature untestable. The controls are replaced rather than disabled, and
+   * `approveDrone` refuses independently before the transition.
+   */
+  const own = isOwnSubmission(session.user.id, drone.ownerUserId);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
@@ -85,6 +96,9 @@ export default async function AdminDroneReviewPage({
         <DroneStatusBadge status={drone.status} />
       </header>
 
+      {/* Who else has this open right now. Advisory — see the component. */}
+      <ReviewPresence entityType="drone" entityId={drone.id} locale={locale} />
+
       {/*
         The decision, at the top. A reviewer who has already read the page and
         come back to act should not have to scroll past everything they have
@@ -92,9 +106,11 @@ export default async function AdminDroneReviewPage({
 
         It appears only for a `pending` submission — an approved or rejected row
         is a record, and "Approve" on one is a control whose only outcome is
-        `invalid_transition`.
+        `invalid_transition` — and only when the submission is somebody else's.
       */}
-      {drone.status === "pending" ? (
+      {drone.status === "pending" && own ? (
+        <OwnSubmissionNotice />
+      ) : drone.status === "pending" ? (
         <DecisionPanel droneId={drone.id} locale={locale} />
       ) : (
         <div className="rounded-lg border p-4">
@@ -253,6 +269,7 @@ export default async function AdminDroneReviewPage({
         */}
         {remoteId ? (
         <ModuleReview
+          decidable={!own}
           declarations={declarations.map((row) => ({
             id: row.id,
             kind: row.kind,

@@ -20,6 +20,7 @@ import {
   bookingStatus,
   droneBuildType,
   dronePhotoKind,
+  droneReportStatus,
   droneStatus,
   droneWeightClass,
   idDocumentType,
@@ -395,12 +396,34 @@ export const droneReport = pgTable(
     ipHash: text(),
     userAgent: text(),
 
+    /**
+     * **Triage — thread 35, closed in F22c.**
+     *
+     * Until now a report was written, audited and listed, and there was no way
+     * to close one: reports accumulated on `/admin` for ever and a reviewer had
+     * no way to say "handled". The columns were deliberately not added earlier,
+     * because a state nothing writes is a lie about what the app does — so they
+     * arrive with the controls that write them.
+     *
+     * The note is the reviewer's own words and, unlike a rejection reason, it
+     * reaches **nobody**: a report is usually filed by a member of the public
+     * who left no address, and there is no correspondent to quote it to. It is
+     * for the next reviewer and the regulator.
+     */
+    status: droneReportStatus().notNull().default("open"),
+    handledAt: timestamp({ withTimezone: true }),
+    handledByUserId: text().references(() => user.id, { onDelete: "set null" }),
+    handlingNote: text(),
+
     createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (t) => [
     index("drone_report_remote_idx").on(t.remoteIdId, t.createdAt),
-    // The reviewer queue: newest first, which F22 will page through.
+    // The reviewer queue: newest first, which F22 pages through.
     index("drone_report_created_idx").on(t.createdAt),
+    // Triage: open reports first, oldest first inside that.
+    index("drone_report_status_idx").on(t.status, t.createdAt),
   ],
 );
 
@@ -826,5 +849,46 @@ export const rateLimitBucket = pgTable(
     // `on conflict` has nothing to match and every hit inserts a new row.
     uniqueIndex("rate_limit_bucket_uniq").on(t.key, t.windowStart),
     index("rate_limit_bucket_expiry_idx").on(t.expiresAt),
+  ],
+);
+
+/**
+ * Who else has this record open — F22's **soft lock**.
+ *
+ * **It is named for what it is.** F22 calls it a soft lock; it locks nothing
+ * and refuses nothing, and naming the table `review_lock` would invite a future
+ * reader to believe a decision checks it. What actually stops two reviewers
+ * overwriting each other is `applyTransition`'s `select … for update` and the
+ * `already_applied` it answers — this table only lets the second reviewer see
+ * the first one *before* they both start typing.
+ *
+ * One row per (record, reviewer) rather than one per record: two people reading
+ * the same submission is the situation worth showing, and a single-holder row
+ * would have to decide which of them "has" it — a question with no true answer
+ * and a stolen lock as the usual outcome.
+ *
+ * Rows expire by time, not by a goodbye: a closed laptop sends no unlock, so
+ * anything relying on one would leave records permanently "in review". The
+ * page refreshes its own row while it is open and the sweep deletes the rest.
+ */
+export const reviewPresence = pgTable(
+  "review_presence",
+  {
+    id: id(),
+    entityType: auditEntityType().notNull(),
+    entityId: uuid().notNull(),
+    /** Better Auth `user.id`. Text, never uuid. */
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Extended by every heartbeat; the row is ignored once it passes. */
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    // The conflict target of the heartbeat's upsert.
+    uniqueIndex("review_presence_uniq").on(t.entityType, t.entityId, t.userId),
+    index("review_presence_expiry_idx").on(t.expiresAt),
   ],
 );

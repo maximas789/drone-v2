@@ -1,6 +1,18 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, gte, inArray, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  ne,
+  or,
+  type SQL,
+} from "drizzle-orm";
 import { evaluateAirspace } from "@/lib/airspace/evaluate";
 import { buildContextForBooking } from "@/lib/airspace/query";
 import { db } from "@/lib/db";
@@ -11,6 +23,7 @@ import {
   city,
   drone,
   dronePhoto,
+  droneReport,
   pilotProfile,
   remoteId,
   remoteIdDeclaration,
@@ -18,6 +31,12 @@ import {
 } from "@/lib/db/schema";
 import { SEAT_HOLDING_STATUSES } from "@/lib/data/booking";
 import { NO_SHOW_WINDOW_DAYS } from "@/lib/data/pilot";
+import { hashIdDocument } from "@/lib/id-hash";
+import { normalizeCode } from "@/lib/remote-id/codec";
+import {
+  SAUDI_ID_LENGTH,
+  normalizeIdNumber,
+} from "@/lib/validation/saudi-id";
 import { isReviewer, type Session } from "@/lib/session";
 
 /**
@@ -664,4 +683,295 @@ async function listAuditForBooking(session: Session, bookingId: string) {
     .where(eq(auditEvent.entityId, bookingId))
     .orderBy(desc(auditEvent.createdAt))
     .limit(100);
+}
+
+// --- The pilots directory -------------------------------------------------
+
+export type PilotRow = {
+  userId: string;
+  profileId: string;
+  fullNameAr: string;
+  fullNameEn: string;
+  mobileE164: string | null;
+  cityNameAr: string | null;
+  cityNameEn: string | null;
+  verifiedAt: Date | null;
+  rejectedAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+};
+
+/** How a search term was understood. Shown back, so nobody guesses. */
+export type PilotSearchKind = "recent" | "document" | "remote_id" | "text";
+
+export type PilotSearchResult = {
+  kind: PilotSearchKind;
+  rows: PilotRow[];
+};
+
+/**
+ * The pilots directory — **four different questions behind one box.**
+ *
+ * A reviewer holding a document number, a Remote ID off a QR sticker, or half a
+ * name is asking three different questions, and making them pick a mode first
+ * is making them classify their own evidence. The term is classified here
+ * instead, and the *kind* comes back with the rows so the screen can say how it
+ * was read — a search that silently fell through to a name match on a mistyped
+ * ID would otherwise look like "this person does not exist".
+ *
+ * **A document number is matched on its hash, never on its digits.** The column
+ * is `sha256(ID_HASH_PEPPER + number)` with a unique index; hashing the term
+ * and comparing gives an exact match without an `ilike` over identity documents
+ * — which would be a substring search across a national register, and is the
+ * one query this file must never be able to run. It also means the *partial*
+ * document search does not exist, and cannot be added by accident.
+ *
+ * Text search covers **both** name columns and the mobile number. Arabic names
+ * are matched with `ilike` on the raw column: Postgres lower-cases per the
+ * database collation and Arabic has no case, so this is a substring match, and
+ * that is what a reviewer typing three letters of a family name wants.
+ */
+export async function searchPilots(
+  session: Session,
+  term: string,
+  limit = 50,
+): Promise<PilotSearchResult> {
+  if (!isReviewer(session)) return { kind: "recent", rows: [] };
+
+  const query = term.trim();
+
+  if (query === "") {
+    return { kind: "recent", rows: await pilotRowsWhere(undefined, limit) };
+  }
+
+  // A whole document number, and only a whole one — see the note above.
+  const normalisedId = normalizeIdNumber(query);
+  if (normalisedId.length === SAUDI_ID_LENGTH) {
+    return {
+      kind: "document",
+      rows: await pilotRowsWhere(
+        eq(pilotProfile.idDocumentHash, hashIdDocument(normalisedId)),
+        limit,
+      ),
+    };
+  }
+
+  // A Remote ID resolves through the aircraft to whoever owns it.
+  const code = normalizeCode(query);
+  if (code) {
+    const owners = await db
+      .select({ ownerUserId: drone.ownerUserId })
+      .from(remoteId)
+      .innerJoin(drone, eq(drone.id, remoteId.droneId))
+      .where(eq(remoteId.code, code))
+      .limit(limit);
+    if (owners.length === 0) return { kind: "remote_id", rows: [] };
+    return {
+      kind: "remote_id",
+      rows: await pilotRowsWhere(
+        inArray(
+          pilotProfile.userId,
+          owners.map((row) => row.ownerUserId),
+        ),
+        limit,
+      ),
+    };
+  }
+
+  const like = `%${query}%`;
+  return {
+    kind: "text",
+    rows: await pilotRowsWhere(
+      or(
+        ilike(pilotProfile.fullNameAr, like),
+        ilike(pilotProfile.fullNameEn, like),
+        ilike(pilotProfile.mobileE164, like),
+      ),
+      limit,
+    ),
+  };
+}
+
+/** One projection, four callers — so every route into the list returns the same columns. */
+async function pilotRowsWhere(
+  where: SQL | undefined,
+  limit: number,
+): Promise<PilotRow[]> {
+  const rows = await db
+    .select({
+      userId: pilotProfile.userId,
+      profileId: pilotProfile.id,
+      fullNameAr: pilotProfile.fullNameAr,
+      fullNameEn: pilotProfile.fullNameEn,
+      mobileE164: pilotProfile.mobileE164,
+      cityNameAr: city.nameAr,
+      cityNameEn: city.nameEn,
+      verifiedAt: pilotProfile.verifiedAt,
+      rejectedAt: pilotProfile.rejectedAt,
+      completedAt: pilotProfile.completedAt,
+      createdAt: pilotProfile.createdAt,
+    })
+    .from(pilotProfile)
+    .leftJoin(city, eq(city.id, pilotProfile.addressCityId))
+    .where(where)
+    /**
+     * **Unverified first, then oldest.** The directory is a directory, but the
+     * work in it is the identities nobody has checked yet — sorting by name
+     * would bury a pilot who has been waiting a fortnight behind everyone whose
+     * name begins with alif.
+     */
+    .orderBy(asc(pilotProfile.verifiedAt), asc(pilotProfile.createdAt))
+    .limit(limit);
+
+  return rows;
+}
+
+/**
+ * One pilot, everything a reviewer needs to decide about **the person** rather
+ * than about one of their submissions.
+ *
+ * The raw `idDocumentNumber` comes back on the profile row, as it does from
+ * `getDroneForReview`, and `MaskedId` is what renders it — the whole number
+ * reaches a human only through `revealPilotIdentityAction`, which writes its
+ * audit event before it answers.
+ *
+ * The trail is keyed on the **profile id**, which is what `identity.ts` and the
+ * reveal both audit against.
+ */
+export async function getPilotForReview(
+  session: Session,
+  userId: string,
+  now: Date = new Date(),
+) {
+  if (!isReviewer(session)) return null;
+
+  const profileRows = await db
+    .select({ profile: pilotProfile, city })
+    .from(pilotProfile)
+    .leftJoin(city, eq(city.id, pilotProfile.addressCityId))
+    .where(eq(pilotProfile.userId, userId))
+    .limit(1);
+  const profile = profileRows[0]?.profile ?? null;
+  if (!profile) return null;
+
+  const [account, drones, bookings, history, trail] = await Promise.all([
+    db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { id: true, email: true, name: true, createdAt: true },
+    }),
+    db.query.drone.findMany({
+      where: eq(drone.ownerUserId, userId),
+      orderBy: [desc(drone.createdAt)],
+      limit: 50,
+    }),
+    db.query.booking.findMany({
+      where: eq(booking.pilotUserId, userId),
+      orderBy: [desc(booking.slotStart)],
+      limit: 20,
+    }),
+    getPilotHistory(session, userId, undefined, now),
+    db
+      .select({
+        id: auditEvent.id,
+        action: auditEvent.action,
+        entityType: auditEvent.entityType,
+        reason: auditEvent.reason,
+        actorRole: auditEvent.actorRole,
+        actorIsSystem: auditEvent.actorIsSystem,
+        actorUserId: auditEvent.actorUserId,
+        createdAt: auditEvent.createdAt,
+      })
+      .from(auditEvent)
+      .where(eq(auditEvent.entityId, profile.id))
+      .orderBy(desc(auditEvent.createdAt))
+      .limit(100),
+  ]);
+
+  const codes = drones.length
+    ? await db
+        .select({ droneId: remoteId.droneId, code: remoteId.code })
+        .from(remoteId)
+        .where(
+          inArray(
+            remoteId.droneId,
+            drones.map((row) => row.id),
+          ),
+        )
+    : [];
+  const codeByDrone = new Map(codes.map((row) => [row.droneId, row.code]));
+
+  const zones = bookings.length
+    ? await db.query.zone.findMany({
+        where: inArray(
+          zone.id,
+          bookings.map((row) => row.zoneId),
+        ),
+        columns: { id: true, nameAr: true, nameEn: true },
+      })
+    : [];
+  const zoneById = new Map(zones.map((row) => [row.id, row]));
+
+  return {
+    profile,
+    city: profileRows[0]?.city ?? null,
+    account: account ?? null,
+    drones: drones.map((row) => ({
+      id: row.id,
+      nickname: row.nickname,
+      status: row.status,
+      buildType: row.buildType,
+      registrationExpiresAt: row.registrationExpiresAt,
+      remoteIdCode: codeByDrone.get(row.id) ?? null,
+    })),
+    bookings: bookings.map((row) => ({
+      id: row.id,
+      status: row.status,
+      slotStart: row.slotStart,
+      slotEnd: row.slotEnd,
+      zoneNameAr: zoneById.get(row.zoneId)?.nameAr ?? "",
+      zoneNameEn: zoneById.get(row.zoneId)?.nameEn ?? "",
+    })),
+    history,
+    trail,
+  };
+}
+
+// --- Filed reports --------------------------------------------------------
+
+/**
+ * The report queue — **open first, oldest first inside that** (thread 35).
+ *
+ * The same ordering principle as the drone queue: a report filed a fortnight
+ * ago that nobody has closed is the one a reviewer should meet first. Handled
+ * reports stay in the list below the open ones rather than disappearing,
+ * because "what did we do about that sighting" is a question asked after the
+ * fact, and a queue that empties itself answers it with silence.
+ */
+export async function listReports(session: Session, limit = 50) {
+  if (!isReviewer(session)) return [];
+
+  const rows = await db
+    .select({
+      id: droneReport.id,
+      reportedCode: droneReport.reportedCode,
+      description: droneReport.description,
+      locationNote: droneReport.locationNote,
+      status: droneReport.status,
+      handledAt: droneReport.handledAt,
+      handledByUserId: droneReport.handledByUserId,
+      handlingNote: droneReport.handlingNote,
+      createdAt: droneReport.createdAt,
+      remoteIdId: droneReport.remoteIdId,
+      remoteIdCode: remoteId.code,
+      droneId: remoteId.droneId,
+    })
+    .from(droneReport)
+    .leftJoin(remoteId, eq(remoteId.id, droneReport.remoteIdId))
+    // `open` sorts before `actioned` and `dismissed` by the enum's own order,
+    // which is the order they are declared in — the queue's shape is the
+    // enum's shape, not a `case` expression that could drift from it.
+    .orderBy(asc(droneReport.status), asc(droneReport.createdAt))
+    .limit(limit);
+
+  return rows;
 }

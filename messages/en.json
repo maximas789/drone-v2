@@ -1172,7 +1172,18 @@
       "booking_completed": "Flight completed",
       "booking_no_show": "Recorded as a no-show",
       "booking_requested": "Booking requested",
-      "booking_checked_in": "Checked in"
+      "booking_checked_in": "Checked in",
+      "pilot_profile_created": "Pilot profile created",
+      "pilot_profile_identity_updated": "Identity details updated",
+      "pilot_profile_contact_updated": "Contact details updated",
+      "pilot_profile_verification_cleared": "Verification cleared by an identity change",
+      "pilot_profile_identity_revealed": "Identity document revealed",
+      "pilot_profile_identity_verified": "Identity verified",
+      "pilot_profile_identity_rejected": "Identity refused",
+      "drone_report_actioned": "Report actioned",
+      "drone_report_dismissed": "Report dismissed",
+      "pilot_profile_completed": "Pilot profile completed",
+      "pilot_profile_incompleted": "Profile no longer complete"
     },
     "errors": {
       "not_found": "This submission could not be found.",
@@ -1182,7 +1193,8 @@
       "already_applied": "This submission has already been decided.",
       "invalid_validity": "That validity period is not valid. Check that the end date is after the start date.",
       "cancel_too_late": "It is too late to cancel this booking.",
-      "no_longer_authorised": "This request is no longer authorised by the current airspace check."
+      "no_longer_authorised": "This request is no longer authorised by the current airspace check.",
+      "own_submission": "A reviewer cannot decide their own submission."
     },
     "tabsLabel": "Review queues",
     "tabDrones": "Drone registrations",
@@ -1247,7 +1259,68 @@
       "registration_expiring": "This aircraft's registration expires before the end of the requested slot, so the flight would land unregistered. Renew the registration and book again.",
       "slot_congested": "The number of aircraft in this slot has reached what the zone can safely hold. Please choose one of the nearby slots instead.",
       "purpose_unclear": "The stated purpose does not say enough to assess the request. Describe what you will film or carry out, and where in the zone it takes place."
-    }
+    },
+    "tabPilots": "Pilots",
+    "pilotsTitle": "Pilots",
+    "pilotsIntro": "Search by name, mobile, ID number or Remote ID. Unverified identities are listed first.",
+    "pilotsSearchLabel": "Search pilots",
+    "pilotsSearchPlaceholder": "Name, mobile, ID number or Remote ID",
+    "pilotsSearchHint": "This search is sent with the form rather than in the address bar: an identity document number must never appear in a URL.",
+    "pilotsSearch": "Search",
+    "pilotsSearching": "Searching…",
+    "pilotsEmpty": "No pilot matches that.",
+    "pilotsNone": "No pilot has completed a profile yet.",
+    "searchKind": {
+      "recent": "The most recent profiles, unverified first.",
+      "document": "Matched on a whole identity document number.",
+      "remote_id": "Matched through a Remote ID.",
+      "text": "Matched on name or mobile number."
+    },
+    "colIdentity": "Identity",
+    "colProfile": "Profile",
+    "profileIncomplete": "Profile not completed",
+    "identityRejectedBadge": "Identity refused",
+    "openPilot": "Open pilot",
+    "backToPilots": "Back to the pilots list",
+    "pilotDronesHeading": "Registered aircraft",
+    "pilotNoDrones": "This pilot has registered no aircraft.",
+    "pilotBookingsHeading": "Bookings",
+    "pilotNoBookings": "This pilot has made no bookings.",
+    "identityDecisionTitle": "Identity verification",
+    "identityDecisionIntro": "Identity is checked by a person, never automatically. Reveal the document, read it, and record what you found.",
+    "verifyIdentity": "Verify identity",
+    "rejectIdentity": "Refuse identity",
+    "rejectIdentityIntro": "What you write reaches the pilot verbatim on their profile screen, with an invitation to correct their details.",
+    "identityAlreadyVerified": "This identity has been verified. It cannot be verified again from this page.",
+    "identityRejectedOn": "Identity refused {at}",
+    "identityTemplateLabels": {
+      "document_unreadable": "Document unreadable",
+      "name_mismatch": "Name does not match",
+      "document_expired": "Document expired",
+      "details_mismatch": "Details do not match"
+    },
+    "identityTemplates": {
+      "document_unreadable": "The image of the identity document is not legible. Please attach a clear image of the whole document, uncropped and without glare.",
+      "name_mismatch": "The name entered does not match the name on the identity document. Please correct it to read exactly as the document does.",
+      "document_expired": "The identity document attached has expired. Please renew it and enter the new details.",
+      "details_mismatch": "The profile details do not match the identity document. Please check the date of birth, document type and number, and save again."
+    },
+    "ownSubmissionTitle": "You cannot decide your own submission",
+    "ownSubmissionBody": "Four eyes: the pilot on this record is you. Another reviewer has to decide it, and the action refuses it even if this control is bypassed.",
+    "viewedBy": "Also open now by: {names}",
+    "viewerUnknown": "another reviewer",
+    "reportStatus": {
+      "open": "Open",
+      "actioned": "Actioned",
+      "dismissed": "Dismissed"
+    },
+    "reportTriageTitle": "Record what you did",
+    "reportNote": "Note (optional)",
+    "reportNoteHint": "For the next reviewer and for the record. It is not sent to whoever filed the report.",
+    "reportActioned": "Mark as actioned",
+    "reportDismissed": "Dismiss",
+    "reportHandledAt": "Handled {at}",
+    "reportOpenAircraft": "Open the aircraft"
   },
   "notifications": {
     "title": "Notifications",

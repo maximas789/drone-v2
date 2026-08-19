@@ -9,7 +9,7 @@ import type { AirspaceDecision, Reason } from "@/lib/airspace/types";
 import type { DbExecutor } from "@/lib/db";
 import { booking, zone } from "@/lib/db/schema";
 import { applyTransition, type TransitionOutcome } from "./apply";
-import { pilotMayCancel } from "./rules";
+import { isOwnSubmission, pilotMayCancel } from "./rules";
 
 /**
  * The booking lifecycle.
@@ -31,7 +31,9 @@ export type BookingOutcome =
         | "already_applied"
         | "reason_required"
         | "cancel_too_late"
-        | "no_longer_authorised";
+        | "no_longer_authorised"
+        /** Four eyes: the reviewer is the pilot who requested it. */
+        | "own_submission";
       from?: string;
       /** Present on `no_longer_authorised`: what the re-check refused on. */
       reasons?: Reason[];
@@ -61,6 +63,14 @@ export async function approveBooking(
     bookingId,
   );
   if (!row || !zoneRule) return { ok: false, reason: "not_found" };
+  /**
+   * **Four eyes, before the airspace re-check.** Ordering matters: a reviewer
+   * refused for the right reason should be told *that*, not handed a green
+   * airspace answer they still cannot act on.
+   */
+  if (isOwnSubmission(actor.userId, row.pilotUserId)) {
+    return { ok: false, reason: "own_submission", from: "pending" };
+  }
 
   const decision = evaluateAirspace(
     {
@@ -186,6 +196,9 @@ export async function rejectBooking(
     where: eq(booking.id, bookingId),
   });
   if (!row) return { ok: false, reason: "not_found" };
+  if (isOwnSubmission(actor.userId, row.pilotUserId)) {
+    return { ok: false, reason: "own_submission", from: row.status };
+  }
 
   return toOutcome(
     await applyTransition(
@@ -278,6 +291,17 @@ export async function cancelBookingByAuthority(
     where: eq(booking.id, bookingId),
   });
   if (!row) return { ok: false, reason: "not_found" };
+  /**
+   * Four eyes here too, and for a reason that is not obvious. An authority
+   * cancellation has **no** lead-time limit — that is the whole point of it —
+   * so a reviewer cancelling their own flight twenty minutes before the slot
+   * would be walking round `pilotMayCancel`'s two-hour cutoff using a power
+   * granted for somebody else's emergency. Their own booking is cancelled with
+   * the pilot control, under the pilot rule, like anyone else's.
+   */
+  if (isOwnSubmission(actor.userId, row.pilotUserId)) {
+    return { ok: false, reason: "own_submission", from: row.status };
+  }
 
   return toOutcome(
     await applyTransition(

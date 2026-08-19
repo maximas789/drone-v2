@@ -110,6 +110,17 @@ export const LIMITS = {
   "review.decide": [{ window: MINUTE, max: 30 }],
   "admin.lookup": [{ window: MINUTE, max: 60 }],
   /**
+   * Not in F09's table — added by F22c's soft lock, which pings while a review
+   * screen is open.
+   *
+   * **Its own bucket rather than `admin.lookup`'s**, because the two must not
+   * starve each other: a heartbeat every thirty seconds across a few open tabs
+   * would quietly eat a reviewer's search allowance, and a reviewer who cannot
+   * search because a background timer used up the budget would have no way of
+   * knowing why.
+   */
+  "review.presence": [{ window: MINUTE, max: 30 }],
+  /**
    * Not in F09's table — added by F15. Marking a notification read fires on
    * every click-through in the list, so this is a flood-stop and nothing more.
    * Tight enough to matter, generous enough that clearing a full page one item

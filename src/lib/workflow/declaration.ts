@@ -3,7 +3,8 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import type { DbExecutor } from "@/lib/db";
-import { remoteId, remoteIdDeclaration } from "@/lib/db/schema";
+import { drone, remoteId, remoteIdDeclaration } from "@/lib/db/schema";
+import { isOwnSubmission } from "./rules";
 
 /**
  * A reviewer's decision on a **declared Remote ID module**.
@@ -34,7 +35,12 @@ export type DeclarationOutcome =
   | { ok: true; remoteIdId: string; broadcastCapable: boolean }
   | {
       ok: false;
-      reason: "not_found" | "already_applied" | "invalid_transition";
+      reason:
+        | "not_found"
+        | "already_applied"
+        | "invalid_transition"
+        /** Four eyes: the module was declared on the reviewer's own aircraft. */
+        | "own_submission";
     };
 
 type VerifyInput = {
@@ -65,6 +71,9 @@ export async function verifyDeclaration(
 ): Promise<DeclarationOutcome> {
   const row = await lockDeclaration(tx, declarationId);
   if (!row) return { ok: false, reason: "not_found" };
+  if (isOwnSubmission(actor.userId, row.ownerUserId)) {
+    return { ok: false, reason: "own_submission" };
+  }
   if (row.supersededAt !== null) {
     return { ok: false, reason: "invalid_transition" };
   }
@@ -125,6 +134,9 @@ export async function rejectDeclaration(
 ): Promise<DeclarationOutcome> {
   const row = await lockDeclaration(tx, declarationId);
   if (!row) return { ok: false, reason: "not_found" };
+  if (isOwnSubmission(actor.userId, row.ownerUserId)) {
+    return { ok: false, reason: "own_submission" };
+  }
   if (row.rejectedAt !== null) return { ok: false, reason: "already_applied" };
 
   const now = new Date();
@@ -173,10 +185,26 @@ async function lockDeclaration(tx: DbExecutor, declarationId: string) {
       verifiedAt: remoteIdDeclaration.verifiedAt,
       rejectedAt: remoteIdDeclaration.rejectedAt,
       supersededAt: remoteIdDeclaration.supersededAt,
+      /**
+       * Two joins out to the aircraft's owner, for the four-eyes check. A
+       * declaration belongs to a Remote ID, which belongs to a drone, which
+       * belongs to a pilot — and a reviewer verifying the module on their *own*
+       * airframe is deciding their own submission just as much as one approving
+       * their own registration.
+       *
+       * **`for("update", { of: remoteIdDeclaration })` — the `of` is load-
+       * bearing.** A bare `FOR UPDATE` over these joins is refused by Postgres
+       * outright: it cannot lock the nullable side of an outer join. Naming the
+       * one table being written locks exactly that row and leaves the drone and
+       * Remote ID read-only, which is all this needs them for.
+       */
+      ownerUserId: drone.ownerUserId,
     })
     .from(remoteIdDeclaration)
+    .leftJoin(remoteId, eq(remoteId.id, remoteIdDeclaration.remoteIdId))
+    .leftJoin(drone, eq(drone.id, remoteId.droneId))
     .where(eq(remoteIdDeclaration.id, declarationId))
-    .for("update");
+    .for("update", { of: remoteIdDeclaration });
   return row ?? null;
 }
 

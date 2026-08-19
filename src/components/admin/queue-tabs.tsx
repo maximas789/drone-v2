@@ -11,7 +11,7 @@ import { Link } from "@/i18n/navigation";
  * therefore part of F22b, and every tab on it goes somewhere from the moment it
  * is drawn.
  *
- * **Two routes, not one page with a `?tab=`.** Each queue has its own filters,
+ * **Three routes, not one page with a `?tab=`.** Each queue has its own filters,
  * its own ordering and its own detail route; sharing a URL would mean one
  * page's `searchParams` carrying the other's controls, and a reviewer who
  * bookmarks "the bookings I have to decide" would get the drones.
@@ -31,7 +31,7 @@ export function QueueTabs({
   droneCount,
   bookingCount,
 }: {
-  active: "drones" | "bookings";
+  active: "drones" | "bookings" | "pilots";
   droneCount: string;
   bookingCount: string;
 }) {
@@ -50,6 +50,15 @@ export function QueueTabs({
         >
           {t("tabBookings")}
         </Tab>
+        {/*
+          **No count on the pilots tab, deliberately.** The other two are
+          queues, and their number is the work waiting; this one is a
+          directory, and a badge reading "1" beside it would look like one
+          pilot needs attention rather than that one pilot exists.
+        */}
+        <Tab href="/admin/pilots" current={active === "pilots"}>
+          {t("tabPilots")}
+        </Tab>
       </ul>
     </nav>
   );
@@ -63,7 +72,7 @@ function Tab({
 }: {
   href: string;
   current: boolean;
-  count: string;
+  count?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -82,7 +91,9 @@ function Tab({
         }`}
       >
         {children}
-        <Badge variant={current ? "default" : "secondary"}>{count}</Badge>
+        {count === undefined ? null : (
+          <Badge variant={current ? "default" : "secondary"}>{count}</Badge>
+        )}
       </Link>
     </li>
   );

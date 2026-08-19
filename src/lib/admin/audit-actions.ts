@@ -14,11 +14,11 @@
  * did for the status badges: it asserts every member below has a label in `ar`
  * and in `en`, and that no stray label survives for an action nothing writes.
  *
- * Two lists, one lookup. A **drone** trail and a **booking** trail are the two
- * surfaces that render events, and they draw from disjoint sets of actions —
- * but `hasTrailLabel` answers for both, because the component that renders a
- * trail should not have to know which screen it is on to decide whether a row
- * is sayable.
+ * Four lists, one lookup. A drone trail, a booking trail, a pilot trail and a
+ * report's decision are rendered by four different screens from disjoint sets
+ * of actions — but `hasTrailLabel` answers for all of them, because the
+ * component that renders a trail should not have to know which screen it is on
+ * to decide whether a row is sayable.
  */
 export const DRONE_TRAIL_ACTIONS = [
   "drone.submitted",
@@ -80,11 +80,58 @@ export const BOOKING_TRAIL_ACTIONS = [
 
 export type BookingTrailAction = (typeof BOOKING_TRAIL_ACTIONS)[number];
 
-export type TrailAction = DroneTrailAction | BookingTrailAction;
+/**
+ * Every action a **pilot's own trail** can contain — F22c's `/admin/pilots/[id]`.
+ *
+ * Written from three places: F17's profile wizard (`created`,
+ * `identity_updated`, `contact_updated`, and the `verification_cleared` that
+ * fires when a pilot edits the document a reviewer had already checked), F11's
+ * and F22a's reveals, and F22c's own verify / reject.
+ *
+ * The trail is the answer to *"who vouched for this person, and what did they
+ * see"* — the question an incident review asks first — so `identity_revealed`
+ * belongs on it as visibly as the verification does.
+ */
+export const PILOT_TRAIL_ACTIONS = [
+  "pilot_profile.created",
+  /**
+   * Written by a **ternary**, which is how they escaped the first version of
+   * the coverage scan — it matched `action: "x.y"` literally and a conditional
+   * expression is not that. `pilot_profile.completed` reached a reviewer's
+   * screen as a raw dotted code in F22c, found by reading the English page.
+   * The scan now matches any quoted action-shaped string under a trail prefix.
+   */
+  "pilot_profile.completed",
+  "pilot_profile.incompleted",
+  "pilot_profile.identity_updated",
+  "pilot_profile.contact_updated",
+  "pilot_profile.verification_cleared",
+  "pilot_profile.identity_revealed",
+  "pilot_profile.identity_verified",
+  "pilot_profile.identity_rejected",
+] as const;
+
+export type PilotTrailAction = (typeof PILOT_TRAIL_ACTIONS)[number];
+
+/** What a reviewer did with a filed report — thread 35's two closing acts. */
+export const REPORT_TRAIL_ACTIONS = [
+  "drone_report.actioned",
+  "drone_report.dismissed",
+] as const;
+
+export type ReportTrailAction = (typeof REPORT_TRAIL_ACTIONS)[number];
+
+export type TrailAction =
+  | DroneTrailAction
+  | BookingTrailAction
+  | PilotTrailAction
+  | ReportTrailAction;
 
 const KNOWN = new Set<string>([
   ...DRONE_TRAIL_ACTIONS,
   ...BOOKING_TRAIL_ACTIONS,
+  ...PILOT_TRAIL_ACTIONS,
+  ...REPORT_TRAIL_ACTIONS,
 ]);
 
 /**

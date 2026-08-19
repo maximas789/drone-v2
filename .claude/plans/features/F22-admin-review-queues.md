@@ -11,7 +11,7 @@ by: **nothing in a part points at a route a later part builds.**
 |---|---|---|
 | **F22a** | The queue shell and the **drones** tab (filters, search, age badges, counts), `/admin/drones/[id]` with photos + lightbox, the serial framing, the pilot panel, declared-module verify/reject, the audit trail, and the decision panel with reason templates. New: `src/lib/actions/review.ts`, `src/lib/workflow/declaration.ts`. | ✅ Session 26 |
 | **F22b** | The **bookings** tab (time-until-slot) and `/admin/bookings/[id]`: the live airspace re-run, the zone map, registration-validity-at-slot, slot occupancy, approve / reject / authority-cancel. **The tab strip arrives here.** | ✅ Session 27 |
-| **F22c** | `/admin/pilots` and its detail, `verifyIdentity`, the soft lock, the **four-eyes rule** (thread 42), and `drone_report` triage (thread 35). | ⬜ |
+| **F22c** | `/admin/pilots` and its detail, `verifyIdentity`, the soft lock, the **four-eyes rule** (thread 42), and `drone_report` triage (thread 35). | ✅ Session 28 |
 
 **The tab strip arrives in F22b, not F22a.** A two-tab control whose second tab
 links to a route that does not exist yet is worse than one tab; F22a therefore

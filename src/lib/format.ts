@@ -317,6 +317,21 @@ export function formatDays(days: number, locale: Locale): string {
 }
 
 /**
+ * `فهد، وسارة` / `Fahad and Sara` — a list of names in the reader's language.
+ *
+ * Here rather than at the call site because rule 6 bans a bare `new Intl.*`
+ * anywhere else, and because the naive version is a `join(", ")` that reads
+ * wrongly in Arabic twice over: the separator is `،` and the last item takes a
+ * conjunction, neither of which a hard-coded comma knows about. CLDR does.
+ */
+export function formatList(items: readonly string[], locale: Locale): string {
+  return new Intl.ListFormat(tag(locale), {
+    style: "long",
+    type: "conjunction",
+  }).format(items);
+}
+
+/**
  * `24 ساعة` / `24 hours` — the width of a window, not a clock time.
  *
  * The sibling of `formatDays`, for the same three reasons, and used where a

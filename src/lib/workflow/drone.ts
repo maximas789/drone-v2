@@ -6,7 +6,7 @@ import { db, type DbExecutor } from "@/lib/db";
 import { drone, dronePhoto, pilotProfile } from "@/lib/db/schema";
 import { issueRemoteId } from "@/lib/remote-id/issue";
 import { applyTransition, type TransitionOutcome } from "./apply";
-import { registrationExpiryFrom } from "./rules";
+import { isOwnSubmission, registrationExpiryFrom } from "./rules";
 import { reactivateRemoteIdForDrone, suspendRemoteIdForDrone } from "./remote-id";
 
 /**
@@ -34,7 +34,9 @@ export type DroneOutcome =
         | "reason_required"
         | "profile_incomplete"
         | "photo_required"
-        | "serial_required";
+        | "serial_required"
+        /** Four eyes: the reviewer is the pilot who submitted it. */
+        | "own_submission";
       from?: string;
     };
 
@@ -154,6 +156,16 @@ export async function approveDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  /**
+   * **Four eyes, refused here rather than in the action.** The panel greys the
+   * buttons and says why, but a server action is an ordinary POST and the
+   * screen is not a check. Checked before the transition, so a refused
+   * self-approval writes nothing at all — not even an audit event, because
+   * nothing happened.
+   */
+  if (isOwnSubmission(actor.userId, row.ownerUserId)) {
+    return { ok: false, reason: "own_submission", from: row.status };
+  }
 
   const outcome = await applyTransition(
     {
@@ -210,6 +222,11 @@ export async function rejectDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  // Four eyes applies to a refusal as much as to an approval: a reviewer who
+  // can reject their own submission can clear their own queue.
+  if (isOwnSubmission(actor.userId, row.ownerUserId)) {
+    return { ok: false, reason: "own_submission", from: row.status };
+  }
 
   return toOutcome(
     await applyTransition(

@@ -1172,7 +1172,18 @@
       "booking_completed": "اكتملت الرحلة",
       "booking_no_show": "لم يحضر",
       "booking_requested": "طُلب الحجز",
-      "booking_checked_in": "سجّل الحضور"
+      "booking_checked_in": "سجّل الحضور",
+      "pilot_profile_created": "أُنشئ ملف المشغّل",
+      "pilot_profile_identity_updated": "عُدّلت بيانات الهوية",
+      "pilot_profile_contact_updated": "عُدّلت بيانات التواصل",
+      "pilot_profile_verification_cleared": "أُلغي التوثيق بعد تعديل الهوية",
+      "pilot_profile_identity_revealed": "كُشفت وثيقة الهوية",
+      "pilot_profile_identity_verified": "وُثّقت الهوية",
+      "pilot_profile_identity_rejected": "رُفضت الهوية",
+      "drone_report_actioned": "اتُّخذ إجراء على البلاغ",
+      "drone_report_dismissed": "أُغلق البلاغ دون إجراء",
+      "pilot_profile_completed": "اكتمل ملف المشغّل",
+      "pilot_profile_incompleted": "عاد الملف غير مكتمل"
     },
     "errors": {
       "not_found": "لم يُعثر على هذا الطلب.",
@@ -1182,7 +1193,8 @@
       "already_applied": "تم البتّ في هذا الطلب بالفعل.",
       "invalid_validity": "فترة السريان غير صحيحة. تأكّد من أن تاريخ الانتهاء بعد تاريخ البدء.",
       "cancel_too_late": "فات وقت الإلغاء لهذا الحجز.",
-      "no_longer_authorised": "لم يعد هذا الطلب مصرّحاً به بحسب فحص المجال الجوي الحالي."
+      "no_longer_authorised": "لم يعد هذا الطلب مصرّحاً به بحسب فحص المجال الجوي الحالي.",
+      "own_submission": "لا يجوز للمراجع أن يبتّ في طلبٍ قدّمه بنفسه."
     },
     "tabsLabel": "قوائم المراجعة",
     "tabDrones": "تسجيلات الطائرات",
@@ -1247,7 +1259,68 @@
       "registration_expiring": "ينتهي تسجيل هذه الطائرة قبل نهاية الفترة المطلوبة، فتهبط الرحلة وهي غير مسجّلة. جدّد التسجيل ثم أعد الحجز.",
       "slot_congested": "عدد الطائرات في هذه الفترة بلغ ما تحتمله المنطقة بأمان. اختر فترة أخرى قريبة منها.",
       "purpose_unclear": "الغرض المذكور من الرحلة لا يكفي لتقييم الطلب. اذكر ما ستصوّره أو تنفّذه وأين يقع داخل المنطقة."
-    }
+    },
+    "tabPilots": "المشغّلون",
+    "pilotsTitle": "المشغّلون",
+    "pilotsIntro": "ابحث بالاسم أو رقم الجوال أو رقم الهوية أو معرّف الهوية عن بُعد. الهويات غير المُوثّقة تظهر أولاً.",
+    "pilotsSearchLabel": "البحث عن مشغّل",
+    "pilotsSearchPlaceholder": "الاسم أو الجوال أو رقم الهوية أو معرّف الهوية عن بُعد",
+    "pilotsSearchHint": "يُرسَل هذا البحث مع النموذج لا في شريط العنوان: رقم وثيقة الهوية يجب ألا يظهر في رابط.",
+    "pilotsSearch": "بحث",
+    "pilotsSearching": "جارٍ البحث…",
+    "pilotsEmpty": "لا يوجد مشغّل مطابق.",
+    "pilotsNone": "لم يُكمل أي مشغّل ملفه بعد.",
+    "searchKind": {
+      "recent": "أحدث الملفات، وغير المُوثّقة أولاً.",
+      "document": "مطابقة على رقم وثيقة هوية كامل.",
+      "remote_id": "مطابقة عبر معرّف هوية عن بُعد.",
+      "text": "مطابقة على الاسم أو رقم الجوال."
+    },
+    "colIdentity": "الهوية",
+    "colProfile": "الملف",
+    "profileIncomplete": "الملف غير مكتمل",
+    "identityRejectedBadge": "هوية مرفوضة",
+    "openPilot": "فتح ملف المشغّل",
+    "backToPilots": "العودة إلى قائمة المشغّلين",
+    "pilotDronesHeading": "الطائرات المسجّلة",
+    "pilotNoDrones": "لم يسجّل هذا المشغّل أي طائرة.",
+    "pilotBookingsHeading": "الحجوزات",
+    "pilotNoBookings": "لا توجد حجوزات لهذا المشغّل.",
+    "identityDecisionTitle": "توثيق الهوية",
+    "identityDecisionIntro": "الهوية يوثّقها إنسان، لا يوثّقها النظام تلقائياً. اكشف الوثيقة، واقرأها، وسجّل ما رأيت.",
+    "verifyIdentity": "توثيق الهوية",
+    "rejectIdentity": "رفض الهوية",
+    "rejectIdentityIntro": "ما تكتبه هنا يصل المشغّل كما هو في صفحة ملفه، مع دعوته إلى تصحيح بياناته.",
+    "identityAlreadyVerified": "وُثّقت هذه الهوية، ولا يمكن توثيقها مرة أخرى من هذه الصفحة.",
+    "identityRejectedOn": "رُفضت الهوية في {at}",
+    "identityTemplateLabels": {
+      "document_unreadable": "الوثيقة غير واضحة",
+      "name_mismatch": "الاسم لا يطابق",
+      "document_expired": "الوثيقة منتهية",
+      "details_mismatch": "بيانات غير متطابقة"
+    },
+    "identityTemplates": {
+      "document_unreadable": "صورة وثيقة الهوية غير مقروءة. أرفق صورة واضحة للوثيقة كاملة، غير مقصوصة وبلا انعكاس ضوء.",
+      "name_mismatch": "الاسم المُدخل لا يطابق الاسم في وثيقة الهوية. صحّح الاسم كما هو مكتوب في الوثيقة تماماً.",
+      "document_expired": "وثيقة الهوية المرفقة منتهية الصلاحية. جدّد الوثيقة ثم أعد إدخال بياناتها.",
+      "details_mismatch": "بيانات الملف لا تطابق ما في وثيقة الهوية. راجع تاريخ الميلاد ونوع الوثيقة ورقمها ثم أعد الحفظ."
+    },
+    "ownSubmissionTitle": "لا يمكنك البتّ في طلبك أنت",
+    "ownSubmissionBody": "مبدأ الأربع أعين: صاحب هذا السجل هو أنت. يبتّ فيه مراجع آخر، ويرفض النظام العملية حتى لو جرى تجاوز هذا الزر.",
+    "viewedBy": "يفتح هذا السجل الآن أيضاً: {names}",
+    "viewerUnknown": "مراجع آخر",
+    "reportStatus": {
+      "open": "مفتوح",
+      "actioned": "اتُّخذ إجراء",
+      "dismissed": "أُغلق دون إجراء"
+    },
+    "reportTriageTitle": "سجّل ما فعلته",
+    "reportNote": "ملاحظة (اختيارية)",
+    "reportNoteHint": "للمراجع التالي وللسجل. لا تُرسل إلى من قدّم البلاغ.",
+    "reportActioned": "تسجيل اتخاذ إجراء",
+    "reportDismissed": "إغلاق دون إجراء",
+    "reportHandledAt": "عولج في {at}",
+    "reportOpenAircraft": "فتح ملف الطائرة"
   },
   "notifications": {
     "title": "الإشعارات",

@@ -74,9 +74,18 @@ export type ReviewableDeclaration = {
 export function ModuleReview({
   declarations,
   locale,
+  decidable = true,
 }: {
   declarations: readonly ReviewableDeclaration[];
   locale: Locale;
+  /**
+   * `false` when four eyes applies — the aircraft is the reviewer's own. The
+   * modules are still shown in full, because a reviewer may legitimately need
+   * to *read* what was declared on their own airframe; what disappears is every
+   * control, exactly as it does around the registration decision itself.
+   * `verifyDeclaration` refuses independently either way.
+   */
+  decidable?: boolean;
 }) {
   const t = useTranslations("review");
 
@@ -88,7 +97,11 @@ export function ModuleReview({
     <ul className="flex flex-col gap-4">
       {declarations.map((declaration) => (
         <li key={declaration.id}>
-          <ModuleCard declaration={declaration} locale={locale} />
+          <ModuleCard
+            declaration={declaration}
+            locale={locale}
+            decidable={decidable}
+          />
         </li>
       ))}
     </ul>
@@ -98,9 +111,11 @@ export function ModuleReview({
 function ModuleCard({
   declaration,
   locale,
+  decidable,
 }: {
   declaration: ReviewableDeclaration;
   locale: Locale;
+  decidable: boolean;
 }) {
   const t = useTranslations("review");
   const tCard = useTranslations("remoteId.card");
@@ -235,7 +250,14 @@ function ModuleCard({
 
       <FormProblem>{message}</FormProblem>
 
-      {superseded ? (
+      {!decidable ? (
+        /*
+          Four eyes: the modules read, the controls gone. Not disabled buttons
+          — a greyed control with no sentence beside it reads as a broken page,
+          and `OwnSubmissionNotice` above has already said why.
+        */
+        <p className="text-muted-foreground text-xs">{t("ownSubmissionBody")}</p>
+      ) : superseded ? (
         <p className="text-muted-foreground text-xs">{t("supersededHint")}</p>
       ) : mode === "verifying" ? (
         <div className="flex flex-col gap-3">

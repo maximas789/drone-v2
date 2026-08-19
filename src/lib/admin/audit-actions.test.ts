@@ -6,6 +6,8 @@ import en from "@/../messages/en.json";
 import {
   BOOKING_TRAIL_ACTIONS,
   DRONE_TRAIL_ACTIONS,
+  PILOT_TRAIL_ACTIONS,
+  REPORT_TRAIL_ACTIONS,
   hasTrailLabel,
   trailLabelKey,
 } from "./audit-actions";
@@ -27,14 +29,31 @@ import {
 
 const catalogues = { ar, en };
 
-/** The namespaces the trails are audited under — drone's three, and booking's one. */
-const TRAIL_PREFIXES = ["drone.", "remote_id.", "declaration.", "booking."];
+/** The namespaces the four trails are audited under. */
+const TRAIL_PREFIXES = [
+  "drone.",
+  "remote_id.",
+  "declaration.",
+  "booking.",
+  "pilot_profile.",
+  "drone_report.",
+];
 
-/** Written against `pilot_profile`, `user` or a zone — no trail renders these. */
-const NOT_ON_THIS_TRAIL = /^(pilot_profile|user|zone|city|zone_closure)\./;
+/**
+ * Written against a user or a zone — no trail renders these yet. `user.` is
+ * F05's role change, which belongs to F25's audit browser; the zone ones are
+ * F23's. Both are listed rather than left out so the day a screen renders them
+ * this scan is the thing that asks for their labels.
+ */
+const NOT_ON_THIS_TRAIL = /^(user|zone|city|zone_closure)\./;
 
-/** Every action either trail can show. `hasTrailLabel` answers for both. */
-const ALL_TRAIL_ACTIONS = [...DRONE_TRAIL_ACTIONS, ...BOOKING_TRAIL_ACTIONS];
+/** Every action any trail can show. `hasTrailLabel` answers for all four. */
+const ALL_TRAIL_ACTIONS = [
+  ...DRONE_TRAIL_ACTIONS,
+  ...BOOKING_TRAIL_ACTIONS,
+  ...PILOT_TRAIL_ACTIONS,
+  ...REPORT_TRAIL_ACTIONS,
+];
 
 function labelsFor(messages: typeof ar): Record<string, unknown> {
   const review = messages.review as Record<string, unknown>;
@@ -78,17 +97,36 @@ describe("audit action labels", () => {
     });
   }
 
-  it("covers every drone, Remote ID and booking action written in src/lib", () => {
+  it("covers every action written in src/lib that a trail renders", () => {
     const found = new Set<string>();
     const files = walk("src/lib");
 
     for (const file of files) {
       const source = readFileSync(file, "utf8");
-      for (const match of source.matchAll(/action:\s*"([a-z_]+\.[a-z_]+)"/g)) {
-        const action = match[1];
-        if (NOT_ON_THIS_TRAIL.test(action)) continue;
-        if (TRAIL_PREFIXES.some((prefix) => action.startsWith(prefix))) {
-          found.add(action);
+      /**
+       * **The window after each `action:`, not the literal that follows it.**
+       *
+       * The first version matched `action: "x.y"` and nothing else, so it
+       * missed `action: isComplete ? "pilot_profile.completed" : …` — a
+       * ternary is not a literal — and that code reached a reviewer's screen as
+       * a raw dotted path in F22c, found by reading the English page.
+       *
+       * Widening it to *any* quoted action-shaped string went too far the other
+       * way: `booking.create` and `drone.draft` are rate-limit rule keys and
+       * `booking.reminded` is a notification type, none of which a trail ever
+       * renders. So the scan takes the two hundred characters following each
+       * `action:` and reads every quoted candidate inside that window, which
+       * covers a ternary without swallowing the rest of the file.
+       */
+      for (const site of source.split(/\baction:/).slice(1)) {
+        for (const match of site
+          .slice(0, 200)
+          .matchAll(/"([a-z_]+\.[a-z_]+)"/g)) {
+          const action = match[1];
+          if (NOT_ON_THIS_TRAIL.test(action)) continue;
+          if (TRAIL_PREFIXES.some((prefix) => action.startsWith(prefix))) {
+            found.add(action);
+          }
         }
       }
     }

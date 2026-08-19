@@ -45,3 +45,31 @@ export function registrationExpiryFrom(issued: Date): Date {
 export function pilotMayCancel(slotStart: Date, now: Date): boolean {
   return slotStart.getTime() - now.getTime() >= PILOT_CANCEL_LEAD_MS;
 }
+
+/**
+ * **Four eyes.** Whether the person deciding is the person who submitted.
+ *
+ * A regulator's approval is worth what the separation between submitter and
+ * approver is worth, and this app's staff hold `owner` alongside `reviewer` on
+ * purpose — staff use the product as pilots, which is how they find out what it
+ * is like. The cost of that decision is that nothing structural keeps a
+ * reviewer away from their own paperwork, so the rule has to be written down.
+ *
+ * Pure, and here rather than in an action, because **both** halves need it: the
+ * screen greys the controls and says why, and the workflow refuses
+ * independently — a disabled button is a courtesy, not a check, and the actions
+ * are ordinary POSTs.
+ *
+ * A missing id on **either** side is not a match. A record whose owner could
+ * not be read is one this predicate knows nothing about, and answering "yes,
+ * that is yours" would block a legitimate decision on a guess; the caller's own
+ * `not_found` covers a genuinely absent row. And a **system** actor has no user
+ * id at all — the expiry sweep and the closure fan-out decide about everybody's
+ * records by design, and a null matching a null would stop the clock working.
+ */
+export function isOwnSubmission(
+  actorUserId: string | null | undefined,
+  subjectUserId: string | null | undefined,
+): boolean {
+  return Boolean(actorUserId) && actorUserId === subjectUserId;
+}

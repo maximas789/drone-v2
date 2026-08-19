@@ -5,7 +5,12 @@ import { headers } from "next/headers";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import { audit, type Actor } from "@/lib/audit";
 import { getSession } from "@/lib/auth-guards";
-import { getProfileForReveal } from "@/lib/data/review";
+import { touchPresence } from "@/lib/data/presence";
+import {
+  getProfileForReveal,
+  searchPilots,
+  type PilotSearchResult,
+} from "@/lib/data/review";
 import { db } from "@/lib/db";
 import { clientIpFrom, hashIp } from "@/lib/ip-hash";
 import { enforceLimit } from "@/lib/rate-limit";
@@ -15,6 +20,8 @@ import {
   rejectDeclaration,
   verifyDeclaration,
 } from "@/lib/workflow/declaration";
+import { rejectIdentity, verifyIdentity } from "@/lib/workflow/identity";
+import { triageReport } from "@/lib/workflow/report";
 
 /**
  * The reviewer's acts that are not a drone or booking status change.
@@ -259,4 +266,222 @@ function revalidateReviewSurfaces(): void {
  */
 function actorFrom(session: Session): Actor {
   return { userId: session.user.id, role: roleOf(session), isSystem: false };
+}
+
+// --- The person behind the submissions (F22c) -----------------------------
+
+/**
+ * Mark a pilot's identity as checked **by a human**.
+ *
+ * The honesty rules make this the one verification path there is: no SMS, no
+ * document scanner, no score. A reviewer looked at the document — usually
+ * having revealed the number through `revealPilotIdentityAction`, which left
+ * its own audit event — and is recording that they did.
+ *
+ * Four eyes is enforced in `verifyIdentity`, not here, so that any future
+ * caller inherits it. A reviewer verifying their own document is the purest
+ * case the rule exists for: it is the check that turns an account into a
+ * person, and self-certification would make every booking it gates worthless.
+ */
+export async function verifyIdentityAction(
+  userId: string,
+): Promise<ActionResult<{ verified: boolean }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("review.decide", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const outcome = await db.transaction((tx) =>
+    verifyIdentity(tx, { userId, actor: actorFrom(session) }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePilotSurfaces();
+  return { ok: true, data: { verified: outcome.verified } };
+}
+
+/**
+ * Refuse an identity, with words the pilot reads verbatim.
+ *
+ * The floor is the same twenty characters a registration rejection requires,
+ * and for the same reason: F17's profile screen renders this text back to the
+ * pilot as a banner and invites them to correct their details, and "no" is not
+ * something anybody can act on.
+ */
+export async function rejectIdentityAction(
+  userId: string,
+  reason: string,
+): Promise<ActionResult<{ verified: boolean }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("review.decide", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const written = reason.trim();
+  if (written.length < MIN_REASON_LENGTH) return refuse("reason_required");
+
+  const outcome = await db.transaction((tx) =>
+    rejectIdentity(tx, {
+      userId,
+      actor: actorFrom(session),
+      reason: written.slice(0, MAX_TEXT_LENGTH),
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePilotSurfaces();
+  return { ok: true, data: { verified: outcome.verified } };
+}
+
+/**
+ * The pilots directory's search — **a POST, and deliberately not a GET form.**
+ *
+ * Every other filter in this build is a GET form, because a filtered queue that
+ * is a link a reviewer can send to a colleague is worth a great deal. This one
+ * cannot be: the term may be a **national ID or an iqama number**, and a GET
+ * would put it in the URL, the browser's history, the server's access log and
+ * any referrer that leaves the origin. Personal data does not go in a query
+ * string, so the search that can carry it does not use one.
+ *
+ * The number never reaches a query either — `searchPilots` hashes it and
+ * matches `idDocumentHash`, so there is no substring search over a national
+ * register anywhere in this codebase.
+ */
+export async function searchPilotsAction(
+  term: string,
+): Promise<ActionResult<PilotSearchResult>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("admin.lookup", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  return {
+    ok: true,
+    data: await searchPilots(session, term.slice(0, 100)),
+  };
+}
+
+/**
+ * Close a filed report — **thread 35's other half.**
+ *
+ * `actioned` means it led somewhere, `dismissed` means a reviewer read it and
+ * it needed nothing. The note is optional and, unlike every other reason in
+ * this file, it reaches **nobody**: a report is usually filed by a member of
+ * the public who left no way to reply. It is for the next reviewer and for the
+ * regulator reading the trail.
+ *
+ * No four-eyes check. A report is filed *about an aircraft*, usually by a
+ * stranger, and there is no submitter whose own decision this would be — the
+ * nearest thing is a reviewer closing a report about their own drone, which is
+ * a conflict the trail records rather than one this action can resolve.
+ */
+export async function triageReportAction(
+  reportId: string,
+  status: "actioned" | "dismissed",
+  note: string,
+): Promise<ActionResult<{ status: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  const limit = await enforceLimit("review.decide", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  if (status !== "actioned" && status !== "dismissed") {
+    return refuse("invalid_transition");
+  }
+
+  const outcome = await db.transaction((tx) =>
+    triageReport(tx, {
+      reportId,
+      actor: actorFrom(session),
+      status,
+      note: note.slice(0, MAX_TEXT_LENGTH),
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidatePath("/[locale]/admin", "page");
+  return { ok: true, data: { status: outcome.status } };
+}
+
+/**
+ * "I am looking at this record" — the soft lock's heartbeat.
+ *
+ * **It grants nothing and refuses nothing.** The answer is the list of *other*
+ * reviewers currently on the same record, so the page can say who they are
+ * before two people start writing decisions. What actually stops the second
+ * decision overwriting the first is `applyTransition`'s row lock and the
+ * `already_applied` it answers; this is the courtesy that means it rarely
+ * happens.
+ *
+ * `entityType` is narrowed against a closed list here, not trusted: it reaches
+ * an enum column, and an unrecognised value would be a caller choosing which
+ * table's ids they are asking about.
+ */
+export async function touchPresenceAction(
+  entityType: string,
+  entityId: string,
+): Promise<ActionResult<{ viewers: Array<{ userId: string; name: string | null }> }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
+
+  if (
+    entityType !== "drone" &&
+    entityType !== "booking" &&
+    entityType !== "pilot_profile"
+  ) {
+    return refuse("not_found");
+  }
+
+  const limit = await enforceLimit("review.presence", "user", session.user.id);
+  if (!limit.ok) {
+    /*
+      A throttled heartbeat is not worth a message on screen — the indicator
+      simply does not update for a minute. It still answers with the refusal
+      rather than an empty list, so a caller cannot read "nobody is here" out
+      of "we did not ask".
+    */
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  const viewers = await touchPresence(session, { entityType, entityId });
+  return { ok: true, data: { viewers } };
+}
+
+/**
+ * The pilot's own screens change too when an identity is decided — F17 renders
+ * the verification state and the rejection banner from the same row.
+ */
+function revalidatePilotSurfaces(): void {
+  revalidatePath("/[locale]/admin", "page");
+  revalidatePath("/[locale]/admin/pilots", "page");
+  revalidatePath("/[locale]/admin/pilots/[id]", "page");
+  revalidatePath("/[locale]/admin/drones/[id]", "page");
+  revalidatePath("/[locale]/settings/profile", "page");
 }

@@ -4,11 +4,13 @@ import { AGE_FLAG_DAYS } from "@/components/admin/age-badge";
 import { QueueFilters } from "@/components/admin/queue-filters";
 import { QueueTable } from "@/components/admin/queue-table";
 import { QueueTabs } from "@/components/admin/queue-tabs";
+import { ReportTriage } from "@/components/admin/report-triage";
 import { UserRoleTable } from "@/components/admin/user-role-table";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button-link";
+import { Link } from "@/i18n/navigation";
 import {
   Card,
   CardContent,
@@ -23,8 +25,11 @@ import {
 } from "@/lib/admin/filters";
 import { requireReviewer } from "@/lib/auth-guards";
 import { listCities } from "@/lib/data/pilot";
-import { listDroneReports } from "@/lib/data/remote-id";
-import { countPendingReviews, listDroneQueue } from "@/lib/data/review";
+import {
+  countPendingReviews,
+  listDroneQueue,
+  listReports,
+} from "@/lib/data/review";
 import { listUsers } from "@/lib/data/user";
 import { formatDateTime, formatDays, formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
@@ -68,7 +73,7 @@ export default async function AdminPage({
     listDroneQueue(session),
     listCities(session),
     listUsers(session),
-    listDroneReports(session),
+    listReports(session),
     countPendingReviews(session),
   ]);
 
@@ -173,9 +178,15 @@ export default async function AdminPage({
       {/*
         F11's half: a report filed from the public scan page has to land
         somewhere a reviewer sees, or "files a report visible to reviewers" is a
-        claim about a table nobody reads. Still a read-only list — thread 35's
-        triage state is F22c's, and an enum member nothing writes would be a lie
-        about what the app does.
+        claim about a table nobody reads.
+
+        **Thread 35 closed here.** It was a read-only list until F22c: reports
+        accumulated for ever with no handled state, no assignment and no way to
+        close one. The columns were deliberately not added earlier, because a
+        state nothing writes is a lie about what the app does — so they arrived
+        with these controls. Open reports sort first, oldest first inside that;
+        handled ones stay below rather than vanishing, because "what did we do
+        about that sighting" is asked after the fact.
       */}
       <Card>
         <CardHeader>
@@ -188,13 +199,20 @@ export default async function AdminPage({
               {t("admin.reportsEmpty")}
             </p>
           ) : (
-            <ul className="flex flex-col gap-3 text-sm">
+            <ul className="flex flex-col gap-4 text-sm">
               {reports.map((report) => (
-                <li key={report.id} className="flex flex-col gap-1">
+                <li key={report.id} className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <span dir="ltr" className="font-mono font-medium">
                       {report.reportedCode}
                     </span>
+                    <Badge
+                      variant={
+                        report.status === "open" ? "default" : "secondary"
+                      }
+                    >
+                      {tReview(`reportStatus.${report.status}`)}
+                    </Badge>
                     {report.remoteIdCode ? null : (
                       <Badge variant="outline">
                         {t("admin.reportsUnresolved")}
@@ -210,6 +228,40 @@ export default async function AdminPage({
                       {report.locationNote}
                     </p>
                   ) : null}
+                  {/*
+                    The reported code resolved to a real aircraft, so the
+                    reviewer can go and look at it. A report about a code that
+                    resolved to nothing has nowhere to send them, and an
+                    unresolved badge above already says so.
+                  */}
+                  {report.droneId ? (
+                    <Link
+                      href={`/admin/drones/${report.droneId}`}
+                      className="text-sm underline"
+                    >
+                      {tReview("reportOpenAircraft")}
+                    </Link>
+                  ) : null}
+
+                  {report.status === "open" ? (
+                    <ReportTriage reportId={report.id} locale={locale} />
+                  ) : (
+                    <div className="text-muted-foreground flex flex-col gap-1 text-xs">
+                      <span>
+                        {report.handledAt
+                          ? tReview("reportHandledAt", {
+                              at: formatDateTime(report.handledAt, locale),
+                            })
+                          : null}
+                      </span>
+                      {/* The reviewer's own words, kept for the next one. */}
+                      {report.handlingNote ? (
+                        <p className="whitespace-pre-wrap">
+                          {report.handlingNote}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

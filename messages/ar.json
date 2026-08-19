@@ -840,18 +840,10 @@
   },
   "booking": {
     "title": "حجز رحلة",
-    "selectDrone": "اختر الطائرة",
-    "selectZone": "اختر المنطقة",
-    "selectDate": "اختر التاريخ",
-    "selectSlot": "اختر الفترة",
     "altitude": "الارتفاع المطلوب",
     "purpose": "الغرض من الرحلة",
-    "review": "مراجعة الطلب",
     "confirm": "تأكيد الحجز",
-    "slotsRemaining": "{count, plural, =0 {لا توجد أماكن} one {مكان واحد متبقٍ} two {مكانان متبقيان} few {# أماكن متبقية} other {# مكاناً متبقياً}}",
-    "noSlots": "لا توجد فترات متاحة في هذا اليوم.",
     "alternativesTitle": "فترات بديلة",
-    "success": "تم تأكيد حجزك.",
     "newTitle": "حجز رحلة",
     "newIntro": "اختر فترة في منطقة مسموحة. يُعاد التحقق من المجال الجوي عند التأكيد.",
     "noZones": "لا توجد مناطق مسموحة منشورة بعد.",
@@ -931,13 +923,14 @@
   },
   "bookings": {
     "title": "الحجز",
-    "upcoming": "القادمة",
-    "past": "السابقة",
-    "empty": "لا توجد حجوزات.",
-    "reference": "رقم الحجز",
+    "empty": {
+      "upcoming": "لا توجد رحلات معتمدة قادمة. احجز واحدة وستظهر هنا.",
+      "pending": "لا شيء بانتظار المراجعة.",
+      "past": "لم تحدث أي رحلة بعد.",
+      "cancelled": "لا توجد رحلات ملغاة أو مرفوضة."
+    },
     "cancelBooking": "إلغاء الحجز",
     "cancelConfirm": "هل تريد إلغاء هذا الحجز؟",
-    "statusConfirmed": "مؤكد",
     "statusCancelled": "ملغى",
     "statusCompleted": "منتهٍ",
     "statusNoShow": "لم يُنفّذ",
@@ -970,7 +963,19 @@
       "invalid_transition": "هذا غير ممكن لهذا الحجز الآن.",
       "not_authenticated": "يرجى تسجيل الدخول مجدداً.",
       "unknown": "تعذّر تنفيذ ذلك."
-    }
+    },
+    "bookAnother": "حجز رحلة",
+    "tabsLabel": "تصفية الحجوزات",
+    "unknownZone": "منطقة غير معروفة",
+    "tab": {
+      "upcoming": "القادمة",
+      "pending": "قيد المراجعة",
+      "past": "السابقة",
+      "cancelled": "الملغاة"
+    },
+    "statusPending": "قيد المراجعة",
+    "statusApproved": "معتمد",
+    "statusRejected": "مرفوض"
   },
   "admin": {
     "title": "لوحة التحكم",
@@ -1189,7 +1194,58 @@
     "title": "لوحتي",
     "welcome": "أهلاً، {name}",
     "signedInAs": "مسجّل الدخول بصفة {role}",
-    "placeholder": "ستظهر هنا طائراتك المسجّلة وحجوزاتك القادمة حين تُبنى تلك الشاشات."
+    "actionRequired": "إجراء مطلوب",
+    "nextFlight": "الرحلة القادمة",
+    "noUpcoming": "لا توجد رحلات معتمدة قادمة.",
+    "bookAFlight": "حجز رحلة",
+    "viewFlight": "عرض الرحلة",
+    "goCheckIn": "تسجيل الحضور",
+    "checkInOpen": "تسجيل الحضور متاح الآن",
+    "remoteId": "الهوية عن بُعد",
+    "countdownDays": "بعد {days}ي {hours}س",
+    "countdownHours": "بعد {hours}س {minutes}د",
+    "countdownMinutes": "بعد {minutes}د",
+    "myDrones": "طائراتي",
+    "noDrones": "لا توجد طائرات مسجّلة بعد.",
+    "expiresOn": "ينتهي التسجيل في {date}",
+    "recentBookings": "الرحلات الأخيرة",
+    "noBookings": "لا توجد رحلات بعد.",
+    "seeAll": "عرض الكل",
+    "quickActions": "إجراءات سريعة",
+    "registerDrone": "تسجيل طائرة",
+    "openMap": "فتح الخريطة",
+    "adminArea": "لوحة التحكم",
+    "onboardingTitle": "البداية",
+    "onboardingIntro": "ثلاث خطوات بينك وبين رحلة نظامية.",
+    "actions": {
+      "completeProfile": "ملفك الشخصي غير مكتمل.",
+      "awaitingVerification": "وثيقة هويتك بانتظار المراجعة.",
+      "rejectedDrone": "رُفض تسجيل إحدى طائراتك.",
+      "expiringRegistration": "ينتهي تسجيل {nickname} في {date}.",
+      "flightToday": "لديك رحلة اليوم."
+    },
+    "actionCta": {
+      "completeProfile": "أكمله",
+      "awaitingVerification": "عرض الملف",
+      "rejectedDrone": "عرض السبب",
+      "expiringRegistration": "عرض الطائرة",
+      "flightToday": "افتحها"
+    },
+    "onboarding": {
+      "profile": "أكمل ملفك الشخصي",
+      "drone": "سجّل طائرتك",
+      "book": "احجز رحلتك الأولى"
+    },
+    "onboardingHint": {
+      "profile": "اسمك، ووثيقة هويتك، وطريقة التواصل معك.",
+      "drone": "الطائرات المصنّعة ذاتياً وطائرات الـ FPV مرحّب بها — دون رقم تسلسلي.",
+      "book": "بعد اعتماد طائرتك، اختر منطقة وفترة."
+    },
+    "onboardingCta": {
+      "profile": "ابدأ",
+      "drone": "سجّل",
+      "book": "احجز"
+    }
   },
   "email": {
     "common": {

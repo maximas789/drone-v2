@@ -11,7 +11,8 @@ import { requireUser } from "@/lib/auth-guards";
 import { getBookingById, getBookingCopilots } from "@/lib/data/booking";
 import { getDroneById, getRemoteIdForDrone } from "@/lib/data/drone";
 import { listActiveZones } from "@/lib/data/zone";
-import { formatAltitude, formatDateTime } from "@/lib/format";
+import { SlotTime } from "@/components/booking/slot-time";
+import { formatAltitude } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 
 /**
@@ -78,9 +79,8 @@ export default async function BookingDetailPage({
         <h1 className="text-2xl font-semibold">
           {zone ? (locale === "ar" ? zone.nameAr : zone.nameEn) : t("title")}
         </h1>
-        <p dir="ltr" className="text-muted-foreground text-start">
-          {formatDateTime(row.slotStart, locale)} –{" "}
-          {formatDateTime(row.slotEnd, locale)}
+        <p className="text-muted-foreground">
+          <SlotTime start={row.slotStart} end={row.slotEnd} locale={locale} />
         </p>
       </header>
 

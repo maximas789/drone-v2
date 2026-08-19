@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, asc, count, desc, eq, gte, inArray, lt, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { booking, bookingCopilot } from "@/lib/db/schema";
+import { booking, bookingCopilot, remoteId, zone } from "@/lib/db/schema";
 import { isReviewer, type Session } from "@/lib/session";
 
 /** The statuses that hold a seat. Must match the partial unique indexes. */
@@ -157,4 +157,72 @@ export async function listPendingBookings(session: Session, limit = 50) {
     orderBy: [asc(booking.createdAt)],
     limit,
   });
+}
+
+/**
+ * Zone names and Remote ID codes for a set of the caller's bookings, keyed by
+ * booking id.
+ *
+ * **Two queries, not two per row.** The list and the dashboard both render
+ * every booking a pilot holds; a per-row lookup would be N+1 round trips on the
+ * screens whose whole job is to be a list.
+ *
+ * **Scoped by re-reading the caller's own bookings**, not by trusting the ids
+ * passed in — an id list is caller-supplied, and taking it at face value would
+ * make this a lookup for anybody's flights. Same defence as
+ * `listPhotoAndRemoteIdForDrones`.
+ */
+export async function listZoneAndRemoteIdForBookings(
+  session: Session,
+  bookingIds: string[],
+): Promise<
+  Record<
+    string,
+    { zoneNameAr: string; zoneNameEn: string; remoteIdCode: string | null }
+  >
+> {
+  if (bookingIds.length === 0) return {};
+
+  const mine = await db.query.booking.findMany({
+    where: and(
+      eq(booking.pilotUserId, session.user.id),
+      inArray(booking.id, bookingIds),
+    ),
+    columns: { id: true, zoneId: true, remoteIdId: true },
+  });
+  if (mine.length === 0) return {};
+
+  const [zones, codes] = await Promise.all([
+    db.query.zone.findMany({
+      where: inArray(
+        zone.id,
+        mine.map((row) => row.zoneId),
+      ),
+      columns: { id: true, nameAr: true, nameEn: true },
+    }),
+    db.query.remoteId.findMany({
+      where: inArray(
+        remoteId.id,
+        mine.map((row) => row.remoteIdId),
+      ),
+      columns: { id: true, code: true },
+    }),
+  ]);
+
+  const zoneById = new Map(zones.map((row) => [row.id, row]));
+  const codeById = new Map(codes.map((row) => [row.id, row.code]));
+
+  const out: Record<
+    string,
+    { zoneNameAr: string; zoneNameEn: string; remoteIdCode: string | null }
+  > = {};
+  for (const row of mine) {
+    const zoneRow = zoneById.get(row.zoneId);
+    out[row.id] = {
+      zoneNameAr: zoneRow?.nameAr ?? "",
+      zoneNameEn: zoneRow?.nameEn ?? "",
+      remoteIdCode: codeById.get(row.remoteIdId) ?? null,
+    };
+  }
+  return out;
 }

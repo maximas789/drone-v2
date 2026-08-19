@@ -31,7 +31,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 3 — Auth | F05 | ⚠️ Done with deviations (Session 5). **All acceptance criteria verified**, including against a production build. |
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
-| 6 — Pilot experience | F16–F21 | 🟨 **In progress (Sessions 14–24).** **F16–F20 done, and F21a** — a pilot can go from the map to a booked seat. **F21b** (the `/bookings` list and the pilot dashboard) is all that remains in this wave. |
+| 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⬜ Not started |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
@@ -149,6 +149,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 56 | **There is no signed-in `/map` surface, and `nav.map` has pointed at nothing since F16a.** F20's file list names `src/app/[locale]/(app)/map/page.tsx`; F20 shipped the map on the public `/zones` instead, because that is where the airspace is published and a second route showing the same map would be two pages to keep in sync. What `/zones` deliberately does **not** have is F20's mobile layout — a full-screen map with a drag-up bottom sheet — because `/zones` is a document with a map in it, not a map application. **F21 needs that surface to book from and should build it**, with the sheet, and wire `nav.map` to it. | F20b | F21 |
 | 57 | **The last-seat race has never been run in a browser.** `createBookingWithSeat` retries against `booking_seat_uniq` and `createBookingAction` answers `slot_full` with three alternatives, which F21a's wizard renders as one-click buttons — but seeded capacity is 4–6 and no seat has actually been contended by two concurrent pilots. F13's suite covers the transaction; **the alternatives UI is code that has been read, not run.** Needs two sessions booking the same seat at once, or an injected `pickSeat`. | F21a | F31 |
 | 58 | **Ownership was proved only in the "does not exist" direction.** `/bookings/[id]` 404s for a well-formed id that is not this pilot's *or* does not exist — `getBookingById` returns `null` for both, deliberately, so the split cannot enumerate other pilots' flights. Verifying the *other pilot's booking* case needs a second account, and **the first account created becomes admin**, so a probe account is forbidden here. Same gap applies to F18's drones. | F21a | F31 |
+| 59 | **A `"use client"` module's exports are client *references*, so a Server Component cannot call them.** F21b's dashboard 500'd at request time because `countdownParts` lived in `next-flight.tsx`; `typecheck`, `lint` and `test` were all green. The mirror of the `"use server"` trap in `validation/declaration.ts`. **Anything a server page and a client component both call belongs in a plain module** — here `src/lib/dashboard/countdown.ts`. Kept as a standing warning, not a task. | F21b | every wave with client components |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -310,6 +311,78 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 25 — Wave 6 · F21b Bookings list and pilot dashboard (**F21 complete — Wave 6 is done**)
+
+**Date:** 2026-08-19
+**Status:** ⚠️ done with deviations · **F21 is complete, and with it Wave 6.** Ran straight on from Session 24 without a `/clear`, at the user's request.
+
+**Wave 3's dashboard placeholder is gone.** It said hello and printed the account's role. The real one answers the three questions a pilot arrives with — is anything blocking me, when am I next flying, what do I own — and it reads live rows to do it.
+
+**Built:**
+
+- `/[locale]/(app)/bookings` — four tabs, the tab in the URL rather than in client state, so back returns to the tab you were on and the page ships no JavaScript for its own navigation.
+- `/[locale]/(app)/dashboard` — action-required, next flight with a live countdown, aircraft summary, recent flights, quick actions, and the day-one onboarding.
+- `src/components/dashboard/{action-required,next-flight,drone-summary,onboarding}.tsx`.
+- `src/components/booking/{booking-row,status-badge,slot-time}.tsx`.
+- `src/lib/dashboard/countdown.ts` — the countdown arithmetic, pure.
+- `listZoneAndRemoteIdForBookings` in `src/lib/data/booking.ts` — two queries for a whole list, scoped by re-reading the caller's own bookings rather than trusting the ids passed in.
+- `src/lib/db/status-labels.test.ts` — see below.
+- 52 catalogue keys, 12 dead ones deleted (**1155**).
+
+**Three defects, and two of them are new instances of failures this build has already had.**
+
+1. **The dashboard 500'd on first open: a Server Component calling an export of a `"use client"` module.** `countdownParts` and `formatCountdown` started life inside `next-flight.tsx`, which is `"use client"` — and **every export of a client module is a client *reference***, so calling one during the server render throws at request time. `typecheck`, `lint` and `test` were all green. This is the exact mirror of the `"use server"` trap recorded in `validation/declaration.ts` (a `"use server"` module may export only async functions), and the fix is the same shape: the pure arithmetic moved to `src/lib/dashboard/countdown.ts`, imported by both sides. **The countdown has to be computed on both** — the server renders the first value so the markup matches, the client re-renders it every minute — which is exactly why it could not live in either.
+
+2. **`bookings.statusPending` rendered as a raw key beside a flight.** `BookingStatusBadge` looks up `statusPending` / `statusApproved` / `statusRejected`; the catalogue carried `statusConfirmed` — a name matching no value `booking_status` can hold — and nothing else. **`i18n:check` cannot see this**: it compares the catalogues to each other, so a key missing from *both* is missing consistently. Same failure as `nav.dashboard` in F16a. Keys added, `statusConfirmed` deleted, **and this time it is tested**: `src/lib/db/status-labels.test.ts` asserts every `bookingStatus` and `droneStatus` enum value has a label in both catalogues, and that no stray `status*` key survives for a value the column cannot hold. Mutation-checked — removing a key and reinstating `statusConfirmed` killed two tests.
+
+3. **A bidi defect that no text assertion can catch.** `<span dir="ltr">{date} {time} – {time}</span>` renders `19 أغسطس 2026 15:00 – 17:00` as **`19 17:00 – 15:00 2026 أغسطس`**. The Arabic month is a strong RTL run and the numerals around it are neutral, so forcing the *container* to LTR resolves the whole line into an order nobody wrote. **`innerText` is correct in every one of these cases** — the logical order is fine and only the visual order is wrong — so it is invisible to any test that reads text, and it was found by looking at a screenshot. Fixed with `<bdi>`, which *isolates*: the date resolves in its own context, the range in another with its own `dir="ltr"` inside. `src/components/booking/slot-time.tsx` is the one implementation, and the same fix was applied to the map's `nextOpenAt`, which had it too.
+
+**Deviations, each with its reason:**
+
+- **`rejected` shares the "cancelled" tab.** F21 names four tabs. A rejected booking is a flight that is not happening, exactly like a cancelled one; a fifth tab would leave five mostly empty to distinguish two states the badge on the row already distinguishes.
+- **Cancelled and rejected are pulled out of *both* time buckets.** A booking cancelled yesterday for a slot next week is still cancelled — leaving it under "upcoming" would have the tab promise a flight that is not happening.
+- **The Remote ID is on every row and every aircraft card**, not only on the detail pages. A pilot scanning for the booking an inspector just asked about is matching a code on a sticker; making them open each row turns a list into an index.
+- **Onboarding replaces the dashboard only while the journey is untouched** — no aircraft *and* no bookings. The moment either exists the real cards are more useful, and a tutorial that lingers is one people learn to scroll past.
+- **Exactly one onboarding step is ever actionable.** Registering an aircraft before the profile is complete is a route F18's guard bounces; offering it would be offering a door that closes in your face. Later steps show as numbered text with no control, rather than as disabled buttons that invite a click doing nothing.
+- **`ActionRequired` renders nothing when nothing is required** — no "you're all set" card. A heading that is always there is a heading people stop reading, and then the one week it matters they skip it too.
+- **The countdown ticks every minute, not every second.** The card answers "how long have I got", which is a question asked in minutes.
+- **Twelve dead catalogue keys deleted** — `dashboard.placeholder`, `bookings.{upcoming,past,reference}`, `booking.{selectDrone,selectZone,selectDate,selectSlot,review,slotsRemaining,noSlots,success}` — all left over from screens that were planned differently. A key nothing renders is a claim about a screen that does not exist.
+
+**Verified — in Chrome, over HTTP, both locales:**
+
+| Criterion | Result |
+|---|---|
+| **Four tabs, each with its own empty state** | OK — upcoming shows two approved flights soonest-first; pending shows the Ammariyah request; past reads *"No flights have happened yet"*; cancelled reads *"Nothing cancelled or rejected"* |
+| **The tab is in the URL** | OK — `?tab=pending` is a real link, so back and middle-click both behave |
+| **Action required appears only when required** | OK — three items for this account (a rejected aircraft, a registration expiring 29 August, a flight today) and no "complete your profile" or "awaiting verification", which are the two that no longer apply |
+| **A registration expiring within 30 days appears** | OK — `EXPIRY_WARNING_DAYS` is F18's constant, reused rather than restated |
+| **Next flight with a live countdown** | OK — *"In 3h 30m"*, ticking, with the zone, the slot and the Remote ID; Latin numerals in Arabic |
+| **Day-one onboarding, not an empty grid** | OK — by **temporarily forcing `dayOne`**, then reverting: three numbered steps, step 1 struck through as done, step 2 the only one carrying a link (`/drones/new`), step 3 with no control |
+| **Empty states read as intentional** | OK in both languages — a sentence per tab rather than one shared "nothing here" |
+| **Bidi** | OK after the fix — `19 أغسطس 2026 15:00 – 17:00` renders in that order in an Arabic page, checked against a screenshot rather than against `innerText` |
+| **English** | OK — no raw keys anywhere on either screen. Aircraft nicknames stay Arabic, correctly: they are the pilot's own words, not chrome |
+| **375 px** | OK — via the iframe (thread 44): `scrollWidth === clientWidth` on both, nothing wider than the viewport |
+| **Ownership** | OK by construction — every read goes through `src/lib/data/*` with the session first; nothing on either screen can reach another pilot's rows |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (**1155**), `pnpm test` (**701**), `pnpm build` — all green. All four booking and dashboard routes build **dynamic**, which they must: every one reads the session.
+
+**Not verified:**
+
+- **A genuinely new account's dashboard.** The day-one state was reached by forcing the flag, not by signing up — **the first account created becomes admin**, so a probe account is forbidden here. The branch was exercised; the *condition* reaching it was not.
+- **The no-show and completed statuses on a row.** Nothing sets them yet: `no_show` needs the slot to pass unattended and `completed` needs F22's lifecycle. Their labels are asserted by `status-labels.test.ts` but have never been rendered.
+- **Dark mode and 1440 px** on both screens.
+- **A dashboard with more than five recent flights**, so the `RECENT_LIMIT` cut and the "see all" link have not been seen doing their job.
+
+**Next session should know:**
+
+- **Wave 6 is complete. Wave 7 — the admin side, F22–F25 — is next, and F22 is the one that unblocks the most.** Four items across Sessions 24 and 25 are waiting on it: identity verification, booking rejection, authority cancellation, and the `completed` / `no_show` statuses.
+- **`status-labels.test.ts` is the guard against a whole class of bug** — a status label missing from both catalogues. Extend it when a new enum grows a badge, rather than discovering it on a page.
+- **`slot-time.tsx` is the one way to render a slot.** Do not put `dir="ltr"` on an element containing a formatted Arabic date; isolate with `<bdi>` instead. This has now been wrong once and will be again.
+- **The dev database holds three bookings and a verified profile**, so both new screens have data. The empty states need checking *around* that, not instead of it.
+- **The profile's ID number is still fabricated** (`1055512345`), and threads 50 and 51 are open. All three are the user's to resolve.
 
 ---
 

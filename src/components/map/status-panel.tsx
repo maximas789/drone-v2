@@ -164,9 +164,16 @@ export function StatusPanel({
            * Arabic as well as English — `ar-SA` would otherwise print a Hijri
            * date here, on the one line whose whole job is to name a moment.
            */}
-          <span dir="ltr" className="text-muted-foreground text-sm">
+          {/**
+           * `<bdi>`, not `dir="ltr"`. A forced-LTR element containing
+           * `19 أغسطس 2026 في 15:00` reorders it into an order nobody wrote —
+           * the Arabic month is a strong RTL run and the numerals around it are
+           * neutral. Isolation keeps the formatted string as `format.ts` built
+           * it. See `booking/slot-time.tsx`.
+           */}
+          <bdi className="text-muted-foreground text-sm">
             {formatDateTime(new Date(decision.nextOpenAt), locale)}
-          </span>
+          </bdi>
         </div>
       ) : null}
 

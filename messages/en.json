@@ -840,18 +840,10 @@
   },
   "booking": {
     "title": "Book a flight",
-    "selectDrone": "Choose a drone",
-    "selectZone": "Choose a zone",
-    "selectDate": "Choose a date",
-    "selectSlot": "Choose a slot",
     "altitude": "Requested altitude",
     "purpose": "Purpose of flight",
-    "review": "Review request",
     "confirm": "Confirm booking",
-    "slotsRemaining": "{count, plural, =0 {No places left} one {1 place left} other {# places left}}",
-    "noSlots": "No slots available on this day.",
     "alternativesTitle": "Alternative slots",
-    "success": "Your booking is confirmed.",
     "newTitle": "Book a flight",
     "newIntro": "Pick a slot in a permitted zone. The airspace is checked again when you confirm.",
     "noZones": "No permitted zones are published yet.",
@@ -931,13 +923,14 @@
   },
   "bookings": {
     "title": "Booking",
-    "upcoming": "Upcoming",
-    "past": "Past",
-    "empty": "No bookings yet.",
-    "reference": "Booking reference",
+    "empty": {
+      "upcoming": "No approved flights coming up. Book one and it will appear here.",
+      "pending": "Nothing waiting on a reviewer.",
+      "past": "No flights have happened yet.",
+      "cancelled": "Nothing cancelled or rejected."
+    },
     "cancelBooking": "Cancel booking",
     "cancelConfirm": "Cancel this booking?",
-    "statusConfirmed": "Confirmed",
     "statusCancelled": "Cancelled",
     "statusCompleted": "Completed",
     "statusNoShow": "No-show",
@@ -970,7 +963,19 @@
       "invalid_transition": "That is not possible for this booking now.",
       "not_authenticated": "Please sign in again.",
       "unknown": "That could not be done."
-    }
+    },
+    "bookAnother": "Book a flight",
+    "tabsLabel": "Filter bookings",
+    "unknownZone": "Unknown zone",
+    "tab": {
+      "upcoming": "Upcoming",
+      "pending": "Pending",
+      "past": "Past",
+      "cancelled": "Cancelled"
+    },
+    "statusPending": "Pending review",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected"
   },
   "admin": {
     "title": "Admin",
@@ -1189,7 +1194,58 @@
     "title": "My dashboard",
     "welcome": "Welcome, {name}",
     "signedInAs": "Signed in as {role}",
-    "placeholder": "Your registered aircraft and upcoming bookings will appear here once those screens are built."
+    "actionRequired": "Action required",
+    "nextFlight": "Next flight",
+    "noUpcoming": "You have no approved flights coming up.",
+    "bookAFlight": "Book a flight",
+    "viewFlight": "View this flight",
+    "goCheckIn": "Check in",
+    "checkInOpen": "Check-in is open",
+    "remoteId": "Remote ID",
+    "countdownDays": "In {days}d {hours}h",
+    "countdownHours": "In {hours}h {minutes}m",
+    "countdownMinutes": "In {minutes}m",
+    "myDrones": "My aircraft",
+    "noDrones": "No aircraft registered yet.",
+    "expiresOn": "Registration expires {date}",
+    "recentBookings": "Recent flights",
+    "noBookings": "No flights yet.",
+    "seeAll": "See all",
+    "quickActions": "Quick actions",
+    "registerDrone": "Register an aircraft",
+    "openMap": "Open the map",
+    "adminArea": "Admin",
+    "onboardingTitle": "Getting started",
+    "onboardingIntro": "Three steps between you and a legal flight.",
+    "actions": {
+      "completeProfile": "Your pilot profile is not complete.",
+      "awaitingVerification": "Your identity document is waiting to be reviewed.",
+      "rejectedDrone": "An aircraft registration was rejected.",
+      "expiringRegistration": "{nickname}'s registration expires {date}.",
+      "flightToday": "You have a flight today."
+    },
+    "actionCta": {
+      "completeProfile": "Complete it",
+      "awaitingVerification": "View profile",
+      "rejectedDrone": "See why",
+      "expiringRegistration": "View aircraft",
+      "flightToday": "Open it"
+    },
+    "onboarding": {
+      "profile": "Complete your pilot profile",
+      "drone": "Register your aircraft",
+      "book": "Book your first flight"
+    },
+    "onboardingHint": {
+      "profile": "Your name, your ID document, and how to reach you.",
+      "drone": "Self-built and FPV aircraft are welcome — no serial number needed.",
+      "book": "Once your aircraft is approved, pick a zone and a slot."
+    },
+    "onboardingCta": {
+      "profile": "Start",
+      "drone": "Register",
+      "book": "Book"
+    }
   },
   "email": {
     "common": {

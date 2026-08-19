@@ -19,7 +19,7 @@ import {
   listSlotsAction,
   type SlotListing,
 } from "@/lib/actions/booking";
-import { formatAltitude, formatDate, formatSeconds, formatTime } from "@/lib/format";
+import { formatAltitude, formatDate, formatSeconds } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import { dayOptions } from "@/lib/maps/probe";
 import {
@@ -31,6 +31,7 @@ import { Copilots, type CopilotDraft } from "./copilots";
 import { DateStrip } from "./date-strip";
 import { DroneSelect, type BookableDrone } from "./drone-select";
 import { SafetyAck } from "./safety-ack";
+import { SlotTime } from "./slot-time";
 import { SlotPicker } from "./slot-picker";
 
 /**
@@ -379,10 +380,7 @@ export function BookingWizard({
                         setReasons([]);
                       }}
                     >
-                      <span dir="ltr">
-                        {formatDate(new Date(slot.slotStart), locale)}{" "}
-                        {formatTime(new Date(slot.slotStart), locale)}
-                      </span>
+  
                     </Button>
                   </li>
                 ))}
@@ -494,11 +492,11 @@ export function BookingWizard({
               {locale === "ar" ? zone.nameAr : zone.nameEn}
             </Row>
             <Row label={t("slot")}>
-              <span dir="ltr">
-                {slotStart
-                  ? `${formatDate(new Date(slotStart), locale)} ${formatTime(new Date(slotStart), locale)}`
-                  : "—"}
-              </span>
+              {slotStart ? (
+                <SlotTime start={new Date(slotStart)} locale={locale} />
+              ) : (
+                "—"
+              )}
             </Row>
             <Row label={t("drone")}>
               {drones.find((drone) => drone.id === droneId)?.nickname ?? "—"}

@@ -66,6 +66,10 @@ export default async function AdminZonesPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <ButtonLink href="/admin/zones/new">{tZones("newZone")}</ButtonLink>
+        {/* A zone belongs to a city, so the list of cities is one click away. */}
+        <Link href="/admin/cities" className="text-sm underline">
+          {tZones("citiesLink")}
+        </Link>
         <p className="text-muted-foreground text-sm">{tZones("newZoneHint")}</p>
       </div>
 

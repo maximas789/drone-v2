@@ -47,10 +47,16 @@ export default async function NewZonePage() {
 
       {cities.length === 0 ? (
         /*
-          A zone belongs to a city, and F23c is what adds one. Saying so beats
-          a select with nothing in it.
+          A zone belongs to a city, so with no cities there is nothing to draw
+          against. The empty state links to the screen that fixes it rather
+          than leaving a select with nothing in it.
         */
-        <p className="text-muted-foreground text-sm">{t("noCities")}</p>
+        <p className="text-muted-foreground text-sm">
+          {t("noCities")}{" "}
+          <Link href="/admin/cities" className="underline">
+            {t("noCitiesLink")}
+          </Link>
+        </p>
       ) : (
         <ZoneForm
           cities={cities}

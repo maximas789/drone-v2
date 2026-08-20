@@ -113,12 +113,21 @@ export default async function EditZonePage({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/admin/zones"
           className="text-muted-foreground text-sm underline"
         >
           {t("backToZones")}
+        </Link>
+        {/*
+          Closures live on their own route rather than as a fourth panel here.
+          A closure is a temporary act over a zone that already exists, with its
+          own list and its own cancellation preview — and this page is already
+          the boundary, the rules and the week.
+        */}
+        <Link href={`/admin/zones/${zone.id}/closures`} className="text-sm underline">
+          {t("closuresLink")}
         </Link>
       </div>
 

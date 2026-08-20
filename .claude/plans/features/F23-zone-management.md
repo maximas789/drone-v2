@@ -11,7 +11,7 @@ rule: **nothing in a part points at a route a later part builds.**
 |---|---|---|
 | **F23a** | The **geometry layer** — winding, self-intersection, area, the vertex cap, the Saudi-bounds check and the GeoJSON parser, all pure and tested — plus `/admin/zones` (the list) and `/admin/zones/new` and `/admin/zones/[id]`: draw with terra-draw, the bilingual form, the rules with their explanations, and create/update of a **draft** zone. | ✅ Session 29 |
 | **F23b** | Operating hours (Sunday-first grid, overlap refusal), the live slot preview through the real `deriveSlots`, and the **publish lifecycle** — publish / suspend / archive with their impact warnings, plus the consequences of editing a published zone's geometry. | ✅ Session 30 |
-| **F23c** | `/admin/zones/[id]/closures` — the NOTAM analogue with its cancellation preview and fan-out — and `/admin/cities`. | ⬜ |
+| **F23c** | `/admin/zones/[id]/closures` — the NOTAM analogue with its cancellation preview and fan-out — and `/admin/cities`. | ✅ Session 31 |
 
 **Everything F23a saves is a draft**, which is why the lifecycle can wait: a
 draft zone is invisible to pilots and produces no slots, so nothing F23a writes
@@ -153,10 +153,10 @@ src/lib/geo/__tests__/{validate,winding}.test.ts
 - [ ] The pilot map shows the new geometry after the cache invalidates. **Unrun** — no boundary was moved in a browser. `revalidateZoneSurfaces()` already covered `/api/zones/geojson` from F23a.
 
 **Closures & access**
-- [ ] Creating a closure previews exactly which bookings it will cancel, with pilot names, before publishing.
-- [ ] Publishing cancels them all with `cancelled_by_closure` and notifies each pilot.
-- [ ] The closure reason is required in both languages and reaches the pilot in theirs.
-- [ ] A **reviewer** (not admin) gets 404 on every zone-write route and is refused by every zone action.
-- [ ] Creating a city makes it selectable in the zone editor.
+- [x] Creating a closure previews exactly which bookings it will cancel, with pilot names, before publishing. *(Twice, in Arabic: from the form before saving, and again on the unpublished row before publishing. The preview query is asserted equal to the fan-out's own `listBookingsOverlapping` over the same window, half-open edges included.)*
+- [x] Publishing cancels them all with `cancelled_by_closure` and notifies each pilot. **Run, for the first time on this machine** — `inngest-cli` was installed this session, so `closure-fanout` executed and completed: booking `cancelled`, one `booking.cancelled_by_closure` with `actorIsSystem`, a `zoneClosed` notification, and a `booking-cancelled-by-authority` email rendered and logged. Thread 68 closed.
+- [~] The closure reason is required in both languages and reaches the pilot in theirs. **Half.** Both languages are required by `validateClosure` and by the action; the **email** quotes the pilot's own language verbatim. The **booking page does not** — `booking.cancellationReason` is one column and holds the authored Arabic, so an English-reading pilot sees Arabic under *"Why this was cancelled"*. Seen on screen. Thread 71.
+- [~] A **reviewer** (not admin) gets 404 on every zone-write route and is refused by every zone action. **Half.** All five new actions were POSTed directly with a **forged cookie** and every one answered `not_authenticated`, writing nothing; a cookieless POST is redirected by the proxy and returns no data. The *reviewer* half still needs a second account — thread 64.
+- [x] Creating a city makes it selectable in the zone editor. *(Tabuk added through the form in Arabic — a reversed lat/lng refused live first — and it appears in the zone editor's city select.)*
 - [ ] The editor is usable in Arabic RTL — toolbar, form, and hours grid all mirror correctly while the map itself does not.
 - [x] `pnpm test` passes the geometry validation and winding suites; `tsc`, `lint`, `build` pass. *(831 tests, all green after F23b; each new claim proven to fail on a deliberate mutation.)*

@@ -63,7 +63,17 @@ export async function getZoneHours(_session: Session | null, zoneId: string) {
   });
 }
 
-/** Closures overlapping a window. Half-open: `[from, to)`. */
+/**
+ * **Published** closures overlapping a window. Half-open: `[from, to)`.
+ *
+ * The `published_at` filter was added in F23c, when the closure editor made an
+ * unpublished closure a row that actually exists. Before that this function had
+ * no caller and returned every closure regardless — a trap waiting for the
+ * first pilot-facing caller, because an unpublished closure is a draft nobody
+ * has decided on and showing one on a public surface would announce a closure
+ * that may never happen. `listClosuresForZones` below always filtered; the two
+ * now agree.
+ */
 export async function listClosures(
   _session: Session | null,
   zoneId: string,
@@ -73,6 +83,7 @@ export async function listClosures(
   return db.query.zoneClosure.findMany({
     where: and(
       eq(zoneClosure.zoneId, zoneId),
+      isNotNull(zoneClosure.publishedAt),
       lte(zoneClosure.startsAt, to),
       gte(zoneClosure.endsAt, from),
     ),

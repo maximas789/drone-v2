@@ -1,11 +1,18 @@
 import "server-only";
 
-import { and, asc, count, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, gte, inArray, lt, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 // Thread 26: `user` comes from `auth-schema` directly, never through the
 // `export *` barrel, which does not re-export it under plain Node ESM.
 import { user } from "@/lib/db/auth-schema";
-import { booking, city, drone, zone, zoneHour } from "@/lib/db/schema";
+import {
+  booking,
+  city,
+  drone,
+  zone,
+  zoneClosure,
+  zoneHour,
+} from "@/lib/db/schema";
 import { isAdmin, type Session } from "@/lib/session";
 
 /**
@@ -227,4 +234,146 @@ export async function listZoneBookingImpact(
       ),
     )
     .orderBy(asc(booking.slotStart));
+}
+
+export type ZoneClosureRow = {
+  id: string;
+  zoneId: string;
+  startsAt: Date;
+  endsAt: Date;
+  reasonAr: string;
+  reasonEn: string;
+  authorityRef: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+};
+
+/**
+ * Every closure on a zone, **published or not**, soonest first.
+ *
+ * The admin counterpart of `data/zone.ts`'s reader, which filters on
+ * `published_at` because a pilot must never see a closure nobody has published.
+ * This one deliberately does not: an unpublished closure is precisely what this
+ * screen exists to show, and the caller renders the two states differently.
+ */
+export async function listZoneClosures(
+  session: Session,
+  zoneId: string,
+): Promise<ZoneClosureRow[]> {
+  if (!isAdmin(session)) return [];
+  return db
+    .select({
+      id: zoneClosure.id,
+      zoneId: zoneClosure.zoneId,
+      startsAt: zoneClosure.startsAt,
+      endsAt: zoneClosure.endsAt,
+      reasonAr: zoneClosure.reasonAr,
+      reasonEn: zoneClosure.reasonEn,
+      authorityRef: zoneClosure.authorityRef,
+      publishedAt: zoneClosure.publishedAt,
+      createdAt: zoneClosure.createdAt,
+    })
+    .from(zoneClosure)
+    .where(eq(zoneClosure.zoneId, zoneId))
+    .orderBy(asc(zoneClosure.startsAt));
+}
+
+/** One closure, for the action that publishes or withdraws it. */
+export async function getZoneClosureForAdmin(session: Session, id: string) {
+  if (!isAdmin(session)) return null;
+  const row = await db.query.zoneClosure.findFirst({
+    where: eq(zoneClosure.id, id),
+  });
+  return row ?? null;
+}
+
+/**
+ * **Exactly which flights a closure window would cancel, by name.**
+ *
+ * The half-open overlap the fan-out itself uses — `slotStart < closureEnd` and
+ * `slotEnd > closureStart` — so the preview and `listBookingsOverlapping` in
+ * `inngest/queries.ts` cannot disagree about whether a slot that ends the
+ * moment a closure begins is caught. It is not: adjacent is not overlapping.
+ *
+ * `pending` and `approved` both, because the fan-out cancels both: a booking
+ * still waiting for a reviewer is still a pilot who has planned a flight.
+ *
+ * A preview that under-reported by one row would be worse than no preview at
+ * all, so it is the same predicate rather than a second one written to match.
+ */
+export async function listBookingsInClosureWindow(
+  session: Session,
+  zoneId: string,
+  startsAt: Date,
+  endsAt: Date,
+): Promise<ZoneBookingImpact[]> {
+  if (!isAdmin(session)) return [];
+  return db
+    .select({
+      bookingId: booking.id,
+      pilotName: user.name,
+      droneNickname: drone.nickname,
+      slotStart: booking.slotStart,
+      slotEnd: booking.slotEnd,
+      status: booking.status,
+    })
+    .from(booking)
+    .innerJoin(user, eq(user.id, booking.pilotUserId))
+    .leftJoin(drone, eq(drone.id, booking.droneId))
+    .where(
+      and(
+        eq(booking.zoneId, zoneId),
+        inArray(booking.status, ["pending", "approved"]),
+        lt(booking.slotStart, endsAt),
+        gt(booking.slotEnd, startsAt),
+      ),
+    )
+    .orderBy(asc(booking.slotStart));
+}
+
+export type CityRow = {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  centroidLat: number;
+  centroidLng: number;
+  isModelled: boolean;
+  /** Zones drawn in this city, in any status — what makes it more than a row. */
+  zoneCount: number;
+};
+
+/**
+ * The cities, with how many zones each one holds.
+ *
+ * The count is the answer to the only question this screen raises: `isModelled`
+ * claims a city has authored airspace, and the number of zones beside it is
+ * what makes that claim checkable rather than a flag somebody set once.
+ */
+export async function listCitiesWithZoneCounts(
+  session: Session,
+): Promise<CityRow[]> {
+  if (!isAdmin(session)) return [];
+  const rows = await db
+    .select({
+      id: city.id,
+      code: city.code,
+      nameAr: city.nameAr,
+      nameEn: city.nameEn,
+      centroidLat: city.centroidLat,
+      centroidLng: city.centroidLng,
+      isModelled: city.isModelled,
+    })
+    .from(city)
+    .orderBy(asc(city.code));
+
+  if (rows.length === 0) return [];
+
+  const counts = await db
+    .select({ cityId: zone.cityId, value: count() })
+    .from(zone)
+    .groupBy(zone.cityId);
+  const byCity = new Map(counts.map((row) => [row.cityId, row.value]));
+
+  return rows.map((row) => ({ ...row, zoneCount: byCity.get(row.id) ?? 0 }));
 }

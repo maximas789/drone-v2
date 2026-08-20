@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, gt, inArray, ne } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import type { DbExecutor } from "@/lib/db";
-import { booking, zone, zoneHour } from "@/lib/db/schema";
+import { booking, zone, zoneClosure, zoneHour } from "@/lib/db/schema";
 import {
   publishReadiness,
   type PublishProblem,
@@ -137,7 +137,15 @@ export async function suspendZone(
     reasonEn,
   }: { zoneId: string; actor: Actor; reasonAr: string; reasonEn: string },
 ): Promise<ZoneOutcome> {
-  if (reasonEn.trim().length < 20) {
+  /**
+   * **Both languages, not only English.** The first version checked the English
+   * alone; the panel disables its button until both are twenty characters, so
+   * nothing on screen could reach it — but an action is an ordinary POST, and a
+   * closure or suspension published with a blank Arabic reason would quote an
+   * empty string verbatim to every Arabic-reading pilot whose flight it just
+   * cancelled. That is the audience this app is written for first.
+   */
+  if (reasonAr.trim().length < 20 || reasonEn.trim().length < 20) {
     return { ok: false, reason: "reason_required" };
   }
 
@@ -320,4 +328,182 @@ export async function setZoneHours(
     before: { hours: before },
     after: { hours: windows },
   });
+}
+
+// --- Closures: the NOTAM analogue ------------------------------------------
+
+export type ClosureOutcome<T> =
+  | { ok: true; data: T }
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "zone_not_publishable"
+        | "already_applied"
+        | "closure_published";
+    };
+
+/**
+ * Write a closure. **Unpublished**, always.
+ *
+ * A closure is created and published in two acts, deliberately, and it is the
+ * same seam as a zone's own draft: an unpublished closure is invisible to the
+ * engine (`listClosuresForZones` filters on `published_at`), refuses nothing
+ * and cancels nobody, so an admin can type a window, look at the flights it
+ * would cancel **by name**, and then decide. One-shot creation would make the
+ * preview a promise about what is *about* to happen rather than a statement
+ * about a row that exists.
+ *
+ * **Only a zone somebody could fly in can be closed.** Closing a draft is
+ * closing something no pilot can see; closing an archived zone is closing
+ * something that no longer exists. Both would produce a row that can never
+ * refuse anything, and a trail with acts in it that did nothing is worse than
+ * one without them.
+ */
+export async function createZoneClosure(
+  tx: DbExecutor,
+  {
+    zoneId,
+    actor,
+    startsAt,
+    endsAt,
+    reasonAr,
+    reasonEn,
+    authorityRef,
+  }: {
+    zoneId: string;
+    actor: Actor;
+    startsAt: Date;
+    endsAt: Date;
+    reasonAr: string;
+    reasonEn: string;
+    authorityRef: string | null;
+  },
+): Promise<ClosureOutcome<{ closureId: string }>> {
+  const row = await tx.query.zone.findFirst({ where: eq(zone.id, zoneId) });
+  if (!row) return { ok: false, reason: "not_found" };
+  if (row.status !== "active" && row.status !== "suspended") {
+    return { ok: false, reason: "zone_not_publishable" };
+  }
+
+  const [created] = await tx
+    .insert(zoneClosure)
+    .values({
+      zoneId,
+      startsAt,
+      endsAt,
+      reasonAr,
+      reasonEn,
+      authorityRef,
+      createdByUserId: actor.userId,
+    })
+    .returning({ id: zoneClosure.id });
+
+  await audit(tx, {
+    actor,
+    entityType: "zone_closure",
+    entityId: created.id,
+    action: "zone_closure.created",
+    after: {
+      zoneId,
+      zoneCode: row.code,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      authorityRef,
+    },
+    // The authored language, as every other reason in this file is stored.
+    reason: reasonAr,
+  });
+
+  return { ok: true, data: { closureId: created.id } };
+}
+
+/**
+ * The moment a closure starts refusing flights.
+ *
+ * **`publishedAt` is stamped once and only once.** The fan-out that cancels
+ * each overlapping booking is an Inngest job the *action* sends after this
+ * commits — never from inside the transaction — for the closure fan-out's own
+ * reason: a failing email must retry one pilot rather than roll back a closure
+ * the engine is already enforcing.
+ *
+ * A second publish answers `already_applied` and writes nothing, so a
+ * double-clicked button cannot cancel a pilot's booking twice or send them the
+ * same cancellation twice.
+ */
+export async function publishZoneClosure(
+  tx: DbExecutor,
+  { closureId, actor }: { closureId: string; actor: Actor },
+): Promise<ClosureOutcome<{ zoneId: string; publishedAt: Date }>> {
+  const row = await tx.query.zoneClosure.findFirst({
+    where: eq(zoneClosure.id, closureId),
+  });
+  if (!row) return { ok: false, reason: "not_found" };
+  if (row.publishedAt) return { ok: false, reason: "already_applied" };
+
+  const publishedAt = new Date();
+  await tx
+    .update(zoneClosure)
+    .set({ publishedAt, updatedAt: publishedAt })
+    .where(eq(zoneClosure.id, closureId));
+
+  await audit(tx, {
+    actor,
+    entityType: "zone_closure",
+    entityId: closureId,
+    action: "zone_closure.published",
+    before: { publishedAt: null },
+    after: {
+      publishedAt: publishedAt.toISOString(),
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt.toISOString(),
+    },
+    reason: row.reasonAr,
+  });
+
+  return { ok: true, data: { zoneId: row.zoneId, publishedAt } };
+}
+
+/**
+ * Delete a closure that was never published.
+ *
+ * **A published closure is not deletable**, and the refusal says so rather than
+ * quietly obeying. Publishing one cancels flights and emails pilots; removing
+ * the row afterwards would reopen the airspace while leaving every one of those
+ * cancellations standing, and would delete the only record of why they
+ * happened. Lifting a closure that is already in force is a different act with
+ * different consequences, and this build does not have it — see the build log.
+ */
+export async function withdrawZoneClosure(
+  tx: DbExecutor,
+  { closureId, actor }: { closureId: string; actor: Actor },
+): Promise<ClosureOutcome<{ zoneId: string }>> {
+  const row = await tx.query.zoneClosure.findFirst({
+    where: eq(zoneClosure.id, closureId),
+  });
+  if (!row) return { ok: false, reason: "not_found" };
+  if (row.publishedAt) return { ok: false, reason: "closure_published" };
+
+  await audit(tx, {
+    actor,
+    entityType: "zone_closure",
+    entityId: closureId,
+    action: "zone_closure.withdrawn",
+    before: {
+      zoneId: row.zoneId,
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt.toISOString(),
+    },
+    reason: row.reasonAr,
+  });
+
+  /**
+   * The audit event is written **before** the row goes, in the same
+   * transaction. The table is append-only and outlives what it describes — a
+   * closure nobody published is still a thing somebody drafted and then thought
+   * better of, and the trail is the only place that survives.
+   */
+  await tx.delete(zoneClosure).where(eq(zoneClosure.id, closureId));
+
+  return { ok: true, data: { zoneId: row.zoneId } };
 }

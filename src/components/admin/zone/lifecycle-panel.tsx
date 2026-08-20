@@ -2,7 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useId, useState, useTransition } from "react";
-import { Badge } from "@/components/ui/badge";
+import {
+  ImpactTable,
+  type ImpactRow,
+} from "@/components/admin/zone/impact-table";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,7 +15,7 @@ import {
 } from "@/lib/actions/admin";
 import type { Reason } from "@/lib/actions/result";
 import { useRouter } from "@/i18n/navigation";
-import { formatDateTime, formatNumber, formatSeconds } from "@/lib/format";
+import { formatDateTime, formatSeconds } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import type { PublishProblem } from "@/lib/validation/zone-publish";
 
@@ -34,14 +37,7 @@ import type { PublishProblem } from "@/lib/validation/zone-publish";
  * and the rule for itself. Nothing on this screen is the security boundary.
  */
 
-export type ImpactRow = {
-  bookingId: string;
-  pilotName: string;
-  droneNickname: string | null;
-  slotStart: string;
-  slotEnd: string;
-  status: string;
-};
+export type { ImpactRow };
 
 export function LifecyclePanel({
   zoneId,
@@ -63,7 +59,6 @@ export function LifecyclePanel({
 }) {
   const t = useTranslations("zoneAdmin");
   const tErrors = useTranslations("errors");
-  const tBookings = useTranslations("bookings");
   const router = useRouter();
   const fieldId = useId();
 
@@ -174,61 +169,12 @@ export function LifecyclePanel({
       {/* --- Whose flights this touches ------------------------------------- */}
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">{t("impactHeading")}</h3>
-        {impact.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("impactNone")}</p>
-        ) : (
-          <>
-            <p className="text-sm">
-              {t("impactCount", { count: formatNumber(impact.length, locale) })}
-            </p>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full min-w-[30rem] border-collapse text-sm">
-                <caption className="sr-only">{t("impactHeading")}</caption>
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th scope="col" className="p-2 text-start font-medium">
-                      {t("colPilot")}
-                    </th>
-                    <th scope="col" className="p-2 text-start font-medium">
-                      {t("colWhen")}
-                    </th>
-                    <th scope="col" className="p-2 text-start font-medium">
-                      {t("colBookingStatus")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {impact.map((row) => (
-                    <tr key={row.bookingId} className="border-t">
-                      <td className="p-2 text-start">
-                        {row.pilotName}
-                        {row.droneNickname ? (
-                          <span className="text-muted-foreground block text-xs">
-                            {row.droneNickname}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="p-2 text-start">
-                        <bdi>
-                          {formatDateTime(new Date(row.slotStart), locale)}
-                        </bdi>
-                      </td>
-                      <td className="p-2 text-start">
-                        <Badge variant="outline">
-                          {tBookings.has(`status${capitalise(row.status)}`)
-                            ? tBookings(
-                                `status${capitalise(row.status)}` as "statusPending",
-                              )
-                            : row.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <ImpactTable
+          rows={impact}
+          locale={locale}
+          emptyLabel={t("impactNone")}
+          countLabel={(count, n) => t("impactCount", { count, n })}
+        />
       </div>
 
       {fanOutFailed ? (
@@ -367,13 +313,6 @@ const STATUS_NOTICE = {
   suspended: "statusSuspendedNotice",
   archived: "statusArchivedNotice",
 } as const;
-
-function capitalise(value: string): string {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
-}
 
 /** Thread 22: anything numeric reaching a message arrives as a string. */
 function stringParams(

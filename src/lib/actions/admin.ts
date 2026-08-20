@@ -9,9 +9,15 @@ import { db } from "@/lib/db";
 import { city, zone } from "@/lib/db/schema";
 import { validateGeometry } from "@/lib/geo/validate";
 import { inngest } from "@/lib/inngest/client";
-import { zoneSuspendedEvent } from "@/lib/inngest/events";
+import {
+  zoneClosurePublishedEvent,
+  zoneSuspendedEvent,
+} from "@/lib/inngest/events";
 import { enforceLimit } from "@/lib/rate-limit";
-import { listZoneBookingImpact } from "@/lib/data/zone-admin";
+import {
+  listBookingsInClosureWindow,
+  listZoneBookingImpact,
+} from "@/lib/data/zone-admin";
 import { isAdmin, roleOf, type Session } from "@/lib/session";
 import {
   validateZone,
@@ -22,13 +28,21 @@ import {
   validateZoneHours,
   type HourWindow,
 } from "@/lib/validation/zone-hours";
+import { validateCity, type CityDraft } from "@/lib/validation/city";
+import {
+  validateClosure,
+  type ClosureDraft,
+} from "@/lib/validation/zone-closure";
 import { geometryShrinks } from "@/lib/validation/zone-publish";
 import {
   archiveZone,
+  createZoneClosure,
   flagBookingsForGeometryReview,
   publishZone,
+  publishZoneClosure,
   setZoneHours,
   suspendZone,
+  withdrawZoneClosure,
 } from "@/lib/workflow";
 
 /**
@@ -620,4 +634,207 @@ export async function previewGeometryChangeAction(
         })),
     },
   };
+}
+
+// --- Closures: the NOTAM analogue ------------------------------------------
+
+/**
+ * Draft a closure over a zone. **It refuses nothing until it is published.**
+ *
+ * Two acts rather than one, for the same reason a zone is drawn as a draft: an
+ * admin types a window, then looks at the flights that window would cancel —
+ * by pilot name, from the row as stored, computed by the server — and only
+ * then publishes. Creating and publishing in one press would make the
+ * cancellation preview a prediction rather than a statement about a row that
+ * exists.
+ */
+export async function createZoneClosureAction(
+  zoneId: string,
+  draft: ClosureDraft,
+): Promise<ActionResult<{ closureId: string }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const checked = validateClosure(draft);
+  if (!checked.ok) {
+    return { ok: false, reasons: checked.problems.map((code) => ({ code })) };
+  }
+
+  const outcome = await db.transaction((tx) =>
+    createZoneClosure(tx, {
+      zoneId,
+      actor: actorFrom(guard.session),
+      ...checked.value,
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: outcome.data };
+}
+
+/**
+ * Publish a closure — **the act that cancels flights.**
+ *
+ * The row commits first and the fan-out follows as a job, exactly as a
+ * suspension does. `inngest.send` throws when nothing is listening (thread 69),
+ * and it once threw over a suspension that had already committed, leaving the
+ * admin with a stack trace and a change they believed had failed. So the send
+ * is guarded and its failure is **reported**: the closure is published and the
+ * engine is already refusing flights inside it, but `fanOutQueued: false` means
+ * the pilots holding those slots have not been told, and somebody has to know
+ * that rather than find out when one of them arrives at a closed zone.
+ */
+export async function publishZoneClosureAction(
+  closureId: string,
+): Promise<ActionResult<{ fanOutQueued: boolean }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const outcome = await db.transaction((tx) =>
+    publishZoneClosure(tx, { closureId, actor: actorFrom(guard.session) }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  let fanOutQueued = true;
+  try {
+    await inngest.send(zoneClosurePublishedEvent.create({ closureId }));
+  } catch {
+    fanOutQueued = false;
+  }
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: { fanOutQueued } };
+}
+
+/** Delete a closure nobody published. A published one is refused — see the workflow. */
+export async function withdrawZoneClosureAction(
+  closureId: string,
+): Promise<ActionResult<{ zoneId: string }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const outcome = await db.transaction((tx) =>
+    withdrawZoneClosure(tx, { closureId, actor: actorFrom(guard.session) }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: outcome.data };
+}
+
+/**
+ * **Exactly which flights this window would cancel, before anything is written.**
+ *
+ * Unlike the geometry preview, this one *can* be exact: a closure is a window
+ * in time and a booking carries its own slot, so overlapping is a question the
+ * row answers. The predicate is the fan-out's own — half-open, `pending` and
+ * `approved` both — so the list an admin confirms against is the list the job
+ * will act on rather than a second query written to resemble it.
+ *
+ * Read-only, so it takes no rate-limit token: the form calls it as the window
+ * is typed.
+ */
+export async function previewClosureImpactAction(
+  zoneId: string,
+  draft: ClosureDraft,
+): Promise<
+  ActionResult<{
+    startsAt: string;
+    endsAt: string;
+    bookings: {
+      bookingId: string;
+      pilotName: string;
+      droneNickname: string | null;
+      slotStart: string;
+      slotEnd: string;
+      status: string;
+    }[];
+  }>
+> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isAdmin(session)) return refuse("not_found");
+
+  const checked = validateClosure(draft);
+  if (!checked.ok) {
+    return { ok: false, reasons: checked.problems.map((code) => ({ code })) };
+  }
+
+  const rows = await listBookingsInClosureWindow(
+    session,
+    zoneId,
+    checked.value.startsAt,
+    checked.value.endsAt,
+  );
+
+  return {
+    ok: true,
+    data: {
+      startsAt: checked.value.startsAt.toISOString(),
+      endsAt: checked.value.endsAt.toISOString(),
+      bookings: rows.map((row) => ({
+        bookingId: row.bookingId,
+        pilotName: row.pilotName,
+        droneNickname: row.droneNickname,
+        slotStart: row.slotStart.toISOString(),
+        slotEnd: row.slotEnd.toISOString(),
+        status: row.status,
+      })),
+    },
+  };
+}
+
+// --- Cities ----------------------------------------------------------------
+
+/**
+ * Add a city. **This is what turns an unmodelled city into a drawable one** —
+ * a zone belongs to a city, so nothing can be drawn anywhere the list does not
+ * name.
+ *
+ * `isModelled` is not settable here and is not on the form: it claims a city
+ * has authored airspace, and creating a row does not make that true. It becomes
+ * true when somebody draws and publishes zones there.
+ */
+export async function createCityAction(
+  draft: CityDraft,
+): Promise<ActionResult<{ id: string }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const checked = validateCity(draft);
+  if (!checked.ok) {
+    return { ok: false, reasons: checked.problems.map((code) => ({ code })) };
+  }
+
+  const [existing] = await db
+    .select({ id: city.id })
+    .from(city)
+    .where(eq(city.code, checked.value.code))
+    .limit(1);
+  // `code` is a unique column; this turns the constraint violation into a
+  // sentence, exactly as `createZoneAction` does for a zone code.
+  if (existing) return refuse("city_code_taken");
+
+  const actor = actorFrom(guard.session);
+  const created = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(city)
+      .values(checked.value)
+      .returning({ id: city.id });
+
+    await audit(tx, {
+      actor,
+      entityType: "city",
+      entityId: row.id,
+      action: "city.created",
+      after: checked.value,
+    });
+
+    return row;
+  });
+
+  revalidatePath("/[locale]/admin/cities", "page");
+  revalidateZoneSurfaces();
+  return { ok: true, data: { id: created.id } };
 }

@@ -3,7 +3,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import { db, type DbExecutor } from "@/lib/db";
-import { booking, drone } from "@/lib/db/schema";
+import { booking, drone, zone } from "@/lib/db/schema";
 import { notify, type NotifyInput } from "@/lib/notify";
 import {
   actorKindsFor,
@@ -13,10 +13,11 @@ import {
   reasonIsSufficient,
   transitionFor,
   type TransitionName,
+  type WorkflowEntity,
 } from "./transitions";
 
 /**
- * The one entry point that changes a drone's or a booking's status.
+ * The one entry point that changes a drone's, a booking's or a zone's status.
  *
  * **The row, the audit event and the notification go in a single
  * transaction** — all three, or none. A status change missing from the trail is
@@ -140,9 +141,24 @@ async function applyWithin(
  */
 async function lockRow(
   tx: DbExecutor,
-  entity: "drone" | "booking",
+  entity: WorkflowEntity,
   id: string,
-): Promise<{ status: string; ownerUserId: string } | null> {
+): Promise<{ status: string; ownerUserId: string | null } | null> {
+  /**
+   * **A zone has no owner.** `createdByUserId` records who drew it, which is
+   * not the same relationship at all: an admin who drew a zone has no special
+   * standing over it, and every zone edge is `admin` anyway. Returning `null`
+   * here is what makes `actorKindsFor` never award `owner` on this entity —
+   * both sides must be present for that, deliberately.
+   */
+  if (entity === "zone") {
+    const [row] = await tx
+      .select({ status: zone.status })
+      .from(zone)
+      .where(eq(zone.id, id))
+      .for("update");
+    return row ? { status: row.status, ownerUserId: null } : null;
+  }
   if (entity === "drone") {
     const [row] = await tx
       .select({ status: drone.status, ownerUserId: drone.ownerUserId })
@@ -161,12 +177,19 @@ async function lockRow(
 
 async function writeStatus(
   tx: DbExecutor,
-  entity: "drone" | "booking",
+  entity: WorkflowEntity,
   id: string,
   to: string,
   patch: Record<string, unknown>,
 ): Promise<void> {
   const common = { updatedAt: new Date(), ...patch };
+  if (entity === "zone") {
+    await tx
+      .update(zone)
+      .set({ ...common, status: to as (typeof zone.status.enumValues)[number] })
+      .where(eq(zone.id, id));
+    return;
+  }
   if (entity === "drone") {
     await tx
       .update(drone)

@@ -8,6 +8,7 @@ import { registrationExpiryReminders } from "./expiry-reminders";
 import { registrationExpirySweep } from "./expiry-sweep";
 import { reviewQueueDigest } from "./review-digest";
 import { runCancelled } from "./run-cancelled";
+import { zoneSuspended } from "./zone-suspended";
 
 /**
  * Everything `/api/inngest` serves. A function missing from this array is a
@@ -25,4 +26,5 @@ export const functions = [
   closureFanout,
   droneRevoked,
   runCancelled,
+  zoneSuspended,
 ];

@@ -12,7 +12,7 @@
  * would stop being readable as a list of what is allowed.
  */
 
-export type WorkflowEntity = "drone" | "booking";
+export type WorkflowEntity = "drone" | "booking" | "zone";
 
 /**
  * Who may drive an edge.
@@ -218,6 +218,72 @@ export const TRANSITIONS = {
     to: "cancelled",
     action: "booking.cancelled_by_closure",
     actors: ["system"],
+  },
+
+  /**
+   * **A published boundary moved under this flight.** Sent back to `pending`
+   * rather than cancelled: a booking has no launch point (threads 37 and 55),
+   * so nothing can say whether *this* flight was in the part that was cut
+   * away — and a boundary tweak must not quietly void somebody's authorised
+   * flight. `pending` is where a human decides, and the seat is held either
+   * way because `booking_seat_uniq` covers both statuses.
+   *
+   * From `approved` only. A booking already `pending` is in the queue already,
+   * and re-flagging it would append a second event saying nothing new.
+   */
+  "booking.flagged_for_review": {
+    entity: "booking",
+    from: ["approved"],
+    to: "pending",
+    action: "booking.flagged_for_review",
+    actors: ["admin"],
+  },
+
+  // --- Zone: the publish lifecycle ----------------------------------------
+
+  /**
+   * **A drawing becomes airspace.** From here pilots see the zone, slots derive
+   * from it, and the engine authorises against it. `workflow/zone.ts` checks
+   * `publishReadiness` first — geometry, both names, a capacity, an
+   * operating-hour window for a permitted zone, and no overlap with a published
+   * no-fly zone.
+   *
+   * `suspended` is a legal origin so that lifting a suspension is the same edge
+   * as the original publication rather than a second one meaning the same
+   * thing.
+   */
+  "zone.published": {
+    entity: "zone",
+    from: ["draft", "suspended"],
+    to: "active",
+    action: "zone.published",
+    actors: ["admin"],
+  },
+
+  /**
+   * Airspace withdrawn, with a written reason that reaches every pilot holding
+   * a slot in it. Reversible — that is what separates it from archiving.
+   */
+  "zone.suspended": {
+    entity: "zone",
+    from: ["active"],
+    to: "suspended",
+    action: "zone.suspended",
+    actors: ["admin"],
+    reasonMinLength: 20,
+  },
+
+  /**
+   * The end of a zone. **Only with no future bookings** — checked in
+   * `workflow/zone.ts` against the live rows, because archiving is not a
+   * cancellation and must never silently become one.
+   */
+  "zone.archived": {
+    entity: "zone",
+    from: ["draft", "active", "suspended"],
+    to: "archived",
+    action: "zone.archived",
+    actors: ["admin"],
   },
 } as const satisfies Record<string, TransitionDef>;
 

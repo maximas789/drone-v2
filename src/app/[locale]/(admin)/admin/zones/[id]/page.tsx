@@ -1,28 +1,39 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locale as localeParam } from "next/root-params";
+import { HoursGrid } from "@/components/admin/zone/hours-grid";
+import { LifecyclePanel } from "@/components/admin/zone/lifecycle-panel";
 import { ZoneForm } from "@/components/admin/zone/zone-form";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { requireAdmin } from "@/lib/auth-guards";
-import { getZoneForAdmin, listCitiesForAdmin, listZoneContext } from "@/lib/data/zone-admin";
+import {
+  getZoneForAdmin,
+  getZoneHoursForAdmin,
+  listCitiesForAdmin,
+  listPublishedNoFlyZones,
+  listZoneBookingImpact,
+  listZoneContext,
+} from "@/lib/data/zone-admin";
 import { toLocale } from "@/lib/locale";
 import { zonesToGeoJson } from "@/lib/maps/layer-styles";
 import type { ZoneDraft } from "@/lib/validation/zone";
+import type { Weekday } from "@/lib/validation/zone-hours";
+import { publishReadiness } from "@/lib/validation/zone-publish";
 
 /**
- * `/admin/zones/[id]` — one zone, its boundary and its rules.
+ * `/admin/zones/[id]` — one zone: its boundary, its rules, its week, and the
+ * button that turns it into airspace.
  *
- * **A published boundary cannot be moved from here, and the form says so.**
- * Editing a live polygon has consequences — every future booking inside it has
- * to be re-evaluated, and the ones that would fall outside shown to the admin
- * *before* saving and then flagged rather than cancelled. That is F23b's, and
- * until it exists `updateZoneAction` refuses a geometry change on anything that
- * is not a draft. Refusing is the honest answer; doing it quietly would leave
- * somebody's authorised flight outside the zone that authorised it.
+ * **The publish readiness is computed here, on the server**, by the same pure
+ * `publishReadiness` the action runs. The panel is told what is missing rather
+ * than being left to work it out — and because both sides call one function,
+ * the screen can never say "ready" over an action that then refuses.
  *
- * Publish, suspend and archive are absent for the same reason — rule 11 puts
- * every status change in `src/lib/workflow/`, and F23b builds them there.
+ * **Moving a published boundary is confirmed, not forbidden.** The form asks
+ * the server what the change would do, shows the flights it would send back to
+ * review, and only then saves. Those flights are *flagged*, never cancelled: a
+ * boundary tweak must not quietly void somebody's authorised flight.
  */
 export default async function EditZonePage({
   params,
@@ -65,6 +76,41 @@ export default async function EditZonePage({
     authorityRef: zone.authorityRef ?? "",
   };
 
+  const [hours, noFly, impact] = await Promise.all([
+    getZoneHoursForAdmin(session, id),
+    listPublishedNoFlyZones(session, id),
+    listZoneBookingImpact(session, id),
+  ]);
+
+  const windows = hours.map((hour) => ({
+    weekday: hour.weekday as Weekday,
+    opensMinute: hour.opensMinute,
+    closesMinute: hour.closesMinute,
+  }));
+
+  const readiness = publishReadiness(
+    {
+      kind: zone.kind,
+      nameAr: zone.nameAr,
+      nameEn: zone.nameEn,
+      capacity: zone.capacity,
+      geometry: zone.geometry,
+    },
+    windows,
+    noFly,
+  );
+
+  /**
+   * Sunrise and sunset are a **place**, not a setting, so the preview needs a
+   * coordinate. The bbox centre is the cheap one that is already stored and is
+   * well inside a city-sized polygon; a proper centroid would move the answer
+   * by seconds of time over a zone this size.
+   */
+  const centre = {
+    lat: (zone.minLat + zone.maxLat) / 2,
+    lng: (zone.minLng + zone.maxLng) / 2,
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
       <div>
@@ -98,6 +144,34 @@ export default async function EditZonePage({
         contextGeojson={zonesToGeoJson(context, locale)}
         locale={locale}
         status={zone.status}
+      />
+
+      <HoursGrid
+        zoneId={zone.id}
+        initial={windows}
+        locale={locale}
+        slotDurationMinutes={zone.slotDurationMinutes}
+        minLeadMinutes={zone.minLeadMinutes}
+        capacity={zone.capacity}
+        nightAllowed={zone.nightAllowed}
+        centre={centre}
+      />
+
+      <LifecyclePanel
+        zoneId={zone.id}
+        status={zone.status}
+        publishedAt={zone.publishedAt?.toISOString() ?? null}
+        readiness={readiness.problems}
+        overlappingNoFly={readiness.overlappingNoFly}
+        impact={impact.map((row) => ({
+          bookingId: row.bookingId,
+          pilotName: row.pilotName,
+          droneNickname: row.droneNickname,
+          slotStart: row.slotStart.toISOString(),
+          slotEnd: row.slotEnd.toISOString(),
+          status: row.status,
+        }))}
+        locale={locale}
       />
     </main>
   );

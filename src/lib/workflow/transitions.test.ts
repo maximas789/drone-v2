@@ -203,3 +203,107 @@ describe("the written reason", () => {
     expect(reasonIsSufficient("drone.expired", null)).toBe(true);
   });
 });
+
+/**
+ * **The zone lifecycle** — F23b's third entity. Airspace is drawn by an admin
+ * and by nobody else, and the table is where that is stated once.
+ */
+describe("the zone lifecycle", () => {
+  const zoneEdges = names.filter(
+    (name) => transitionFor(name).entity === "zone",
+  );
+
+  it("has the three edges the lifecycle needs and no more", () => {
+    expect(zoneEdges.sort()).toEqual([
+      "zone.archived",
+      "zone.published",
+      "zone.suspended",
+    ]);
+  });
+
+  it("lets an admin drive every zone edge and a reviewer none of them", () => {
+    for (const name of zoneEdges) {
+      expect(actorMayDrive(name, actorKindsFor(admin(), null))).toBe(true);
+      expect(actorMayDrive(name, actorKindsFor(reviewer(), null))).toBe(false);
+    }
+  });
+
+  /**
+   * A zone has no owner, so `lockRow` hands `null` here. Both sides must be
+   * present for `owner` to be awarded — which is what stops the admin who drew
+   * a zone from holding a relationship to it that the table never granted.
+   */
+  it("never awards owner on a zone, whoever asks", () => {
+    expect(actorKindsFor(owner("someone"), null)).toEqual([]);
+    for (const name of zoneEdges) {
+      expect(actorMayDrive(name, actorKindsFor(owner("someone"), null))).toBe(
+        false,
+      );
+    }
+  });
+
+  it("publishes from a draft and from a suspension, but never from an archive", () => {
+    expect(isLegalEdge("zone.published", "draft")).toBe(true);
+    expect(isLegalEdge("zone.published", "suspended")).toBe(true);
+    expect(isLegalEdge("zone.published", "archived")).toBe(false);
+    expect(isAlreadyApplied("zone.published", "active")).toBe(true);
+  });
+
+  it("suspends only what is live, and demands a written reason", () => {
+    expect(isLegalEdge("zone.suspended", "active")).toBe(true);
+    expect(isLegalEdge("zone.suspended", "draft")).toBe(false);
+    expect(reasonIsSufficient("zone.suspended", "closed")).toBe(false);
+    expect(
+      reasonIsSufficient(
+        "zone.suspended",
+        "Runway works at the adjacent airfield until further notice.",
+      ),
+    ).toBe(true);
+  });
+
+  it("archives from anywhere still open, and asks for no reason", () => {
+    expect(isLegalEdge("zone.archived", "draft")).toBe(true);
+    expect(isLegalEdge("zone.archived", "active")).toBe(true);
+    expect(isLegalEdge("zone.archived", "suspended")).toBe(true);
+    expect(reasonIsSufficient("zone.archived", null)).toBe(true);
+  });
+});
+
+/**
+ * A moved boundary sends an approved flight **back to a reviewer**, not to the
+ * bin. The two live in the same table so the difference is readable.
+ */
+describe("flagging a booking after a boundary change", () => {
+  it("returns an approved booking to pending, keeping its seat", () => {
+    const def = transitionFor("booking.flagged_for_review");
+    expect(def.entity).toBe("booking");
+    expect(def.from).toEqual(["approved"]);
+    expect(def.to).toBe("pending");
+  });
+
+  it("is admin-only — a reviewer does not redraw airspace", () => {
+    expect(
+      actorMayDrive("booking.flagged_for_review", actorKindsFor(admin(), null)),
+    ).toBe(true);
+    expect(
+      actorMayDrive(
+        "booking.flagged_for_review",
+        actorKindsFor(reviewer(), null),
+      ),
+    ).toBe(false);
+    expect(
+      actorMayDrive("booking.flagged_for_review", actorKindsFor(SYSTEM, null)),
+    ).toBe(false);
+  });
+
+  it("does nothing to a booking already pending", () => {
+    expect(isAlreadyApplied("booking.flagged_for_review", "pending")).toBe(true);
+    expect(isLegalEdge("booking.flagged_for_review", "pending")).toBe(false);
+  });
+
+  /** The distinction the trail has to record: flagged is not cancelled. */
+  it("is not the closure cancellation wearing a different name", () => {
+    expect(transitionFor("booking.cancelled_by_closure").to).toBe("cancelled");
+    expect(transitionFor("booking.flagged_for_review").to).toBe("pending");
+  });
+});

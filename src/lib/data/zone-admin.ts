@@ -2,7 +2,10 @@ import "server-only";
 
 import { and, asc, count, eq, gte, inArray, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { booking, city, zone } from "@/lib/db/schema";
+// Thread 26: `user` comes from `auth-schema` directly, never through the
+// `export *` barrel, which does not re-export it under plain Node ESM.
+import { user } from "@/lib/db/auth-schema";
+import { booking, city, drone, zone, zoneHour } from "@/lib/db/schema";
 import { isAdmin, type Session } from "@/lib/session";
 
 /**
@@ -143,4 +146,85 @@ export async function listZoneContext(
 export async function listCitiesForAdmin(session: Session) {
   if (!isAdmin(session)) return [];
   return db.query.city.findMany({ orderBy: [asc(city.nameAr)] });
+}
+
+/** The zone's own operating windows, Sunday first, in time order within a day. */
+export async function getZoneHoursForAdmin(session: Session, zoneId: string) {
+  if (!isAdmin(session)) return [];
+  return db
+    .select({
+      weekday: zoneHour.weekday,
+      opensMinute: zoneHour.opensMinute,
+      closesMinute: zoneHour.closesMinute,
+    })
+    .from(zoneHour)
+    .where(eq(zoneHour.zoneId, zoneId))
+    .orderBy(asc(zoneHour.weekday), asc(zoneHour.opensMinute));
+}
+
+/**
+ * Every **published** no-fly zone except this one — what a publish check reads.
+ *
+ * Published only: refusing a publication because it overlaps a boundary nobody
+ * has published would be refusing on the strength of somebody's drawing.
+ */
+export async function listPublishedNoFlyZones(
+  session: Session,
+  excludeZoneId?: string,
+) {
+  if (!isAdmin(session)) return [];
+  const scope = and(eq(zone.kind, "no_fly"), eq(zone.status, "active"));
+  return db
+    .select({ code: zone.code, geometry: zone.geometry })
+    .from(zone)
+    .where(excludeZoneId ? and(scope, ne(zone.id, excludeZoneId)) : scope);
+}
+
+export type ZoneBookingImpact = {
+  bookingId: string;
+  pilotName: string;
+  droneNickname: string | null;
+  slotStart: Date;
+  slotEnd: Date;
+  status: string;
+};
+
+/**
+ * The flights a suspension would cancel, or a moved boundary would put back in
+ * the queue — **named, not counted.**
+ *
+ * "This will cancel 3 bookings" is a number an admin can accept without
+ * thinking; three people's names beside three times is a decision. Same reason
+ * the closure preview in F23c shows pilot names before publishing.
+ *
+ * The pilot's name comes from `user.name`, which is the account name — a
+ * verified profile's own bilingual pair lives on `pilot_profile` and is not
+ * needed to answer *whose flight is this*.
+ */
+export async function listZoneBookingImpact(
+  session: Session,
+  zoneId: string,
+  now: Date = new Date(),
+): Promise<ZoneBookingImpact[]> {
+  if (!isAdmin(session)) return [];
+  return db
+    .select({
+      bookingId: booking.id,
+      pilotName: user.name,
+      droneNickname: drone.nickname,
+      slotStart: booking.slotStart,
+      slotEnd: booking.slotEnd,
+      status: booking.status,
+    })
+    .from(booking)
+    .innerJoin(user, eq(user.id, booking.pilotUserId))
+    .leftJoin(drone, eq(drone.id, booking.droneId))
+    .where(
+      and(
+        eq(booking.zoneId, zoneId),
+        inArray(booking.status, ["pending", "approved"]),
+        gte(booking.slotEnd, now),
+      ),
+    )
+    .orderBy(asc(booking.slotStart));
 }

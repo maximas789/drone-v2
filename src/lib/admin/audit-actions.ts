@@ -74,6 +74,13 @@ export const BOOKING_TRAIL_ACTIONS = [
   "booking.cancelled_by_pilot",
   "booking.cancelled_by_authority",
   "booking.cancelled_by_closure",
+  /**
+   * F23b. A published boundary moved under an approved flight, so it went back
+   * to `pending` rather than being cancelled — the trail has to say which of
+   * those two happened, because they are very different things to have done to
+   * somebody's authorisation.
+   */
+  "booking.flagged_for_review",
   "booking.completed",
   "booking.no_show",
 ] as const;

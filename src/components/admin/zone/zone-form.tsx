@@ -9,11 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
-import { createZoneAction, updateZoneAction } from "@/lib/actions/admin";
+import {
+  createZoneAction,
+  previewGeometryChangeAction,
+  updateZoneAction,
+} from "@/lib/actions/admin";
 import type { Reason } from "@/lib/actions/result";
 import type { Geometry } from "@/lib/geo";
 import { validateGeometry } from "@/lib/geo/validate";
-import { formatArea, formatNumber, formatSeconds } from "@/lib/format";
+import {
+  formatArea,
+  formatDateTime,
+  formatNumber,
+  formatSeconds,
+} from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import {
   WEIGHT_CLASSES,
@@ -69,7 +78,7 @@ export function ZoneForm({
   cities: readonly ZoneFormCity[];
   contextGeojson: unknown;
   locale: Locale;
-  /** Shown, and used to explain why a published boundary cannot be moved here. */
+  /** Decides whether a boundary change has to be confirmed against its impact. */
   status?: string;
 }) {
   const t = useTranslations("zoneAdmin");
@@ -85,6 +94,23 @@ export function ZoneForm({
   );
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
+  /**
+   * Set when the server refuses a boundary change on a published zone until it
+   * has been confirmed. The list is the server's, fetched *after* the refusal
+   * rather than computed here — the client does not get to decide which flights
+   * a moved boundary disturbs.
+   */
+  const [impact, setImpact] = useState<
+    | null
+    | {
+        bookingId: string;
+        pilotName: string;
+        slotStart: string;
+        slotEnd: string;
+        status: string;
+      }[]
+  >(null);
+  const [flagged, setFlagged] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   const set = <K extends keyof ZoneDraft>(key: K, value: ZoneDraft[K]) =>
@@ -96,19 +122,39 @@ export function ZoneForm({
     [geometry],
   );
 
-  function save() {
+  /**
+   * `confirmImpact` is only ever `true` after the admin has looked at the list
+   * below. The **server** decides whether confirmation is needed — this asks it,
+   * is refused with `geometry_impact_unconfirmed`, then fetches the list. The
+   * alternative, working out here whether the boundary shrank, would be the
+   * client deciding whose flight is disturbed.
+   */
+  function save(confirmImpact = false) {
     startTransition(async () => {
       setReasons([]);
       setWarnings([]);
+      setFlagged(null);
       const result = zoneId
-        ? await updateZoneAction(zoneId, draft, geometry)
+        ? await updateZoneAction(zoneId, draft, geometry, confirmImpact)
         : await createZoneAction(draft, geometry);
 
       if (!result.ok) {
+        if (
+          zoneId &&
+          result.reasons.some((r) => r.code === "geometry_impact_unconfirmed")
+        ) {
+          const preview = await previewGeometryChangeAction(zoneId, geometry);
+          if (preview.ok) {
+            setImpact(preview.data.bookings);
+            return;
+          }
+        }
         setReasons(result.reasons);
         return;
       }
+      setImpact(null);
       setWarnings(result.data.warnings);
+      if (result.data.flagged) setFlagged(result.data.flagged);
       router.push(`/admin/zones/${result.data.id}`);
       router.refresh();
     });
@@ -179,7 +225,7 @@ export function ZoneForm({
 
         {status && status !== "draft" ? (
           <p className="text-muted-foreground text-sm">
-            {t("geometryLockedNotice")}
+            {t("geometryPublishedNotice")}
           </p>
         ) : null}
       </section>
@@ -459,12 +505,67 @@ export function ZoneForm({
         </FormProblem>
       ) : null}
 
+      {/*
+        **The consequences of a moved boundary, before it moves.** Shown only
+        after the server has refused the save, so what appears here is the
+        server's own list of affected flights and not a guess made in the
+        browser.
+      */}
+      {impact ? (
+        <div className="border-destructive flex flex-col gap-3 rounded-lg border border-s-4 p-4">
+          <h3 className="font-medium">{t("geometryImpactHeading")}</h3>
+          <p className="text-sm">{t("geometryImpactIntro")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("geometryImpactNoLaunchPoint")}
+          </p>
+
+          {impact.length === 0 ? (
+            <p className="text-sm">{t("impactNone")}</p>
+          ) : (
+            <ul className="flex flex-col gap-1 text-sm">
+              {impact.map((row) => (
+                <li key={row.bookingId} className="flex flex-wrap gap-2">
+                  <span className="font-medium">{row.pilotName}</span>
+                  <bdi className="text-muted-foreground">
+                    {formatDateTime(new Date(row.slotStart), locale)}
+                  </bdi>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending}
+              onClick={() => save(true)}
+            >
+              {t("geometryImpactConfirm")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setImpact(null)}
+            >
+              {t("cancel")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {flagged !== null ? (
+        <p className="text-sm">
+          {t("flaggedNotice", { count: formatNumber(flagged, locale) })}
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap gap-3">
-        <Button type="button" disabled={pending} onClick={save}>
+        <Button type="button" disabled={pending} onClick={() => save()}>
           {pending ? t("saving") : zoneId ? t("save") : t("createDraft")}
         </Button>
         <p className="text-muted-foreground self-center text-xs">
-          {t("draftNotice")}
+          {status && status !== "draft" ? t("geometryPublishedNotice") : t("draftNotice")}
         </p>
       </div>
     </div>

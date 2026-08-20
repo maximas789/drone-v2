@@ -30,6 +30,15 @@ export const NOTIFICATION_TYPES = [
   "bookingRejected",
   "bookingReminder",
   "zoneClosed",
+  /** F23b. The zone itself was withdrawn, not merely closed for a window. */
+  "zoneSuspended",
+  /**
+   * F23b. A published boundary moved, so an approved flight went back to a
+   * reviewer. Deliberately not `bookingCancelled` — the pilot still holds the
+   * seat, and telling them their flight was cancelled when it was not would be
+   * the worse of the two errors.
+   */
+  "bookingUnderReview",
   "registrationExpiring",
   "registrationExpired",
   "identityRevealed",

@@ -276,6 +276,29 @@ export async function listBookingsOverlapping(
     .limit(limit) as Promise<BookingRow[]>;
 }
 
+/**
+ * Live bookings in one zone whose slot has not yet ended — what a **suspension**
+ * cancels.
+ *
+ * Unbounded in time rather than windowed, unlike the closure query: a closure
+ * has a start and an end, a suspension does not. Everything still ahead goes.
+ */
+export async function listFutureBookingsInZone(
+  zoneId: string,
+  now: Date,
+  limit = 1000,
+): Promise<BookingRow[]> {
+  return baseBookingQuery()
+    .where(
+      and(
+        eq(booking.zoneId, zoneId),
+        inArray(booking.status, [...LIVE_BOOKING_STATUSES]),
+        gt(booking.slotEnd, now),
+      ),
+    )
+    .limit(limit) as Promise<BookingRow[]>;
+}
+
 /** Live bookings for one drone whose slot has not yet ended. */
 export async function listFutureBookingsForDrone(
   droneId: string,
@@ -339,6 +362,19 @@ export async function getPublishedClosure(closureId: string) {
       eq(zoneClosure.id, closureId),
       isNotNull(zoneClosure.publishedAt),
     ),
+  });
+}
+
+/**
+ * The zone, only while it is **still suspended**. Re-read inside the fan-out
+ * for the same reason the closure job re-reads its closure: if an admin lifted
+ * the suspension between the event being sent and the step running, cancelling
+ * flights under it would be an over-reach nothing asked for.
+ */
+export async function getSuspendedZone(zoneId: string) {
+  return db.query.zone.findFirst({
+    where: and(eq(zone.id, zoneId), eq(zone.status, "suspended")),
+    columns: { id: true, nameAr: true, nameEn: true, status: true },
   });
 }
 

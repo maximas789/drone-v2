@@ -11,7 +11,10 @@
  *
  * F08 wrote the four system edges; **F14 completed both lifecycles** and added
  * the role branch that resolves `owner` from the row rather than from anything
- * the caller says about itself.
+ * the caller says about itself. **F23b added a third entity** — `zone.ts` holds
+ * the publish lifecycle, and `apply.ts` locks a zone row the same way it locks
+ * a drone or a booking. A zone has no owner, so `lockRow` returns `null` for
+ * one and `actorKindsFor` never awards `owner` on that entity.
  *
  * Three files here have **no `TRANSITIONS` entry** and are not workflows in the
  * four-state sense: `declaration.ts`, `identity.ts` and `report.ts` each hold a
@@ -30,3 +33,4 @@ export * from "./remote-id";
 export * from "./report";
 export * from "./rules";
 export * from "./transitions";
+export * from "./zone";

@@ -8,13 +8,28 @@ import { getSession } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { city, zone } from "@/lib/db/schema";
 import { validateGeometry } from "@/lib/geo/validate";
+import { inngest } from "@/lib/inngest/client";
+import { zoneSuspendedEvent } from "@/lib/inngest/events";
 import { enforceLimit } from "@/lib/rate-limit";
+import { listZoneBookingImpact } from "@/lib/data/zone-admin";
 import { isAdmin, roleOf, type Session } from "@/lib/session";
 import {
   validateZone,
   type ZoneDraft,
   type ZoneProblem,
 } from "@/lib/validation/zone";
+import {
+  validateZoneHours,
+  type HourWindow,
+} from "@/lib/validation/zone-hours";
+import { geometryShrinks } from "@/lib/validation/zone-publish";
+import {
+  archiveZone,
+  flagBookingsForGeometryReview,
+  publishZone,
+  setZoneHours,
+  suspendZone,
+} from "@/lib/workflow";
 
 /**
  * Writing the airspace itself. **Admin only, every one of them.**
@@ -37,10 +52,10 @@ import {
  * query while still being enforced by the engine, which is the worst pair of
  * behaviours available.
  *
- * F23a writes **drafts only**. There is no publish here and no status change of
- * any kind: rule 11 puts those in `src/lib/workflow/`, and F23b is what builds
- * them. A draft zone is invisible to pilots and produces no slots, which is
- * exactly why this part is safe to ship on its own.
+ * **No status is written in this file.** Rule 11 puts every status change in
+ * `src/lib/workflow/`; the lifecycle actions at the foot of this file are the
+ * session, the rate limit and the revalidation around a call into
+ * `workflow/zone.ts`, which is where the decision lives.
  */
 
 const MAX_TEXT_LENGTH = 2_000;
@@ -49,6 +64,8 @@ export type ZoneSaved = {
   id: string;
   /** Warnings the geometry check repaired — rings closed, winding corrected. */
   warnings: string[];
+  /** Approved flights sent back to a reviewer by a moved boundary. */
+  flagged?: number;
 };
 
 /**
@@ -180,17 +197,22 @@ export async function createZoneAction(
  * is the question an incident review asks about airspace. The two polygons are
  * the answer.
  *
- * F23a edits **drafts and published zones alike at the field level**, but the
- * consequences of moving a *published* boundary — re-evaluating the bookings
- * inside it and showing which now fall outside — are F23b's. Until then this
- * action refuses a geometry change on anything that is not a draft, rather than
- * making it silently and leaving somebody's authorised flight outside the zone
- * it was authorised in.
+ * **Moving a published boundary is consequential, so it is confirmed.** If the
+ * new polygon does not contain the old one — the boundary was cut back or moved
+ * rather than only extended — every approved flight still ahead in that zone is
+ * affected, and the action refuses with `geometry_impact_unconfirmed` until the
+ * caller has seen `previewGeometryChangeAction`'s list and says so. On
+ * confirmation the bookings are **flagged for review, not cancelled**: they go
+ * back to `pending`, keeping their seat, and a reviewer decides against the new
+ * boundary. A boundary tweak must not quietly void somebody's authorised
+ * flight, and it must not quietly leave one standing outside its zone either.
  */
 export async function updateZoneAction(
   zoneId: string,
   draft: ZoneDraft,
   geometry: unknown,
+  /** Set once the admin has seen which flights a moved boundary would disturb. */
+  confirmGeometryImpact = false,
 ): Promise<ActionResult<ZoneSaved>> {
   const session = await getSession();
   const checked = await checkedZoneInput(session, draft, geometry);
@@ -204,14 +226,18 @@ export async function updateZoneAction(
   const after = JSON.stringify(checked.geometry.geometry);
   const geometryChanged = before !== after;
 
-  if (geometryChanged && current.status !== "draft") {
-    /**
-     * Refused rather than done quietly. A published zone's boundary has
-     * bookings standing on it; F23b owns showing the admin which of them would
-     * fall outside and flagging those for review instead of cancelling them.
-     * Until that exists, the honest answer is "not from here".
-     */
-    return refuse("geometry_locked_until_draft");
+  /**
+   * A draft has no bookings and nobody can see it, so it is edited freely. On
+   * anything published the question is whether the boundary **shrank or moved**
+   * — see `geometryShrinks` for why the answer cannot be per-booking.
+   */
+  const disturbs =
+    geometryChanged &&
+    current.status !== "draft" &&
+    geometryShrinks(current.geometry, checked.geometry.geometry);
+
+  if (disturbs && !confirmGeometryImpact) {
+    return refuse("geometry_impact_unconfirmed");
   }
 
   const [clash] = await db
@@ -221,6 +247,7 @@ export async function updateZoneAction(
     .limit(1);
   if (clash && clash.id !== zoneId) return refuse("code_taken");
 
+  let flagged = 0;
   await db.transaction(async (tx) => {
     await tx
       .update(zone)
@@ -253,6 +280,22 @@ export async function updateZoneAction(
           }
         : { code: checked.fields.code, kind: checked.fields.kind },
     });
+
+    /**
+     * **In the same transaction as the boundary.** A polygon that moved and a
+     * set of bookings still marked approved against the old one is exactly the
+     * inconsistency this is here to prevent, so either both land or neither
+     * does.
+     */
+    if (disturbs) {
+      const result = await flagBookingsForGeometryReview(tx, {
+        zoneId,
+        actor,
+        zoneNameAr: checked.fields.nameAr,
+        zoneNameEn: checked.fields.nameEn,
+      });
+      flagged = result.flagged;
+    }
   });
 
   revalidateZoneSurfaces();
@@ -261,6 +304,7 @@ export async function updateZoneAction(
     data: {
       id: zoneId,
       warnings: checked.geometry.warnings.map((warning) => warning.code),
+      flagged,
     },
   };
 }
@@ -330,4 +374,250 @@ function revalidateZoneSurfaces(): void {
 /** The role is captured at the time of the act, never re-derived later. */
 function actorFrom(session: Session): Actor {
   return { userId: session.user.id, role: roleOf(session), isSystem: false };
+}
+
+// --- The publish lifecycle -------------------------------------------------
+
+/**
+ * Every lifecycle action starts the same way and there is no version of this
+ * that is safe to skip: an action is an ordinary POST, the `(admin)` layout
+ * that guarded the page never runs for it, and `not_found` rather than
+ * `forbidden` is what stops a refusal from confirming the surface exists.
+ */
+async function requireAdminSession() {
+  const session = await getSession();
+  if (!session) return { ok: false as const, result: refuse("not_authenticated") };
+  if (!isAdmin(session)) return { ok: false as const, result: refuse("not_found") };
+
+  const limit = await enforceLimit("zone.write", "user", session.user.id);
+  if (!limit.ok) {
+    return {
+      ok: false as const,
+      result: refuseWith("rate_limited", {
+        retryAfterSeconds: limit.retryAfterSeconds,
+      }),
+    };
+  }
+  return { ok: true as const, session };
+}
+
+/**
+ * Replace a zone's whole week of operating windows.
+ *
+ * **Validated here as the authority**, by the same pure function the grid runs
+ * as you type. The grid can be bypassed; `validateZoneHours` cannot, and an
+ * overlapping pair that slipped through would give one hour of airspace two
+ * slot grids and two seats where there is one.
+ */
+export async function setZoneHoursAction(
+  zoneId: string,
+  windows: readonly HourWindow[],
+): Promise<ActionResult<{ count: number }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const checked = validateZoneHours(windows);
+  if (!checked.ok) {
+    return { ok: false, reasons: checked.problems.map((code) => ({ code })) };
+  }
+
+  const [row] = await db
+    .select({ id: zone.id })
+    .from(zone)
+    .where(eq(zone.id, zoneId))
+    .limit(1);
+  if (!row) return refuse("not_found");
+
+  await db.transaction((tx) =>
+    setZoneHours(tx, {
+      zoneId,
+      actor: actorFrom(guard.session),
+      windows: checked.value,
+    }),
+  );
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: { count: checked.value.length } };
+}
+
+/**
+ * Draft (or suspended) → active. **The moment a drawing becomes airspace.**
+ *
+ * The refusal codes are `publishReadiness`'s own, so the screen names the thing
+ * that is missing rather than saying "not ready". `publish_overlaps_no_fly`
+ * carries the codes of the zones in the way — an admin told only that something
+ * overlaps has to go and find it.
+ */
+export async function publishZoneAction(
+  zoneId: string,
+): Promise<ActionResult<{ status: string }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const outcome = await db.transaction((tx) =>
+    publishZone(tx, { zoneId, actor: actorFrom(guard.session) }),
+  );
+  if (!outcome.ok) {
+    return outcome.overlappingNoFly?.length
+      ? refuseWith(outcome.reason, {
+          zones: outcome.overlappingNoFly.join("، "),
+        })
+      : refuse(outcome.reason);
+  }
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: { status: outcome.to } };
+}
+
+/**
+ * Active → suspended, with a reason in both languages that reaches every pilot
+ * holding a slot.
+ *
+ * The cancellations **fan out as a job** rather than happening here: the
+ * suspension must commit whether or not a mail provider is reachable, and a
+ * failing email must retry one pilot rather than all of them.
+ */
+export async function suspendZoneAction(
+  zoneId: string,
+  reasonAr: string,
+  reasonEn: string,
+): Promise<ActionResult<{ status: string; fanOutQueued: boolean }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const ar = reasonAr.slice(0, MAX_TEXT_LENGTH).trim();
+  const en = reasonEn.slice(0, MAX_TEXT_LENGTH).trim();
+
+  const outcome = await db.transaction((tx) =>
+    suspendZone(tx, {
+      zoneId,
+      actor: actorFrom(guard.session),
+      reasonAr: ar,
+      reasonEn: en,
+    }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  /**
+   * **The suspension has committed; the fan-out is a separate promise.**
+   *
+   * `inngest.send` throws `fetch failed` when no dev server is listening — and
+   * it threw, in a browser, over a suspension that had already been written.
+   * The admin saw a stack trace and had no way to know the zone *was*
+   * suspended, which is the worst pair of outcomes available: the status
+   * changed and the person who changed it believes it did not.
+   *
+   * So the send is guarded and its failure is **reported, not swallowed**. The
+   * zone is suspended either way — that part is committed and correct — but
+   * `fanOutQueued: false` tells the screen to say plainly that the
+   * cancellations have not been queued, because a pilot whose booking was not
+   * cancelled will turn up to closed airspace.
+   */
+  let fanOutQueued = true;
+  try {
+    await inngest.send(
+      zoneSuspendedEvent.create({ zoneId, reasonAr: ar, reasonEn: en }),
+    );
+  } catch {
+    fanOutQueued = false;
+  }
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: { status: outcome.to, fanOutQueued } };
+}
+
+/** The end of a zone. Refused while any future booking still stands. */
+export async function archiveZoneAction(
+  zoneId: string,
+): Promise<ActionResult<{ status: string }>> {
+  const guard = await requireAdminSession();
+  if (!guard.ok) return guard.result;
+
+  const outcome = await db.transaction((tx) =>
+    archiveZone(tx, { zoneId, actor: actorFrom(guard.session) }),
+  );
+  if (!outcome.ok) return refuse(outcome.reason);
+
+  revalidateZoneSurfaces();
+  return { ok: true, data: { status: outcome.to } };
+}
+
+/**
+ * **What a moved boundary would do, before it moves.**
+ *
+ * Called by the editor when the polygon has changed on a zone that is not a
+ * draft. It answers with the flights that would be sent back to a reviewer —
+ * named, with their times — so the admin confirms against a list of people
+ * rather than a number.
+ *
+ * `shrinks: false` means the new boundary contains the old one and nothing is
+ * disturbed; the editor saves straight through. When it is `true` the list is
+ * **every approved flight still ahead in the zone**, not a computed subset,
+ * because a booking has no launch point (threads 37 and 55) and "was this
+ * flight in the part you cut away" is a question the row cannot answer. Saying
+ * so on the screen is better than a confident answer that is a guess.
+ *
+ * Read-only, so it takes no rate-limit token of its own beyond the admin check:
+ * it runs on every geometry edit the editor sees.
+ */
+export async function previewGeometryChangeAction(
+  zoneId: string,
+  geometry: unknown,
+): Promise<
+  ActionResult<{
+    shrinks: boolean;
+    bookings: {
+      bookingId: string;
+      pilotName: string;
+      slotStart: string;
+      slotEnd: string;
+      status: string;
+    }[];
+  }>
+> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isAdmin(session)) return refuse("not_found");
+
+  const current = await db.query.zone.findFirst({ where: eq(zone.id, zoneId) });
+  if (!current) return refuse("not_found");
+
+  const checked = validateGeometry(geometry);
+  if (!checked.ok) {
+    return {
+      ok: false,
+      reasons: checked.problems.map((problem) => ({
+        code: `geometry_${problem.code}`,
+        params: problem.params,
+      })),
+    };
+  }
+
+  const unchanged =
+    JSON.stringify(current.geometry) === JSON.stringify(checked.geometry);
+  const shrinks =
+    !unchanged &&
+    current.status !== "draft" &&
+    geometryShrinks(current.geometry, checked.geometry);
+
+  if (!shrinks) return { ok: true, data: { shrinks: false, bookings: [] } };
+
+  const rows = await listZoneBookingImpact(session, zoneId);
+  return {
+    ok: true,
+    data: {
+      shrinks: true,
+      // Only the approved ones are flagged; a `pending` booking is already in
+      // the queue the flag would put it in.
+      bookings: rows
+        .filter((row) => row.status === "approved")
+        .map((row) => ({
+          bookingId: row.bookingId,
+          pilotName: row.pilotName,
+          slotStart: row.slotStart.toISOString(),
+          slotEnd: row.slotEnd.toISOString(),
+          status: row.status,
+        })),
+    },
+  };
 }

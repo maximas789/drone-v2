@@ -31,3 +31,20 @@ export const droneRevokedEvent = eventType("drone/revoked", {
 export const zoneClosurePublishedEvent = eventType("zone/closure.published", {
   schema: staticSchema<{ closureId: string }>(),
 });
+
+/**
+ * Sent by F23b when a zone is suspended. Cancels every future booking in it.
+ *
+ * **This one carries text, not only an id** — the same exception
+ * `droneRevokedEvent` makes, and for the same reason: the reason is the
+ * authority's own words, quoted verbatim to each pilot, and no column on `zone`
+ * holds it (`audit_event.reason` is the record). Both languages travel, because
+ * each pilot is told in theirs.
+ */
+export const zoneSuspendedEvent = eventType("zone/suspended", {
+  schema: staticSchema<{
+    zoneId: string;
+    reasonAr: string;
+    reasonEn: string;
+  }>(),
+});

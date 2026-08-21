@@ -6,6 +6,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button-link";
+import { ProposalNotice } from "@/components/proposal-notice";
 import { requireAdmin } from "@/lib/auth-guards";
 import { countPendingReviews } from "@/lib/data/review";
 import { listCitiesWithZoneCounts } from "@/lib/data/zone-admin";
@@ -30,7 +31,6 @@ export default async function AdminCitiesPage() {
   const locale = toLocale(await localeParam());
   const session = await requireAdmin();
   const t = await getTranslations("cityAdmin");
-  const tCommon = await getTranslations("common");
   const tReview = await getTranslations("review");
 
   const [cities, counts] = await Promise.all([
@@ -51,9 +51,7 @@ export default async function AdminCitiesPage() {
         </div>
       </header>
 
-      <Badge variant="secondary" className="whitespace-normal">
-        {tCommon("proposalNotice")}
-      </Badge>
+      <ProposalNotice />
 
       <QueueTabs
         active="zones"

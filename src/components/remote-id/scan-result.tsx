@@ -227,7 +227,17 @@ export function ScanResult({
               <ul className="flex flex-col gap-2 text-sm">
                 {view.declarations.map((declaration, index) => (
                   <li
-                    key={`${declaration.kind}-${declaration.moduleSerial ?? index}`}
+                    /*
+                        **The index is always in the key, not a fallback for a
+                        null serial.** `remote_id_declaration` is a history
+                        table: superseding a module writes a *second* row with
+                        the same kind and the same serial, so `kind-serial`
+                        collides the moment anyone re-declares the same
+                        hardware — which is the ordinary case. React then warns
+                        and may duplicate or omit a row on the regulator-facing
+                        list of what an aircraft broadcasts.
+                      */
+                      key={`${declaration.kind}-${declaration.moduleSerial ?? ""}-${index}`}
                     className="flex flex-wrap items-center gap-2"
                   >
                     <span className="font-medium">{declaration.kind}</span>

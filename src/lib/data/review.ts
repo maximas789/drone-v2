@@ -236,7 +236,13 @@ export async function getDroneForReview(session: Session, id: string) {
  * would show a reviewer the approval and silently omit the Remote ID that
  * approval issued. Two entity ids, one chronological list.
  */
-async function listAuditForDrone(
+/**
+ * Exported since F24: `/admin/lookup` shows the same trail beside a resolved
+ * registration, and a lookup that read only the `drone` id would silently omit
+ * the Remote ID's own history — the issue, the suspensions and every identity
+ * reveal, which are exactly the rows a field officer is asking about.
+ */
+export async function listAuditForDrone(
   session: Session,
   droneId: string,
   remoteIdId: string | null,

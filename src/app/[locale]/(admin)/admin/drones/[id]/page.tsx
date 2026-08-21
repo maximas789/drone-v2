@@ -152,7 +152,13 @@ export default async function AdminDroneReviewPage({
               </p>
             ) : (
               <>
-                <Badge variant="outline" className="mt-2 whitespace-normal">
+                <Badge
+                  variant="outline"
+                  /* See `proposal-notice.tsx`: `Badge` is `h-5
+                     overflow-hidden`, so a wrapped second line is clipped
+                     without `h-auto`. */
+                  className="mt-2 h-auto whitespace-normal py-1 text-start"
+                >
                   {t("noSerialBadge")}
                 </Badge>
                 <p className="text-muted-foreground mt-2 text-sm">

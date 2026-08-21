@@ -122,3 +122,17 @@ src/lib/lookup/__tests__/detect.test.ts
 - [ ] The page is usable one-handed at 375 px in Arabic RTL, with large tap targets.
 - [ ] Recent lookups persist within a session.
 - [ ] `pnpm test` passes the input-detection suite; `tsc`, `lint`, `build` pass.
+
+---
+
+## Built — corrections to this file (Session 32, 2026-08-20)
+
+**The build log is the truth; these are the places this file and the code disagree.**
+
+- **`revealIdentity` and `reportUnregistered` are not in `src/lib/actions/lookup.ts`.** They already existed, keyed on a code, in `src/lib/actions/remote-id.ts` (F11) and are reused unchanged. A second reveal path would be a second place the "audit event before the return" discipline has to be right. `src/lib/actions/lookup.ts` holds `lookupAction` and `openCandidateAction`.
+- **Six query kinds, not five.** `module_serial` is audited alongside `code`, `partial`, `national_id`, `mobile` and `name` — it is cleanly detectable and telling a reviewer their serial was read as "a name" would be false on screen.
+- **The audit row is filed against `entityType: "user"`** with the reviewer's own id, carrying `{ queryType, resultCount }`. A search that matched nothing has no other entity to hang on, and those are the ones worth seeing.
+- **`src/lib/lookup/authorisation.ts`** is not in the file list above. `flightAuthorisationOf` is the pure derivation behind the yes/no panel, split out so both answers are unit-testable without a database.
+- **The classifier is decisive and says so on screen**, with a control to re-run the term the other way. The Crockford alphabet is ordinary Latin, so an eight-letter family name can *be* a valid code (`Alshehri` → `AJN-A1SH-EHR1`). Code-first is still correct; the escape hatch is what makes it safe. Asserted in `detect.test.ts`.
+- **The single-match case goes through `resolveRemoteId`**, so a reviewer's lookup writes a `remote_id_scan` row like any other resolution — which is what a subsequent reveal attaches itself to.
+- **"Verified by grep" is a test.** `detect.test.ts` scans the source: the candidate projection carries no identity column, and the action reaches the record only through `resolveRemoteId`. Both mutation-checked.

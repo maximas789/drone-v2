@@ -5,6 +5,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button-link";
+import { ProposalNotice } from "@/components/proposal-notice";
 import { Link } from "@/i18n/navigation";
 import { requireAdmin } from "@/lib/auth-guards";
 import { countPendingReviews } from "@/lib/data/review";
@@ -32,7 +33,6 @@ import { toLocale } from "@/lib/locale";
 export default async function AdminZonesPage() {
   const locale = toLocale(await localeParam());
   const session = await requireAdmin();
-  const t = await getTranslations();
   const tZones = await getTranslations("zoneAdmin");
   const tReview = await getTranslations("review");
 
@@ -54,9 +54,7 @@ export default async function AdminZonesPage() {
         </div>
       </header>
 
-      <Badge variant="secondary" className="whitespace-normal">
-        {t("common.proposalNotice")}
-      </Badge>
+      <ProposalNotice />
 
       <QueueTabs
         active="zones"

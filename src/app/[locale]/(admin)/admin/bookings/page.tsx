@@ -5,8 +5,8 @@ import { BookingQueueTable } from "@/components/admin/booking-queue-table";
 import { QueueTabs } from "@/components/admin/queue-tabs";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button-link";
+import { ProposalNotice } from "@/components/proposal-notice";
 import {
   applyBookingFilters,
   isBookingFiltered,
@@ -77,9 +77,7 @@ export default async function AdminBookingsPage({
         </div>
       </header>
 
-      <Badge variant="secondary" className="whitespace-normal">
-        {t("common.proposalNotice")}
-      </Badge>
+      <ProposalNotice />
 
       <QueueTabs
         active="bookings"

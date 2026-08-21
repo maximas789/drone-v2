@@ -24,10 +24,19 @@ import type { Locale } from "@/lib/locale";
 export function ReportDialog({
   code,
   locale,
+  openLabel,
 }: {
   /** Whatever was scanned, including a code that resolved to nothing. */
   code: string;
   locale: Locale;
+  /**
+   * The label on the closed control. Added by F24, which files through this
+   * same action from `/admin/lookup` — where the honest label is *"report an
+   * unregistered drone"*, because the reviewer has just been told nothing
+   * resolved. A second component would have meant a second call site for an
+   * action whose "the code need not resolve" behaviour is the subtle part.
+   */
+  openLabel?: string;
 }) {
   const t = useTranslations("remoteId");
   const tErrors = useTranslations("errors");
@@ -83,7 +92,7 @@ export function ReportDialog({
   if (!open) {
     return (
       <Button variant="outline" onClick={() => setOpen(true)}>
-        {t("reportOpen")}
+        {openLabel ?? t("reportOpen")}
       </Button>
     );
   }

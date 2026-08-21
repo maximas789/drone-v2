@@ -6,6 +6,7 @@ import { ReportDialog } from "@/components/remote-id/report-dialog";
 import { ScanResult } from "@/components/remote-id/scan-result";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Badge } from "@/components/ui/badge";
+import { ProposalNotice } from "@/components/proposal-notice";
 import { Link } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth-guards";
 import { formatSeconds } from "@/lib/format";
@@ -113,9 +114,7 @@ export default async function ScanPage({
         </>
       )}
 
-      <Badge variant="secondary" className="whitespace-normal">
-        {tCommon("proposalNotice")}
-      </Badge>
+      <ProposalNotice />
     </main>
   );
 }

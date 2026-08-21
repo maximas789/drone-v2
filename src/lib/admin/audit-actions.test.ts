@@ -8,6 +8,7 @@ import {
   DRONE_TRAIL_ACTIONS,
   PILOT_TRAIL_ACTIONS,
   REPORT_TRAIL_ACTIONS,
+  USER_TRAIL_ACTIONS,
   hasTrailLabel,
   trailLabelKey,
 } from "./audit-actions";
@@ -47,12 +48,19 @@ const TRAIL_PREFIXES = [
  */
 const NOT_ON_THIS_TRAIL = /^(user|zone|city|zone_closure)\./;
 
-/** Every action any trail can show. `hasTrailLabel` answers for all four. */
+/** Every action any trail can show. `hasTrailLabel` answers for all five. */
 const ALL_TRAIL_ACTIONS = [
   ...DRONE_TRAIL_ACTIONS,
   ...BOOKING_TRAIL_ACTIONS,
   ...PILOT_TRAIL_ACTIONS,
   ...REPORT_TRAIL_ACTIONS,
+  /**
+   * F24's `remote_id.lookup` is filed against a **user** and shows on no
+   * aircraft's trail. It is named here anyway: F25's audit browser will render
+   * it, and a label that exists must be a label something writes — which is
+   * what the "nothing writes this" test below checks in the other direction.
+   */
+  ...USER_TRAIL_ACTIONS,
 ];
 
 function labelsFor(messages: typeof ar): Record<string, unknown> {

@@ -128,17 +128,37 @@ export const REPORT_TRAIL_ACTIONS = [
 
 export type ReportTrailAction = (typeof REPORT_TRAIL_ACTIONS)[number];
 
+/**
+ * Actions filed against a **`user`** entity — F24's lookup.
+ *
+ * `remote_id.lookup` is the odd one out in this file and deliberately so. Every
+ * other action here says what happened *to* a record; this one says what a
+ * member of staff **did**, and it is filed against the reviewer's own user id
+ * because a search that resolved to nothing has no other entity to hang on —
+ * and those are precisely the searches worth being able to see.
+ *
+ * It therefore appears on no aircraft's trail and on no pilot's. It exists here
+ * so F25's audit browser can name it, and because `audit-actions.test.ts` scans
+ * the source for audited actions and would otherwise fail — which is exactly
+ * what that scan is for.
+ */
+export const USER_TRAIL_ACTIONS = ["remote_id.lookup"] as const;
+
+export type UserTrailAction = (typeof USER_TRAIL_ACTIONS)[number];
+
 export type TrailAction =
   | DroneTrailAction
   | BookingTrailAction
   | PilotTrailAction
-  | ReportTrailAction;
+  | ReportTrailAction
+  | UserTrailAction;
 
 const KNOWN = new Set<string>([
   ...DRONE_TRAIL_ACTIONS,
   ...BOOKING_TRAIL_ACTIONS,
   ...PILOT_TRAIL_ACTIONS,
   ...REPORT_TRAIL_ACTIONS,
+  ...USER_TRAIL_ACTIONS,
 ]);
 
 /**

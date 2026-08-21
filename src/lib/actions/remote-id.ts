@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import { audit, type Actor } from "@/lib/audit";
-import { requireReviewer, getSession } from "@/lib/auth-guards";
+import { getSession } from "@/lib/auth-guards";
 import { db, type DbExecutor } from "@/lib/db";
 import {
   drone,
@@ -20,7 +20,7 @@ import { enforceLimit } from "@/lib/rate-limit";
 import { storeQrForRemoteId } from "@/lib/qr/store";
 import { normalizeCode } from "@/lib/remote-id/codec";
 import { viewerLevelFor } from "@/lib/remote-id/resolve";
-import { roleOf } from "@/lib/session";
+import { isReviewer, roleOf } from "@/lib/session";
 import { validateDeclaration } from "@/lib/validation/declaration";
 import { acceptsDeclarations } from "@/lib/validation/drone";
 
@@ -50,7 +50,7 @@ export type RevealedIdentity = {
  * Reveal the owner behind a Remote ID.
  *
  * ```
- * requireReviewer() → rateLimit(20/hr) → a written reason, at least 10 chars
+ * reviewer guard → rateLimit(20/hr) → a written reason, at least 10 chars
  *   → audit_event 'remote_id.identity_revealed'   ← written BEFORE the return
  *   → remote_id_scan.revealedIdentity = true
  *   → the unmasked identity
@@ -65,7 +65,21 @@ export async function revealIdentityAction(
   code: string,
   reason: string,
 ): Promise<ActionResult<RevealedIdentity>> {
-  const session = await requireReviewer();
+  /**
+   * **A refusal, not `requireReviewer()`** — changed in F24, which drove this
+   * action from `/admin/lookup` and found the shape wrong. The guard did its
+   * job: a pilot POSTing it directly got a 404 and no identity. But it got
+   * there by *throwing* `notFound()`, and rule 10 says a refusal is never an
+   * exception — a thrown 404 inside a `startTransition` reaches the caller as
+   * an error boundary rather than as a message it can read.
+   *
+   * `not_found`, never `forbidden`: telling somebody the route exists is
+   * telling them something. The session is still read here rather than trusted
+   * from the layout, which never runs for a POST.
+   */
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+  if (!isReviewer(session)) return refuse("not_found");
 
   const limit = await enforceLimit("identity.reveal", "user", session.user.id);
   if (!limit.ok) {

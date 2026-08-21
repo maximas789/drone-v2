@@ -4,8 +4,8 @@ import { PilotSearch } from "@/components/admin/pilot-search";
 import { QueueTabs } from "@/components/admin/queue-tabs";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button-link";
+import { ProposalNotice } from "@/components/proposal-notice";
 import { requireReviewer } from "@/lib/auth-guards";
 import { countPendingReviews, searchPilots } from "@/lib/data/review";
 import { formatNumber } from "@/lib/format";
@@ -55,9 +55,7 @@ export default async function AdminPilotsPage() {
         </div>
       </header>
 
-      <Badge variant="secondary" className="whitespace-normal">
-        {t("common.proposalNotice")}
-      </Badge>
+      <ProposalNotice />
 
       <QueueTabs
         active="pilots"

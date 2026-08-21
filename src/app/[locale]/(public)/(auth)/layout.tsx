@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { Badge } from "@/components/ui/badge";
+import { ProposalNotice } from "@/components/proposal-notice";
 import { Link } from "@/i18n/navigation";
 
 /**
@@ -24,9 +24,7 @@ export default async function AuthLayout({
       {children}
 
       {/* Honesty constraint: this is a proposal, and every entry point says so. */}
-      <Badge variant="secondary" className="whitespace-normal">
-        {t("proposalNotice")}
-      </Badge>
+      <ProposalNotice />
     </main>
   );
 }

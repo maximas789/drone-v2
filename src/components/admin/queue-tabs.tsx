@@ -31,7 +31,7 @@ export function QueueTabs({
   droneCount,
   bookingCount,
 }: {
-  active: "drones" | "bookings" | "pilots" | "zones";
+  active: "drones" | "bookings" | "pilots" | "lookup" | "zones";
   droneCount: string;
   bookingCount: string;
 }) {
@@ -58,6 +58,15 @@ export function QueueTabs({
         */}
         <Tab href="/admin/pilots" current={active === "pilots"}>
           {t("tabPilots")}
+        </Tab>
+        {/*
+          **No count on the lookup tab either, and for a different reason.**
+          There is nothing to count: it is not a queue and not a directory, it
+          is a box you type into. A badge beside it would be inventing a number
+          to keep the strip symmetrical.
+        */}
+        <Tab href="/admin/lookup" current={active === "lookup"}>
+          {t("tabLookup")}
         </Tab>
         {/*
           **Zones is admin-only, and the tab is drawn for everybody.** A

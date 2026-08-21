@@ -31,7 +31,14 @@ export function QueueTabs({
   droneCount,
   bookingCount,
 }: {
-  active: "drones" | "bookings" | "pilots" | "lookup" | "zones" | "analytics";
+  active:
+    | "drones"
+    | "bookings"
+    | "pilots"
+    | "lookup"
+    | "zones"
+    | "analytics"
+    | "audit";
   droneCount: string;
   bookingCount: string;
 }) {
@@ -89,6 +96,19 @@ export function QueueTabs({
         */}
         <Tab href="/admin/analytics" current={active === "analytics"}>
           {t("tabAnalytics")}
+        </Tab>
+        {/*
+          **Admin-only, and drawn for everybody** — the zones tab's rule, not
+          the analytics tab's. A reviewer following it gets the same 404 a pilot
+          does, from `requireAdmin` on the page and independently from the
+          export route. Hiding it would mean this strip needed the session, and
+          a navigation control that changes shape by role is one more thing to
+          get wrong than a route that refuses. No count: the log is not a queue,
+          and a badge counting sixty-eight events would read as sixty-eight
+          things waiting for somebody.
+        */}
+        <Tab href="/admin/audit" current={active === "audit"}>
+          {t("tabAudit")}
         </Tab>
       </ul>
     </nav>

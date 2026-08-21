@@ -71,6 +71,21 @@ before anything touches the worker pool, and `ensureRtlTextPlugin` rather than a
 first.** Two polygons overlaid, old and new, is the whole feature — but the plumbing
 under it is the part that cost most of a session last time.
 
+**It cost most of a session again, and none of it was the plumbing that was warned
+about** (corrected in F25b). The RTL plugin and the worker URL were right first time.
+What was wrong: the map lives inside a `<details>`, where `load` never fires and a
+`ResizeObserver` never fires either — a closed `<details>` still reports a box, so there
+is no size change to observe. Build on the `<details>`'s `toggle` event, redraw on
+`idle`, and gate the offline fallback on `isStyleLoaded()` rather than `loaded()`, which
+is false until every tile has arrived and so fires the fallback on a healthy host. And
+before suspecting any of that, **read `document.visibilityState`**: rAF is suspended in
+a hidden tab, so an automated browser session sees a map that never renders and never
+loads, which is an exact impersonation of the `setWorkerUrl` trap.
+
+**The map also needs the row's full width.** Each event renders as two `<tr>`s — the
+data, then a `colSpan` row holding the diff — because a map in the reason cell gets that
+column's width, which is about seventy-five pixels.
+
 ### Not in either part
 
 Nothing. F25's spec is fully covered by a + b.
@@ -164,12 +179,17 @@ Analytics queries are aggregate SQL with date-range predicates against the index
 ```
 src/app/[locale]/(admin)/admin/analytics/page.tsx
 src/app/[locale]/(admin)/admin/audit/page.tsx
+src/app/api/admin/audit/route.ts       the audited CSV export (F25b)
 src/lib/analytics/queries.ts
 src/lib/data/audit.ts                  cursor pagination + filters
+src/lib/admin/audit-filters.ts         filter parsing + the (created_at, id) cursor
+src/lib/admin/audit-diff.ts            the pure field-level diff
+src/lib/admin/audit-export.ts          the CSV columns
 src/components/admin/analytics/{stat-tiles,registrations-chart,outcomes-chart,
                                 turnaround-histogram,zone-bar,utilisation-heatmap,
                                 noshow-line,resolutions-line,date-range,export-csv}.tsx
-src/components/admin/audit/{table,filters,diff-view,geometry-diff-map,entity-timeline}.tsx
+src/components/admin/audit/{table,filters,diff-view,geometry-diff-map,
+                            geometry-diff-mount,date-filter,entity-timeline}.tsx
 ```
 
 ## Acceptance criteria

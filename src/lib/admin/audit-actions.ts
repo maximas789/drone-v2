@@ -44,6 +44,16 @@ export const DRONE_TRAIL_ACTIONS = [
   "remote_id.declaration_superseded",
   "remote_id.broadcast_capability_changed",
   "declaration.document_uploaded",
+  /**
+   * F25b, and **found by opening the audit browser** rather than by any check.
+   * The expiry sweep writes this as a *marker* — the row is what stops a pilot
+   * being warned twice about the same threshold — and it is a genuine audit
+   * event that the log renders. It escaped `audit-actions.test.ts` because
+   * `expiry-reminders.ts` writes `action: EXPIRY_REMINDER_ACTION`, a constant,
+   * and the scan matched only quoted literals near an `action:`. The scan now
+   * reads `*_ACTION` declarations too.
+   */
+  "drone.expiry_reminded",
 ] as const;
 
 export type DroneTrailAction = (typeof DRONE_TRAIL_ACTIONS)[number];
@@ -83,6 +93,13 @@ export const BOOKING_TRAIL_ACTIONS = [
   "booking.flagged_for_review",
   "booking.completed",
   "booking.no_show",
+  /**
+   * The day-before reminder, written by the hourly job as the marker that stops
+   * a second one going out. Same story as `drone.expiry_reminded` above: a
+   * constant rather than a literal, so the coverage scan never saw it, and it
+   * reached the audit browser as a raw dotted code.
+   */
+  "booking.reminded",
 ] as const;
 
 export type BookingTrailAction = (typeof BOOKING_TRAIL_ACTIONS)[number];
@@ -142,16 +159,78 @@ export type ReportTrailAction = (typeof REPORT_TRAIL_ACTIONS)[number];
  * the source for audited actions and would otherwise fail — which is exactly
  * what that scan is for.
  */
-export const USER_TRAIL_ACTIONS = ["remote_id.lookup"] as const;
+export const USER_TRAIL_ACTIONS = [
+  "remote_id.lookup",
+  /**
+   * F25b. Who made whom a reviewer is the single most consequential thing an
+   * administrator does in this app — it hands somebody the power to reveal a
+   * pilot's identity — and until the audit browser existed there was no screen
+   * that rendered it. It is filed against the *promoted* account's user id.
+   */
+  "user.role_changed",
+  /**
+   * F25b. **Browsing the log is not audited; taking a copy of it out of the
+   * system is.** Reading is what the screen is for, and a row per scroll would
+   * bury the events that matter under the act of looking at them. An export is
+   * a different act: the file leaves the system, keeps whatever it held at that
+   * moment, and can be forwarded. Filed against the exporting administrator's
+   * own user id, like `remote_id.lookup` above and for the same reason — the
+   * row is about what a member of staff *did*.
+   */
+  "user.audit_exported",
+] as const;
 
 export type UserTrailAction = (typeof USER_TRAIL_ACTIONS)[number];
+
+/**
+ * A **zone's** trail — F25b's `/admin/zones/[id]`, and the audit browser.
+ *
+ * `zone.*` and `zone_closure.*` in one list because they are one trail. A
+ * closure is audited against the *closure's* id, not the zone's, so
+ * `listAuditForZone` unions the two sets of ids; a reader looking at what has
+ * happened to a piece of airspace needs the boundary change and the temporary
+ * closure in the same column of time, not on two screens.
+ *
+ * `zone.geometry_changed` is separate from `zone.updated` because they are
+ * different acts: renaming a zone is administration, moving its boundary can
+ * put an already-approved flight inside a no-fly area. It is also the one
+ * action whose diff is a **map** rather than a field list.
+ */
+export const ZONE_TRAIL_ACTIONS = [
+  "zone.created",
+  "zone.updated",
+  "zone.geometry_changed",
+  "zone.hours_changed",
+  "zone.published",
+  "zone.suspended",
+  "zone.archived",
+  "zone_closure.created",
+  "zone_closure.published",
+  "zone_closure.withdrawn",
+] as const;
+
+export type ZoneTrailAction = (typeof ZONE_TRAIL_ACTIONS)[number];
+
+/**
+ * Everything else the audit browser can show. One member today.
+ *
+ * A city is created once and never touched again, which is exactly why it had
+ * no trail screen before: there was nowhere for `city.created` to appear. The
+ * browser shows every row in the table, so it needs a label for every row —
+ * including the ones no per-entity screen will ever render.
+ */
+export const PLATFORM_TRAIL_ACTIONS = ["city.created"] as const;
+
+export type PlatformTrailAction = (typeof PLATFORM_TRAIL_ACTIONS)[number];
 
 export type TrailAction =
   | DroneTrailAction
   | BookingTrailAction
   | PilotTrailAction
   | ReportTrailAction
-  | UserTrailAction;
+  | UserTrailAction
+  | ZoneTrailAction
+  | PlatformTrailAction;
 
 const KNOWN = new Set<string>([
   ...DRONE_TRAIL_ACTIONS,
@@ -159,7 +238,12 @@ const KNOWN = new Set<string>([
   ...PILOT_TRAIL_ACTIONS,
   ...REPORT_TRAIL_ACTIONS,
   ...USER_TRAIL_ACTIONS,
+  ...ZONE_TRAIL_ACTIONS,
+  ...PLATFORM_TRAIL_ACTIONS,
 ]);
+
+/** Every action this build knows how to name, for the browser's filter. */
+export const ALL_TRAIL_ACTIONS: readonly string[] = [...KNOWN].sort();
 
 /**
  * The catalogue key for an action — **dots replaced with underscores.**

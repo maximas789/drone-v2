@@ -1,12 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locale as localeParam } from "next/root-params";
+import { EntityTimeline } from "@/components/admin/audit/entity-timeline";
 import { HoursGrid } from "@/components/admin/zone/hours-grid";
 import { LifecyclePanel } from "@/components/admin/zone/lifecycle-panel";
 import { ZoneForm } from "@/components/admin/zone/zone-form";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { requireAdmin } from "@/lib/auth-guards";
+import { listAuditForZone } from "@/lib/data/audit";
 import {
   getZoneForAdmin,
   getZoneHoursForAdmin,
@@ -50,6 +52,8 @@ export default async function EditZonePage({
     listCitiesForAdmin(session),
     listZoneContext(session, id),
   ]);
+
+  const trail = await listAuditForZone(session, id);
 
   const initial: ZoneDraft = {
     code: zone.code,
@@ -182,6 +186,17 @@ export default async function EditZonePage({
         }))}
         locale={locale}
       />
+
+      {/*
+        **The trail that was missing.** Drones, bookings and pilots each had an
+        inline audit trail from F22; a zone did not, so a boundary move and the
+        closure that cancelled eleven flights were visible only to somebody who
+        knew to open the full log. `listAuditForZone` unions the zone's own id
+        with every closure filed against it — a closure is audited against the
+        *closure's* id, so a trail keyed on the zone alone would silently omit
+        exactly the events a reader came here for.
+      */}
+      <EntityTimeline events={trail} entityId={zone.id} locale={locale} />
     </main>
   );
 }

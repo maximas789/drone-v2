@@ -32,7 +32,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
-| 7 — Admin | F22–F25 | 🟡 **In progress (Sessions 26–33).** **F22, F23, F24 and F25a complete.** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. **F25a shipped the analytics screen — six tiles, seven hand-rolled SVG charts, the validated chart palette, and the CSV export. F25b, the audit browser, is all that remains in Wave 7.** |
+| 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b, which needs a second staff account (thread 64).** |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
 
@@ -133,7 +133,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 38 | ~~**The seeded zones open at 06:00 and Riyadh sunrise is 06:34 in December.**~~ **Reconciled in F23b, by saying it rather than changing it.** The admin slot preview runs the real `deriveSlots` and then marks every slot `isNightWindow` would refuse on a `nightAllowed: false` zone, naming that day's sunrise and sunset. Seen: RUH-P-01's 17:00–19:00 slot marked against an 18:26 sunset, and a hand-set 04:00 opening marking two slots against a 05:33 sunrise. `slotStates` still has **no `night` state** — deliberately, for F13's reason — so **F21's pilot picker still shows slots the engine will refuse**, without a greyed marker. That is the part left, and it is F21's. | F12/F13 | F21 |
 | 43 | **`notification.emailLogId` is wired on the approval path only.** `linkNotificationEmail` matches on `(userId, entityId)` and `qr-render` calls it after sending. The expiry sweep, the booking reminders and the closure fan-out all send email beside a notification and do not link it, so F29's "why didn't that email arrive?" answers for approvals and shrugs for the rest. | F15 | F29 |
 | 44 | **375 px works through a same-origin iframe, and only that way.** `resize_window` reports success and leaves the viewport at 1440 — six attempts across five sessions. The technique that works: inject an `iframe` 375 px wide pointing at the page, whose media queries evaluate at its own width, then measure `scrollWidth` vs `clientWidth` inside it. **F31's gate must use this**, not the tool. **Reconfirmed at F24**, with the full result card rendered inside the frame: `resize_window` again left `innerWidth` at 1440, the iframe gave 371, and `body.scrollWidth === clientWidth` with `scrollX` still 0 after a real scroll attempt. | F15 | F31, every UI wave |
-| 46 | **`<input type="date">` is unusable in this app.** Chrome renders it from the **browser's** locale and ignores `lang` on the element and on `<html>` — proven by setting both. Under an Arabic Chrome it prints `٠٤/٠٥/٢٠١٢` and a reversed `ةنس/رهش/موي` placeholder, which is rule 6 broken through a surface `format.ts` cannot reach. `DateOfBirthInput` (three selects) is the pattern. **Native `required` is banned for the same class of reason**: it cancels the submit and speaks the browser's language, so the app's bilingual refusal never runs. Both found by opening the page. | F17 | F18, F21, F23, F31 |
+| 46 | **`<input type="date">` is unusable in this app.** Chrome renders it from the **browser's** locale and ignores `lang` on the element and on `<html>` — proven by setting both. Under an Arabic Chrome it prints `٠٤/٠٥/٢٠١٢` and a reversed `ةنس/رهش/موي` placeholder, which is rule 6 broken through a surface `format.ts` cannot reach. `DateOfBirthInput` (three selects) is the pattern. **Native `required` is banned for the same class of reason**: it cancels the submit and speaks the browser's language, so the app's bilingual refusal never runs. Both found by opening the page. **Broken again in F25b** — the audit filter bar shipped native date inputs and the Arabic page drew `ةنس/رهش/موي`. Also newly established: `dir`, `lang` and an inline `style.direction` are all overridden, because the UA sheet's rule on `input[type=date]` carries `!important` and beats author styles including inline ones. `DateSelect` is the only answer; wrap it in a hidden input if the form must stay a plain GET (`audit/date-filter.tsx`). | F17 | F18, F21, F23, F31 |
 | 47 | **No QR has ever been printed, and none has been scanned by a real phone camera.** F19a proved what the image *encodes* — the stored PNG is byte-identical to a fresh encode of the `/ar/rid/{code}` URL, with a differing control — and that the target resolves. Neither says a camera can read a **20 mm printed** symbol at ~15 cm, which is the criterion F19 actually states and the thing a field inspector does. It needs paper and a phone, so no amount of code can close it. **F19b owns the print view**; whoever builds it should print one sheet and try, or say plainly that it is unverified. | F19a | F19b, F31 |
 | 48 | **The print dialog has never been opened, and the printed palette is untestable today.** `window.print()` blocks the page on a native dialog the browser tooling cannot dismiss, so the Print button is wired and unexercised; the `@page` rule, the chrome-hiding selectors and the millimetre sizes were verified from the CSSOM and by measurement instead. Separately, *"printed output uses the light palette even in dark mode"* is **vacuous right now**: nothing in this app ever applies the `.dark` class — there is no theme toggle. **Re-check both when F28 ships one**, and note the printed surfaces also use explicit `bg-white` / `text-black` rather than theme tokens. | F19b | F28, F31 |
 | 50 | **`CLAUDE.md` says GACA registration *requires* a manufacturer serial number. GACA's own documents do not.** E-Book Volume 18, Table 1 makes the serial essential information for the **Specific Category only**; Note 3 asks for it in the Open Category *"if this information is available"* and says the displayed identifier is *"either the GACA registration certificate number or the UAS serial number"*. **The product is unaffected and the pitch is stronger for it** — `/remote-id` argues the accurate version, that the regulator already contemplates an authority-issued identifier standing in for a serial, and that from 1 January 2026 what must be *broadcast* under DRI is a registration number, not a factory marking. But `CLAUDE.md`'s opening paragraph still states the unverified version, and it is the file every session reads first. **The correction is the user's to make.** | F16b | `CLAUDE.md`, F26, F27, F30 |
@@ -150,13 +150,12 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 63 | **An expired drone with no photographs can never be renewed.** `renewDroneAction` answers `photo_required`, and the only surface that adds a photograph is `/drones/[id]/edit`, which 404s for `expired` (`EDITABLE_DRONE_STATUSES` is draft + rejected). The pilot is told to add a photo and has nowhere to add one. It only bites a row that reached `approved` without photographs — which registration should prevent — so it is a seeded-fixture problem today, not a live one. **F18 or F28 owns either widening the editable statuses for renewal or saying so in the refusal.** | F22a | F18, F28 |
 | 64 | **The four-eyes rule has never been satisfied over HTTP, because there is only one staff account.** `probe-four-eyes.mts` proves both halves against the database with two user *rows*; what is unrun is a second **reviewer signing in** and deciding the first account's submission in a browser. The assistant may not create accounts or enter passwords, so the user must sign up the second account and promote it on `/admin`. Until then the whole build has exactly one person who can decide nothing of their own. **Still one account as of Session 30** — checked directly against the `user` table, which holds a single row, `admin`. The plan handed to this session said to sign the second one up; it has not happened. **F24 hit it twice.** It is why `/admin/bookings/[id]` offers the single account no decision at all — so the *is this drone authorised right now* panel had no approved booking to render and needed `scripts/probe-authorised-now.mts` — and it is why F24’s reviewer-not-admin checks were driven over HTTP with a throwaway account that was deleted afterwards, rather than in a browser. | F22c | F31, and any demo that shows an approval |
 | 65 | **`ZONE_FILL` holds CSS variables, not colours.** `var(--zone-permitted)` works in MapLibre's own paint properties only because the app resolves it first (`resolveZoneColors`); anything else handed the map — terra-draw's mode styles in F23a, and whatever F25 charts with — gets a string it cannot parse and falls back to a default, **silently**. The name reads like a colour and is not one. | F23a | any future map or chart code |
-| 67 | **A blank map in a CDP screenshot is not a blank map.** Both `/zones` and the zone editor screenshotted as flat beige rectangles for half an hour of investigation in F23b — style loaded, sprites and glyphs fetched, attribution and scale controls populated, worker starting cleanly, console empty. **One click on the canvas and the map appeared, fully drawn.** MapLibre only repaints on demand, and the capture does not force one. Two corollaries: **click the map before screenshotting it**, and *"no tile requests in `performance.getEntriesByType('resource')`"* proves nothing either — MapLibre fetches tiles **inside the worker**, whose timeline the window cannot see. Both wrong turns were taken. | F23b | F31, any session that screenshots a map |
+| 67 | **A blank map in a CDP screenshot is not a blank map.** Both `/zones` and the zone editor screenshotted as flat beige rectangles for half an hour of investigation in F23b — style loaded, sprites and glyphs fetched, attribution and scale controls populated, worker starting cleanly, console empty. **One click on the canvas and the map appeared, fully drawn.** MapLibre only repaints on demand, and the capture does not force one. Two corollaries: **click the map before screenshotting it**, and *"no tile requests in `performance.getEntriesByType('resource')`"* proves nothing either — MapLibre fetches tiles **inside the worker**, whose timeline the window cannot see. Both wrong turns were taken. **F25b adds the harder half: check `document.visibilityState` first.** The automation tab was `hidden`, and rAF is suspended in a hidden tab — so MapLibre never renders, never fires `load` or `idle`, the layers are never added, and the tile deadline expires on a perfectly healthy map. That is not a screenshot that failed to repaint, it is a render loop that was never running, and it looks exactly like the `setWorkerUrl` trap. Read `visibilityState` before suspecting the worker, the style or the container. | F23b, F25b | F31, any session that screenshots a map |
 | 68 | ~~**`zone-suspended.ts` has never run.**~~ **The wall is down.** `npx inngest-cli@latest dev -u http://localhost:3001/api/inngest` was installed and run in F23c, the `ajniha` app connected with **11 functions**, and **`closure-fanout` executed end to end** — a booking cancelled, notified and emailed from a closure published in a browser, with a `completed` row in `job`. Kept for one session as a note: **`zone-suspended.ts` itself is still unexecuted**, and it is now a fixture away rather than an install away. | F23b | F31 |
 | 69 | **`inngest.send` throws, and it threw over a status that had already committed.** Suspending a zone with no Inngest listening gave the admin a `fetch failed` stack trace — while the zone *was* suspended. `suspendZoneAction` now guards the send and answers `fanOutQueued: false`, which the panel renders as a plain sentence. **Every other `inngest.send` in the app is still unguarded**: `approveDroneAction` and `revokeDroneAction` in `src/lib/actions/drone.ts` have exactly this failure available to them, and a revocation that throws after committing is worse than a suspension that does. F29 owns the general fix. | F23b | F29 |
 | 70 | **A module-level counter in a client component is a hydration mismatch.** F23b's hours grid minted row keys from `let counter = 0` at module scope; the module is evaluated once per process on each side, so the server rendered `w1` and the browser `w2`, and React reported mismatched `id`/`htmlFor` — with `typecheck`, `lint` and `test` all green. Fixed with an index in the `useState` initialiser plus a `useRef` for rows added after mount. **Thread 11's shape again**, and the console is the only place it showed. | F23b | every wave with client components |
 | 71 | **A cancellation reason reaches an English-reading pilot in Arabic.** `booking.cancellationReason` is a single column and holds the **authored** language, which is right for the record — but `/en/bookings/[id]` renders it raw under *"Why this was cancelled"*, so a closure whose English reason was written, stored and emailed still shows Arabic on the pilot's own page. The notification params carry **both** languages and are the material for a fix; the same gap applies to an authority cancellation, which has only ever had one authored reason. **F28 or F21 owns it**, and it needs a decision about whether the row grows a second column or the page reads the notification. | F23c | F31 |
 | 72 | **`{count}` messages hard-code an Arabic plural.** Arabic has six plural categories; a message written as `{count} حجوزات` prints `1 حجوزات` for one. `impactCount` and `closureCancelCount` were fixed in F23c with the pattern that works under thread 22 — a numeric `n` selects the branch and is never printed, a **formatted** `count` string is what appears — but **`zoneAdmin.previewCount` and every other `{count}` message in the catalogues are unaudited**. `i18n:check` cannot see this: it compares placeholders between catalogues, and a message wrong in both is wrong consistently. | F23c | F25, F31 |
-| 73 | **The analytics CSV's response headers have never been read back from a live response.** Status and body bytes were (200, `EF BB BF`, CRLF, Arabic intact); `Content-Type`, `Content-Disposition` and `Cache-Control` were not, because the browser extension refuses to read response headers. They are literals in `src/app/api/admin/analytics/route.ts`, so nothing has confirmed **the filename a browser actually saves**, and no spreadsheet has opened the file — the BOM is verified as bytes, not as behaviour. Same shape as thread 30: the code is written from the spec and unexecuted at the last hop. | F25a | F31 |
 | 74 | **Every chart on `/admin/analytics` has only ever been drawn from single-digit data.** Five registrations, four bookings, thirty scans, two review decisions. Label thinning, the eight-zone bar cap, the six-step sequential ramp and the 44 px bar cap are exercised by unit test and by reasoning; **none has been seen on a full screen**. A seed of a few hundred rows would be the cheapest way to find out what this page looks like when it is doing its job — and F31 is the place that matters, because the pitch screen looking thin is a presentation failure rather than a bug. | F25a | F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
@@ -350,6 +349,164 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 34 — Wave 7 · F25b The audit browser (`/admin/audit`) — **F25 complete, Wave 7 complete**
+
+**Date:** 2026-08-21
+**Status:** ⚠️ done with deviations
+
+**The whole log, and the proof that nothing rewrites it.** Admin-only, newest first,
+keyset-paginated, nine filters, a field-level before/after diff, an overlay map for the
+one diff that is a picture, and a CSV export that writes its own audit row. Plus the
+inline trail `/admin/zones/[id]` never had.
+
+**Reused, not rebuilt** (as briefed): `src/lib/analytics/csv.ts` writes the export —
+BOM, CRLF, quoting and formula-defusing all F25a's. `ChartCard`/`ChartTable` were not
+needed here at all; this screen is a table, not a chart.
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/admin/audit-filters.ts` | Filters + cursor. **Plain module** — the page, the client date control and the CSV route all parse the identical shape (thread 59). |
+| `src/lib/admin/audit-diff.ts` | Pure field-level diff and a **structural** geometry reader. |
+| `src/lib/admin/audit-export.ts` | The CSV columns. `getTranslations({ locale })` with the locale passed in (thread 4). |
+| `src/lib/data/audit.ts` | `listAuditEvents` (keyset), `listAuditActors`, `listAuditActionCodes`, `listAuditForZone`. `listRecentEvents` **deleted** — it was unused and is what `listAuditEvents` replaces. |
+| `src/components/admin/audit/{filters,table,diff-view,geometry-diff-map,geometry-diff-mount,date-filter,entity-timeline}.tsx` | |
+| `src/app/[locale]/(admin)/admin/audit/page.tsx` | `requireAdmin()` on the page — `(admin)/layout.tsx` only requires a reviewer. |
+| `src/app/api/admin/audit/route.ts` | The audited export. |
+| `src/lib/admin/audit-integrity.test.ts` | The append-only grep. |
+| + `audit-filters.test.ts`, `audit-diff.test.ts` | |
+
+**1001 tests across 58 files.** 1931 catalogue keys, `ar`/`en` in sync.
+
+---
+
+#### Deviations, and why
+
+| Deviation | Why |
+|---|---|
+| **`GET /api/admin/audit` writes a row.** A GET that mutates. | The alternative — an action returning a string plus a client component manufacturing an object URL — is more code doing less, breaks middle-click and "save link as", and would write the same row anyway. It is not a mutation a reader can observe: the export is repeatable and each repetition is honestly recorded. Named here rather than hidden. |
+| Filters offered are read from **the data** (`selectDistinct`), not from `audit-actions.ts`. | The catalogue lists what this build *can* write; the filter must offer what the table *holds*. An option that can only ever return nothing is a broken control. |
+| An unrecognised `?entityType=` becomes **no filter**, not a refusal. | `entityType` is a pg enum; an unknown string reaching `eq()` is a database error. A hand-edited URL must show the unfiltered log, not 500 the one screen whose job is to work when something else has gone wrong. Verified: `?entityType=nonsense` returns page one. |
+| `entityId` links to a **filtered view of the log** always; "open record" only for `drone`, `booking`, `zone`, `user`. | `pilot_profile` events carry the *profile* id while `/admin/pilots/[id]` takes a **user** id, and `remote_id`, `zone_closure`, `city`, `drone_report` have no detail route. A link that 404s on an append-only log reads as a fault in the log. |
+| Each event renders as **two `<tr>`s** — data, then a full-width `colSpan={5}` row holding the diff. | The boundary diff is a *map*, and a map in the reason cell gets that column's width: **75 px**. Found by measuring the canvas, not from a screenshot — a 75×254 MapLibre canvas looks like a scrollbar. |
+| No "previous page" control. | A keyset cursor knows how to go forward; back is what the back button is for, and every page is its own link. |
+| `zone.geometry_changed` is named in the CSV's changes column rather than serialised. | Four hundred coordinates in a spreadsheet cell is not information. |
+
+---
+
+#### Four defects found only by opening the page
+
+**1. `<input type="date">` — the rule I broke.** The filter bar's date range shipped as
+two native date inputs; the Arabic page drew Chrome's own placeholder as `ةنس/رهش/موي`
+— `يوم/شهر/سنة` reversed and unjoined. **Thread 46 already forbids this control** and
+`DateSelect` already existed. Before finding that, I tried `dir="ltr"`, then `lang="en"`,
+then an inline `style.direction`: `getComputedStyle` reported `direction: rtl` over all
+three, because the UA sheet's rule on `input[type=date]` carries `!important` and beats
+author styles including inline ones. New `date-filter.tsx` wraps `DateSelect` behind a
+hidden input, so the form stays a plain GET and the filtered log stays a link.
+
+**2. Two audited actions have been printing as raw dotted codes** —
+`drone.expiry_reminded` and `booking.reminded`. Both are written by Inngest through a
+**constant** (`EXPIRY_REMINDER_ACTION`, `BOOKING_REMINDER_ACTION`), and
+`audit-actions.test.ts` matched only quoted literals near an `action:`. They had no
+label in either catalogue and no screen had ever rendered them; the audit browser
+renders everything. Both now labelled, both folded into the drone and booking trails,
+and **the scan now also reads `*_ACTION` declarations** — that suffix exists in this
+codebase for no other purpose.
+
+**3. The geometry diff map, which took four wrong fixes.** Symptoms in order: correct
+polygons on a flat grey ground (the offline fallback, with the tile host answering
+perfectly — a convincing impersonation of the `setWorkerUrl` trap in `config.ts`); then
+right style, wrong camera; then right camera, no polygons; then nothing at all. What
+was actually true:
+
+- The map is inside a `<details>`. **A `ResizeObserver` on the container never fires** —
+  a closed `<details>` still reports a box through `getBoundingClientRect`, so there is
+  no size *change* on opening, and an observer skips a subtree whose rendering is
+  skipped. Replaced with a `toggle` listener on the nearest `<details>`, which also
+  means MapLibre is not downloaded until somebody expands a boundary change.
+- **`load` never fires on this surface, and `styledata` is worse** — it fires *while* a
+  style installs, so a handler gated on `isStyleLoaded()` reads false every time and the
+  flag flips afterwards with no further event. `map.on("idle", draw)` is the trigger
+  that works; `addBoundary` is idempotent so repeated calls cost nothing.
+- The fallback timer tested **`map.loaded()`**, which is false until every tile in view
+  has arrived. It fired on a healthy host mid-download and threw away the real style.
+  It now tests `isStyleLoaded()` — the question is "can we reach OpenFreeMap", and a
+  style that has parsed is a host that answered.
+
+**4. And the one that wasted the most time was not a defect at all.**
+`document.visibilityState === "hidden"` for the automation tab. rAF is suspended in a
+hidden tab, so MapLibre never renders, never fires `load` or `idle`, and the tile
+deadline expires on a perfectly healthy map. **Thread 67 in a new costume**: not "the
+screenshot didn't repaint" but "the render loop was never running". Any future session
+debugging a map through CDP should check `document.visibilityState` **first** — before
+the worker URL, before the style, before anything.
+
+---
+
+#### The integrity criterion
+
+`audit-integrity.test.ts` greps every `.ts`/`.tsx` under `src/` for `.update(auditEvent)`
+/ `.delete(auditEvent)`, the relational spellings, and raw SQL against `audit_event`;
+and for any *declaration* of `updateAuditEvent`-shaped names. **`src/` only, and the
+boundary is the point** — `scripts/probe-*.mts` do delete audit rows to clean up their
+own fixtures, and they are not the application. Its first version matched the bare name
+anywhere and failed on `data/audit.ts`'s header comment promising the guarantee: a test
+that refuses the sentence stating the rule is arguing with itself.
+
+---
+
+#### Verified over HTTP, both locales
+
+Admin session, dev serve on 3001, `ar` and `en`:
+
+- Every filter alone and combined — actor, role, action, entity type, entity id, date
+  range, system/people, free text over `reason`. Counts: system-only 5, people-only 50,
+  `entityType=zone_closure` 4, `system=no&role=admin&entityType=remote_id` 10, Arabic
+  free-text search 1.
+- **Cursor pagination: 50 + 20 rows, zero overlap**, compared by id.
+- Field-level diff renders (`الرمز — → AJN-7Q4M-31KD`); absent-vs-`null` distinguished.
+- **Geometry diff map**: real basemap, Arabic labels (`سدوس`, `العيينة`), old boundary
+  dashed, new solid and filled, three layers added, colours through `resolveZoneColors`.
+- System events show the **System** badge; `actorRole` is the row's, not a join.
+- Zone trail on `/admin/zones/[id]` shows the RUH-P-07 **closure** events — proving the
+  zone-id ∪ closure-ids union.
+- **CSV export**: 200, `EF BB BF` read off `arrayBuffer()`, CRLF, Arabic reason intact,
+  and — **closing thread 73** — `Content-Type: text/csv; charset=utf-8`,
+  `Content-Disposition: attachment; filename="ajniha-audit-…csv"`,
+  `Cache-Control: private, no-store` all read back from the live response. The export
+  wrote its `user.audit_exported` row with the filters, row count and `truncated: false`.
+- 1024 px in a same-origin iframe: `body.scrollWidth === clientWidth`, `scrollTo(9999,0)`
+  leaves `scrollX` at 0 — no page-level horizontal scroll under RTL (thread 62).
+- `tsc --noEmit`, `lint`, `i18n:check`, `test` (1001), `pnpm build` all pass.
+
+**Not verified, and it needs you:** *"a reviewer gets 404 on `/admin/audit` but CAN
+reach `/admin/analytics`"* — **thread 64**, still open. There is still only one staff
+account. `requireAdmin()` is on the page and independently on the route handler, and
+`/admin/analytics` calls `requireReviewer()`; neither half has been exercised by a real
+reviewer session over HTTP.
+
+---
+
+#### Demo data changed
+
+Two things were added to the database this session, deliberately, and the next session
+should not be surprised by them:
+
+- **One `zone.geometry_changed` event on `RUH-P-20` "حقل تجربة الرسم"** (Abha, archived).
+  The diff map had nothing to render — the table held no boundary change at all — and a
+  map cannot be verified without one. Chosen because it is archived, is named "drawing
+  test field", and the save-confirm panel reported **no upcoming bookings** in it. No
+  published zone was touched.
+- **Two `user.audit_exported` rows** from testing the export.
+
+The log therefore holds ~71 rows, not the 68 the session started with.
 
 ---
 

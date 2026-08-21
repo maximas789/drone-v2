@@ -4,11 +4,7 @@ import { describe, expect, it } from "vitest";
 import ar from "@/../messages/ar.json";
 import en from "@/../messages/en.json";
 import {
-  BOOKING_TRAIL_ACTIONS,
-  DRONE_TRAIL_ACTIONS,
-  PILOT_TRAIL_ACTIONS,
-  REPORT_TRAIL_ACTIONS,
-  USER_TRAIL_ACTIONS,
+  ALL_TRAIL_ACTIONS,
   hasTrailLabel,
   trailLabelKey,
 } from "./audit-actions";
@@ -30,7 +26,18 @@ import {
 
 const catalogues = { ar, en };
 
-/** The namespaces the four trails are audited under. */
+/**
+ * Every namespace an audited action is written under — **all of them, as of
+ * F25b.**
+ *
+ * This list used to carry six prefixes and a companion exclusion,
+ * `NOT_ON_THIS_TRAIL`, holding back `user.`, `zone.`, `zone_closure.` and
+ * `city.` because no screen rendered them: "listed rather than left out so the
+ * day a screen renders them this scan is the thing that asks for their
+ * labels." F25b's audit browser renders **every row in the table**, so that day
+ * has arrived and the exclusion is gone. The scan now covers the whole table,
+ * which is what it was always waiting to do.
+ */
 const TRAIL_PREFIXES = [
   "drone.",
   "remote_id.",
@@ -38,29 +45,10 @@ const TRAIL_PREFIXES = [
   "booking.",
   "pilot_profile.",
   "drone_report.",
-];
-
-/**
- * Written against a user or a zone — no trail renders these yet. `user.` is
- * F05's role change, which belongs to F25's audit browser; the zone ones are
- * F23's. Both are listed rather than left out so the day a screen renders them
- * this scan is the thing that asks for their labels.
- */
-const NOT_ON_THIS_TRAIL = /^(user|zone|city|zone_closure)\./;
-
-/** Every action any trail can show. `hasTrailLabel` answers for all five. */
-const ALL_TRAIL_ACTIONS = [
-  ...DRONE_TRAIL_ACTIONS,
-  ...BOOKING_TRAIL_ACTIONS,
-  ...PILOT_TRAIL_ACTIONS,
-  ...REPORT_TRAIL_ACTIONS,
-  /**
-   * F24's `remote_id.lookup` is filed against a **user** and shows on no
-   * aircraft's trail. It is named here anyway: F25's audit browser will render
-   * it, and a label that exists must be a label something writes — which is
-   * what the "nothing writes this" test below checks in the other direction.
-   */
-  ...USER_TRAIL_ACTIONS,
+  "zone.",
+  "zone_closure.",
+  "city.",
+  "user.",
 ];
 
 function labelsFor(messages: typeof ar): Record<string, unknown> {
@@ -131,11 +119,34 @@ describe("audit action labels", () => {
           .slice(0, 200)
           .matchAll(/"([a-z_]+\.[a-z_]+)"/g)) {
           const action = match[1];
-          if (NOT_ON_THIS_TRAIL.test(action)) continue;
           if (TRAIL_PREFIXES.some((prefix) => action.startsWith(prefix))) {
             found.add(action);
           }
         }
+      }
+    }
+
+    /**
+     * **The second scan: actions written through a constant.**
+     *
+     * `expiry-reminders.ts` writes `action: EXPIRY_REMINDER_ACTION` and
+     * `booking-reminders.ts` writes `action: BOOKING_REMINDER_ACTION`. Neither
+     * is a quoted literal, so the window scan above saw nothing near the
+     * `action:` and both reached the audit browser in F25b as raw dotted codes
+     * — `drone.expiry_reminded` and `booking.reminded`, printed at an
+     * administrator on the append-only log. Found by opening the page, which is
+     * thread 11 for the third time in this file.
+     *
+     * So the declarations are read as well. Any `const NAME_ACTION = "x.y"` is
+     * an audited action by construction: that suffix exists in this codebase
+     * for no other purpose.
+     */
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      for (const match of source.matchAll(
+        /[A-Z0-9_]*_ACTION\s*(?::[^=]*)?=\s*"([a-z_]+\.[a-z_]+)"/g,
+      )) {
+        found.add(match[1]);
       }
     }
 

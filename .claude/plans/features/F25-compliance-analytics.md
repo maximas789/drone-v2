@@ -2,6 +2,67 @@
 
 **Wave:** 7 · **Depends on:** [F14](./F14-workflow-and-audit.md) · **Reviewer (analytics) + admin (audit)**
 
+---
+
+## The split — settled with the user before any code was written (2026-08-21)
+
+**F25 is built in two sessions, a then b.** Same seam rule as F16/F19/F20/F21/F22/F23:
+**nothing in a part points at a route a later part builds**, so each tab on the admin
+strip goes somewhere from the moment it is drawn.
+
+### F25a — Analytics · `/[locale]/admin/analytics` · reviewer
+
+The six header tiles, all seven charts, the 7/30/90/all date range, the CSV export with
+its UTF-8 BOM, `src/lib/analytics/queries.ts`, the ten `components/admin/analytics/*`
+files, the shared categorical palette, the RTL-axis decision and its on-page sentence,
+and every chart's empty state. Adds the **`analytics`** tab to `QueueTabs`.
+
+**It goes first because it is the pitch artefact.** The build-type split — the share of
+registrations that are self-built or FPV, aircraft that could not legally have registered
+before — is this product's evidence, and it is the one screen a regulator is shown. It
+also establishes the palette, the date-range control and the CSV writer that F25b reuses.
+
+**It owns a decision this file does not make: there is no charting library installed.**
+`node -e` over `package.json` at the time of the split: no `recharts`, no `d3`, no
+plotting package of any kind. F25a chooses one (current stable, no version number
+anywhere — rule 2) or hand-rolls SVG as F16a's landing page already does for the twelve
+seeded polygons. **Settle it with the user before writing chart code**; it is the largest
+single scope question left in Wave 7. Load the `dataviz` skill first — the conventions
+in this file (one palette, direct labels, greyscale-distinguishable) are its conventions.
+
+### F25b — Audit browser · `/[locale]/admin/audit` · admin only
+
+Cursor pagination and the filters in `src/lib/data/audit.ts`, the field-level
+`before`/`after` diff, the **geometry diff map**, the audited CSV export, the integrity
+grep, and the one missing entity timeline. Adds the **`audit`** tab.
+
+**Two things shrink it, and both were checked rather than assumed:**
+
+1. **The entity timeline is already built on three of the four pages.** `AuditTrail`
+   (F22a) renders on `/admin/drones/[id]`, `/admin/bookings/[id]` and
+   `/admin/pilots/[id]`, and F24 put it on the lookup result card too. **Only
+   `/admin/zones/[id]` has none.** The acceptance criterion "drone, booking and zone
+   detail pages each show their own inline audit trail" is therefore one page of work
+   plus a re-check of the other two, not four builds. `listAuditForDrone` in
+   `src/lib/data/review.ts` is the worked example of a trail keyed on two entity ids.
+2. **`audit-actions.ts` already names every action a trail can show**, across five
+   lists including F24's `USER_TRAIL_ACTIONS`, and `audit-actions.test.ts` fails if a
+   newly audited action arrives without a label. The audit browser spans *every* entity
+   type, so it is the first screen that renders all five lists at once — which is
+   exactly what that test was built to make safe.
+
+**And one thing that will cost more than it looks: the geometry diff map.** It is the
+second MapLibre surface in the build and inherits every trap F20 paid for —
+`setRTLTextPlugin` exactly once, `setWorkerUrl` pointed at `public/vendor/maplibre/`
+before anything touches the worker pool, and `ensureRtlTextPlugin` rather than a bare
+`new Map()`. **A blank map in a screenshot is usually not a blank map: click the canvas
+first.** Two polygons overlaid, old and new, is the whole feature — but the plumbing
+under it is the part that cost most of a session last time.
+
+### Not in either part
+
+Nothing. F25's spec is fully covered by a + b.
+
 ## Purpose
 
 The oversight view: what is happening across the platform, and the searchable record of every decision anyone made. This is the AirHub "operations centre" pattern — the screen that would justify Ajniha to a regulator who has to answer for it.

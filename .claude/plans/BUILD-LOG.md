@@ -450,7 +450,26 @@ Newest at the top.
 
 **Next session should know:**
 
-- **F25 is the last of Wave 7.** `USER_TRAIL_ACTIONS` and `hasTrailLabel` are ready for its audit browser; `remote_id.lookup` is the first action written against a `user` entity that a screen will show.
+- **F25 is the last of Wave 7, and it is split a/b — settled with the user after F24 was
+  committed, recorded at the top of `F25-compliance-analytics.md`.** **F25a** is
+  `/admin/analytics`: the tiles, all seven charts, the date range and the CSV export.
+  **F25b** is `/admin/audit`: cursor pagination, the filters, the field-level diff, the
+  geometry diff map and the integrity grep. Nothing in a points at a route b builds.
+- **F25a owns an open decision: there is no charting library installed.** No `recharts`,
+  no `d3`, nothing — checked against `package.json` at the split. Choose one (current
+  stable, no version number written anywhere) or hand-roll SVG the way F16a's landing page
+  already draws the twelve seeded polygons. **Settle it with the user before writing chart
+  code**, and load the `dataviz` skill first.
+- **F25b is smaller than its spec reads.** `AuditTrail` (F22a) is already inline on
+  `/admin/drones/[id]`, `/admin/bookings/[id]` and `/admin/pilots/[id]` — **only
+  `/admin/zones/[id]` is missing one.** And `USER_TRAIL_ACTIONS` plus `hasTrailLabel` are
+  ready: the audit browser is the first screen to render all five trail lists at once,
+  which is exactly what `audit-actions.test.ts` exists to make safe. `remote_id.lookup` is
+  the first action written against a `user` entity that a screen will show.
+- **F25b's geometry diff map is the second MapLibre surface in the build** and inherits
+  every trap F20 paid for: `setRTLTextPlugin` once, `setWorkerUrl` before the worker pool
+  is touched, `ensureRtlTextPlugin` rather than a bare `new Map()` — and a blank map in a
+  screenshot is usually not a blank map, so click the canvas first.
 - **`ProposalNotice` is the only way to render the GACA disclaimer.** Ten hand-written copies were the bug; do not write an eleventh.
 - **`Badge` is `h-5 overflow-hidden`.** Any badge whose text can wrap needs `h-auto py-1`, or the second line is silently clipped below `sm`.
 - **`scripts/probe-authorised-now.mts` exists** for re-creating the "authorised right now" render. Run it, look, then run it with `clean`.

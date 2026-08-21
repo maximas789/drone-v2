@@ -262,6 +262,56 @@ export function formatBytes(bytes: number, locale: Locale): string {
   }).format(megabytes);
 }
 
+/**
+ * `19 أغسطس` / `19 Aug` — a day without its year.
+ *
+ * A chart axis, and only a chart axis. Every point on a 30-day axis carries the
+ * same year, so printing it four times steals the width the day needs; the
+ * chart's own heading and the range control say which period is on screen.
+ * Never use it where a date stands alone — a booking, a decision, a
+ * certificate — because a date with no year is not a date.
+ */
+export function formatDayMonth(date: Date, locale: Locale): string {
+  return dateTimeFormat(locale, { day: "numeric", month: "short" }).format(date);
+}
+
+/**
+ * `أغسطس 2026` / `Aug 2026` — the label of a monthly bucket.
+ *
+ * The year is kept here where it is dropped by `formatDayMonth`, because a
+ * monthly axis spans years by construction: this build's own registrations run
+ * from June 2023 to August 2026, and "أغسطس" alone would name three different
+ * columns.
+ */
+export function formatMonthYear(date: Date, locale: Locale): string {
+  return dateTimeFormat(locale, { month: "short", year: "numeric" }).format(
+    date,
+  );
+}
+
+/**
+ * `43%` / `43٪` — **Latin numerals in both locales, and the Arabic percent
+ * sign in Arabic.**
+ *
+ * Untagged, `ar-SA` emits `٤٣٪`: Arabic-Indic digits *and* U+066A. The forced
+ * tag fixes the digits, which is what rule 6 is about — a number a regulator
+ * reads off a chart must be legible to a reader of either language. It does
+ * **not** change the sign, and it should not: U+066A is the correct percent
+ * sign in Arabic typography, it is what a Saudi document uses, and it is not a
+ * digit. Verified on the page rather than assumed — the first version of this
+ * comment claimed the sign was Latin too, and the rendered axis said otherwise.
+ *
+ * Here rather than as `{rate}%` in the message catalogue because a bare numeric
+ * ICU argument is formatted by next-intl under the page locale and would print
+ * `٤٣` regardless (thread 22).
+ */
+export function formatPercent(fraction: number, locale: Locale): string {
+  return numberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(fraction);
+}
+
 /** Metres below 1 km, kilometres above. Distances to a zone boundary. */
 export function formatDistance(metres: number, locale: Locale): string {
   return metres < 1000

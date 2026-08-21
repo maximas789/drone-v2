@@ -31,7 +31,7 @@ export function QueueTabs({
   droneCount,
   bookingCount,
 }: {
-  active: "drones" | "bookings" | "pilots" | "lookup" | "zones";
+  active: "drones" | "bookings" | "pilots" | "lookup" | "zones" | "analytics";
   droneCount: string;
   bookingCount: string;
 }) {
@@ -78,6 +78,17 @@ export function QueueTabs({
         */}
         <Tab href="/admin/zones" current={active === "zones"}>
           {t("tabZones")}
+        </Tab>
+        {/*
+          **Analytics is reviewer-level, unlike the zones tab beside it**, and
+          it carries no count for the reason the lookup tab carries none: it is
+          not a queue. The number a reviewer would want from it — what is
+          waiting — is already on the two tabs at the start of this strip, and
+          repeating it here as a badge would imply the analytics screen was
+          somewhere work accumulates.
+        */}
+        <Tab href="/admin/analytics" current={active === "analytics"}>
+          {t("tabAnalytics")}
         </Tab>
       </ul>
     </nav>

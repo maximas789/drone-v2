@@ -32,7 +32,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 4 — Platform services | F06, F07, F08, F09 | ⚠️ **Complete, with deviations (Sessions 6–9).** Vercel Blob and real email delivery are the two paths never executed. |
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
-| 7 — Admin | F22–F25 | 🟡 **In progress (Sessions 26–32).** **F22, F23 and F24 complete.** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. **F25 remains.** |
+| 7 — Admin | F22–F25 | 🟡 **In progress (Sessions 26–33).** **F22, F23, F24 and F25a complete.** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. **F25a shipped the analytics screen — six tiles, seven hand-rolled SVG charts, the validated chart palette, and the CSV export. F25b, the audit browser, is all that remains in Wave 7.** |
 | 8 — Close-out | F26–F30 | ⬜ Not started |
 | 9 — Prove it | F31 | ⬜ Not started |
 
@@ -156,6 +156,8 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 70 | **A module-level counter in a client component is a hydration mismatch.** F23b's hours grid minted row keys from `let counter = 0` at module scope; the module is evaluated once per process on each side, so the server rendered `w1` and the browser `w2`, and React reported mismatched `id`/`htmlFor` — with `typecheck`, `lint` and `test` all green. Fixed with an index in the `useState` initialiser plus a `useRef` for rows added after mount. **Thread 11's shape again**, and the console is the only place it showed. | F23b | every wave with client components |
 | 71 | **A cancellation reason reaches an English-reading pilot in Arabic.** `booking.cancellationReason` is a single column and holds the **authored** language, which is right for the record — but `/en/bookings/[id]` renders it raw under *"Why this was cancelled"*, so a closure whose English reason was written, stored and emailed still shows Arabic on the pilot's own page. The notification params carry **both** languages and are the material for a fix; the same gap applies to an authority cancellation, which has only ever had one authored reason. **F28 or F21 owns it**, and it needs a decision about whether the row grows a second column or the page reads the notification. | F23c | F31 |
 | 72 | **`{count}` messages hard-code an Arabic plural.** Arabic has six plural categories; a message written as `{count} حجوزات` prints `1 حجوزات` for one. `impactCount` and `closureCancelCount` were fixed in F23c with the pattern that works under thread 22 — a numeric `n` selects the branch and is never printed, a **formatted** `count` string is what appears — but **`zoneAdmin.previewCount` and every other `{count}` message in the catalogues are unaudited**. `i18n:check` cannot see this: it compares placeholders between catalogues, and a message wrong in both is wrong consistently. | F23c | F25, F31 |
+| 73 | **The analytics CSV's response headers have never been read back from a live response.** Status and body bytes were (200, `EF BB BF`, CRLF, Arabic intact); `Content-Type`, `Content-Disposition` and `Cache-Control` were not, because the browser extension refuses to read response headers. They are literals in `src/app/api/admin/analytics/route.ts`, so nothing has confirmed **the filename a browser actually saves**, and no spreadsheet has opened the file — the BOM is verified as bytes, not as behaviour. Same shape as thread 30: the code is written from the spec and unexecuted at the last hop. | F25a | F31 |
+| 74 | **Every chart on `/admin/analytics` has only ever been drawn from single-digit data.** Five registrations, four bookings, thirty scans, two review decisions. Label thinning, the eight-zone bar cap, the six-step sequential ramp and the 44 px bar cap are exercised by unit test and by reasoning; **none has been seen on a full screen**. A seed of a few hundred rows would be the cheapest way to find out what this page looks like when it is doing its job — and F31 is the place that matters, because the pitch screen looking thin is a presentation failure rather than a bug. | F25a | F31 |
 | 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
 
 ---
@@ -348,6 +350,207 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 33 — Wave 7 · F25a Compliance analytics (`/admin/analytics`)
+
+**Date:** 2026-08-21
+**Status:** ⚠️ done with deviations
+
+**The pitch screen.** Six tiles, seven charts, a 7/30/90/all range, and a CSV export —
+every number an aggregate query against live rows, nothing precomputed, seeded or
+mocked. The headline chart is the product's evidence: over the **all** range this
+database reports **80% of issued registrations (4 of 5) are aircraft with no
+manufacturer serial number**, drawn as a share rather than asserted in prose.
+
+**The open decision, settled with the user before any chart code:** **hand-rolled SVG,
+no charting library, and none installed.** Reasoning is written into
+`F25-compliance-analytics.md` so it is not re-litigated; the short version is that two
+of the seven forms (histogram, heatmap) have no primitive in any library anyway, and
+that server-rendered SVG makes rule 6 hold *by construction* — a library's own tick and
+tooltip formatters are a second route to `Intl` that ESLint's ban cannot see. **Six of
+the seven charts render entirely on the server.** One `"use client"` module ships:
+`chart-hover.tsx`, the shared hover layer.
+
+**Built:**
+
+- `/[locale]/(admin)/admin/analytics` — reviewer-level, dynamic, read-only. Adds the
+  **`analytics`** tab to `QueueTabs` (reviewer-level, no count — it is not a queue).
+- `GET /api/admin/analytics` — the CSV. A route handler and a plain `<a download>`,
+  because a download is a navigation: keyboard, middle-click, "save link as", and a URL
+  that can be pasted to a colleague. The **locale travels in the query string** —
+  `next/root-params` throws in a route handler (thread 4).
+- `src/lib/analytics/` — `queries.ts` (8 aggregates in one `Promise.all`), `range.ts`,
+  `buckets.ts`, `scale.ts`, `layout.ts`, `palette.ts`, `labels.ts`, `csv.ts`,
+  `export.ts`. Everything but `queries.ts` and `export.ts` is pure and unit-tested.
+- `src/components/admin/analytics/` — `chart-card.tsx` (frame + table + legend),
+  `chart-axes.tsx`, `chart-hover.tsx`, `stat-tiles.tsx`, `date-range.tsx`,
+  `export-csv.tsx`, and the seven charts.
+- **The chart palette, validated rather than chosen.** `--chart-1..8`, `--status-good`,
+  `--status-critical` and `--seq-1..6` in `globals.css`, both modes, replacing the five
+  greyscale `--chart-*` shadcn had left there unused. Run through the `dataviz`
+  validator against **this app's own surfaces** (`#ffffff` and the dark card `#12181d`,
+  converted from their oklch tokens): lightness band, chroma floor, protan/deutan
+  separation and contrast all PASS in both modes; slots 1–3 clear the stricter
+  *all-pairs* gate. Three light-mode slots sit below 3:1 — a known, accepted result that
+  **obligates a relief channel**, which is why every chart ships direct labels *and* a
+  table, and why `ChartTable` is not optional chrome.
+- `formatDayMonth`, `formatMonthYear`, `formatPercent` in `format.ts`.
+- 64 catalogue keys (**1831**); **973 tests** across 55 files.
+
+**Deviations, each with its reason:**
+
+- **The resolutions chart is public-against-staff, not the spec's "anonymous /
+  reviewer".** `remote_id_scan.viewer_level` takes five values and the other three —
+  `pilot`, `owner`, `admin` — are 26 of the 30 scans here. Charting two of five would
+  draw a total that is not the total, on the one screen whose whole claim is that the
+  numbers are real. Feature file corrected.
+- **Direct labels live in the legend, not at the end of each series.** Written at the
+  ends first, per the spec and the `dataviz` convention, and it did not survive real
+  data: two series whose last non-empty bucket is a month apart printed their numbers
+  fifteen pixels apart on a three-year axis. A **series total beside its swatch** cannot
+  collide, is present even when a series is empty for the whole window, and still binds
+  the number to the colour. The histogram and the horizontal bar chart, where collision
+  is impossible, label every mark in place. Feature file corrected.
+- **The tiles do not follow the date range,** and the page says so in a sentence under
+  the control. Five of them are a *current state*, which has no range; the sixth is
+  pinned to 30 days by F25 itself. The tile also always prints its **sample size** — a
+  median of "3 days" over two decisions and over two hundred are different claims.
+- **One chart IS mirrored in Arabic: bookings by zone.** Its x axis is a *count* and its
+  y axis a list of names; bars growing away from their own labels are back to front in
+  any language. The page states the distinction (a time axis is fixed; reading order is
+  not) rather than leaving it looking like an oversight. Mirrored by reflecting each x
+  about the box centre, not by `scaleX(-1)`, which would reverse the glyphs too.
+- **A sixth `--chart-*` through `--chart-8`, and the shadcn greyscale five overwritten
+  rather than left beside a new set.** Five dead tokens named `--chart-*` sitting next
+  to the real chart palette is thread 65's trap in a new costume: a name that reads like
+  a colour and is not.
+- **Bar widths are capped at 44 px** (`MAX_BAR_WIDTH`). A band scale gives one bucket
+  the whole plot, and the "all" range drew a single month of decisions as a 200 px slab
+  that read as a background rather than a bar.
+- **`niceTicks` floors its step at 1.** Every axis here counts things; a maximum of 1 —
+  the ordinary case on a young deployment — produced ticks at 0, 0.5 and 1, and the
+  axis of the product's most important chart offered to measure half an aircraft.
+  **Caught by a unit test, not by the screen.**
+- **The utilisation ramp uses as many steps as there are values to tell apart.** Six
+  shades over a maximum of one is six shades that all mean "1" — and the legend printed
+  that number six times.
+- **`getApprovalOutcomes` reads `audit_event`, not `drone.status`.** A drone approved in
+  March and revoked in August has `status = 'revoked'` today; counting current status
+  would erase March's approval. The audit trail records the decision as it was made,
+  which is what an outcomes chart asks about.
+- **`decided_at >= submitted_at` on the median and the histogram, and it is load-bearing.**
+  `submitted_at` is rewritten on resubmission while `decided_at` still holds the previous
+  decision, so a resubmitted aircraft carries a **negative** interval — this database has
+  one right now, at −0.6 hours. Without the predicate it drags the median down and puts a
+  bar to the left of zero, and nothing about either would look wrong.
+- **The no-show denominator is `completed + no_show` only.** Including `cancelled` would
+  count a pilot who cancelled in advance as a compliance failure; including `approved`
+  would count every future flight as attended. Buckets with no denominator are drawn as
+  a **gap in the line**, not a zero.
+- **This CSV export is not audited.** F25's audited export is F25b's — a full dump of who
+  decided what and why. This one is aggregate counts with no personal data in it at all,
+  and auditing every bar-chart download would bury the exports that matter.
+
+**Four defects found by opening the page, none visible to any check we run — thread 11
+again, and the RTL one is new to this build.**
+
+1. **SVG `text-anchor` is direction-relative, so every y-axis tick was anchored
+   backwards in Arabic** and printed into the plot area. `end` means "end of the inline
+   base direction", which on an RTL page is the **left** edge. Found by reading the
+   labels' `getBoundingClientRect()` out of the page — at chart scale a six-pixel
+   numeral's overhang is not obvious in a screenshot. `anchorAtMinX` / `anchorAtMaxX` in
+   `layout.ts` now say what they mean. **`dir="ltr"` on the SVG is not the fix**: it
+   repairs the anchors and simultaneously reorders every Arabic date label on the
+   category axis, which is the `SlotTime` trap. Zone-bar had the same bug twice over —
+   written as `rtl ? "start" : "end"`, which flipped it a second time and printed every
+   zone name on top of its own bar.
+2. **The heatmap's hour axis ran 23 → 0.** It is a CSS grid and inherited the page's
+   RTL flow, so the one chart where the page's own promise is most visible was the one
+   breaking it. `dir="ltr"` on the grid — here the container's job *is* geometry — with
+   the page's direction restored on every element under it that carries words.
+3. **The headline chart rendered no direct label at all.** The label sat on the last
+   bucket, and nothing is registered *today* on most days, so every band was empty
+   there. Superseded by the legend-total fix above.
+4. **X-axis labels collided at the right-hand end.** `thinLabels`' regular stride and
+   its always-kept final index did not know about each other; 39 monthly buckets picked
+   both 36 and 38, and `أغسطس 2026` printed on top of `يونيو 2026`. Now pinned by
+   `chart-axes.test.ts`.
+
+Also fixed, beyond F25a: **four hard-coded Arabic-Indic `٣٠`s in `messages/ar.json`** —
+two mine, **two pre-existing in F24's `lookup.revealsWindow*`**. A literal `٣٠` in a
+catalogue string walks straight past `format.ts`, which is the one thing that file
+exists to prevent, and it sat next to a tile printing `30 يومًا` through `formatDays`.
+The whole `ar` catalogue is now clean of Arabic-Indic digits.
+
+**Verified — in Chrome, over HTTP, both locales:**
+
+| Criterion | Result |
+|---|---|
+| Every tile and chart from a live query, nothing mocked | OK — `queries.ts` is the only source; the page and the CSV call the *same* `getAnalytics` |
+| Build-type split first and largest, showing the serial-less share | OK — `HEADLINE`'s taller box, the only `text-lg` heading, **80% (4 of 5)** over "all" |
+| Median turnaround matches a hand check | OK — **97 days**. Two decisions inside 30 days, at 4,584 h and 93.6 h; `percentile_cont` interpolates to 2,338.8 h = 97.5 d. The resubmitted drone's −0.6 h row is correctly excluded |
+| All seven charts render with real data | OK — in `ar` and `en`, at 7 / 30 / 90 / all |
+| One shared palette; `self_built` the same colour everywhere | OK — asserted in `palette.test.ts`, plus "no colour carries two meanings on this page" and "no status colour is also a slot" |
+| Legible in light **and** dark | OK — dark verified by stamping `.dark` on `<html>` and screenshotting; the dark hexes are a separately validated set, and the sequential ramp **inverts** rather than lightening |
+| Distinguishable in greyscale | OK by construction — the palette passed protan/deutan ΔE, and every series carries a written label beside its swatch |
+| Arabic axis labels and tooltips, right-aligned; Latin numerals; Gregorian dates | OK — `يونيو 2023 … أغسطس 2026`; the tooltip reads `فبراير 2026 — تجارية 0، مصنّعة ذاتياً 1، FPV 0`, which matches the row in `drone` |
+| The time axis is **not** reversed in RTL, and the page says why | OK — two sentences under the range control, naming the bookings-by-zone exception |
+| Date range switching updates every chart | OK — and it is four **links**, so a range is bookmarkable and the back button works |
+| CSV opens in Excel with Arabic intact | OK — first three bytes `EF BB BF`, CRLF endings, `الثمامة` unescaped. **Note for whoever re-checks this: `Response.text()` strips the BOM per the encoding spec**, so `charCodeAt(0) === 0xFEFF` reports `false` on a file that has one. Read `arrayBuffer()` |
+| A field containing a comma survives | OK — `"2,339 ساعة"` quoted; formula-injection prefixes are defused and tested |
+| **Empty database: every chart a purposeful empty state, not a broken axis** | OK — verified for real. `pg_dump`ed `app` into a throwaway `app_empty`, truncated the domain tables (keeping the one account so the page could be reached), pointed `.env` at it, restarted dev, and screenshotted: seven dashed empty boxes with sentences, **no axis drawn at all**, tiles at 0 and the median tile a dash reading *"لا قرارات خلال 30 يومًا"*. CSV still 200 with its BOM. **`app_empty` dropped, `.env` restored byte-identical, `app` confirmed untouched** (7 drones, 4 bookings, 68 audit events, 13 zones, 30 scans, 3 closures) |
+| Long Arabic zone names do not overflow or truncate mid-word | OK — `نطاق مطار الملك خالد الدولي` fits its own row; the 200 px label margin is why the form is horizontal |
+| Tables readable at 1024 px | OK — measured in a 1024 px same-origin frame: `body.scrollWidth === clientWidth` (1009) and `scrollX` still 0 after `scrollTo(9999, 0)`, which is thread 62's trustworthy pair. Wide charts scroll **inside their own card**, never the page |
+| Hover layer works in both directions | OK — the overlay measures to exactly `box.start`/`plotWidth` (44 / 560) under RTL too, and the tooltip names the right bucket in both locales |
+| No raw catalogue keys in either language | OK — zero matches for `analytics.*` / `review.*` / `drones.*` in the rendered text |
+| Console | OK — **zero errors** in both locales; only HMR and React-devtools notices |
+| Signed out | OK — the page 307s to sign-in; the CSV route answers **404 with an empty body**, no guard named |
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (**1831**), `pnpm test` (**973**),
+  `pnpm build` — all green. **Both new routes build `ƒ` (dynamic)**, which they must.
+  **No schema change**; `pnpm db:generate` reported *"No schema changes, nothing to
+  migrate"*.
+- **`pnpm build` clobbers dev's `.next` as warned.** Dev was stopped by PID and
+  restarted with `pnpm dev --port 3001` afterwards; Inngest re-registered
+  (`PUT /api/inngest 200`).
+
+**Not verified:**
+
+- **A reviewer who is not an admin opening this page**, and a **pilot** getting a 404
+  from it. **Thread 64** — still one account. The guard is `requireReviewer()`, the same
+  one F24 drove against a real probe pilot account over HTTP, so the *mechanism* is
+  proven; this route's use of it is not. F25b needs the second account anyway, for the
+  reviewer-gets-404-on-`/admin/audit` half.
+- **The CSV response headers.** Status and body bytes were read from a live response;
+  `Content-Type`, `Content-Disposition` and `Cache-Control` were **not** — the browser
+  extension blocks reading response headers, and they are literals in the route. Nothing
+  has confirmed the filename a browser actually saves.
+- **Excel itself.** The BOM, the CRLFs and the quoting are verified as bytes; no
+  spreadsheet has opened the file.
+- **A chart with enough series to exercise slots 4–8 adjacently**, and any chart with
+  more than three simultaneous categorical series.
+- **Volume.** Every chart here is drawn from single-digit data. Nothing has been seen at
+  a hundred buckets or eight zones, so label thinning and the zone cap are exercised by
+  unit test and by reasoning, not by a full screen.
+
+**Next session should know:**
+
+- **F25b is the last feature in Wave 7**, and the two estimate corrections from the split
+  still hold: `/admin/zones/[id]` is the only page missing an inline `AuditTrail`, and the
+  **geometry diff map** is the second MapLibre surface and carries every F20 trap
+  (`setRTLTextPlugin` once, `setWorkerUrl` before the worker pool, `ensureRtlTextPlugin`
+  rather than `new Map()`, and **click the canvas before believing a blank screenshot**).
+- **F25b reuses three things F25a built** and should not rebuild them: `csv.ts` (BOM,
+  CRLF, quoting, formula defusing — all tested), `date-range.tsx`, and `ChartCard` /
+  `ChartTable`. The audited export differs from this one only in writing its audit event.
+- **`src/lib/analytics/layout.ts` now owns the RTL text-anchoring rule.** Anything that
+  draws SVG text on an Arabic page goes through `anchorAtMinX` / `anchorAtMaxX` — the
+  geometry-diff map's own labels included.
+- **The demo content is intact and is still F25b's material**: F23c's published closure
+  on RUH-P-07 for 10 September 2026, the city of Tabuk, and F24's 21 `remote_id.lookup`
+  events plus the one identity reveal on `AJN-7Q4M-31KD`. 68 `audit_event` rows in total.
 
 ---
 

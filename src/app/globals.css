@@ -18,11 +18,32 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
+  /**
+   * The categorical chart slots. Eight, in a fixed order that is itself the
+   * colourblind-safety mechanism: slots are assigned in sequence and never
+   * cycled, so slot 2 is `self_built` on every chart on the page.
+   * `src/lib/analytics/palette.ts` holds the entity-to-slot map and the
+   * reasoning; the values are validated hexes and must not be re-derived by
+   * eye. Only the first five are mapped today.
+   */
   --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  /** Outcome, not identity. Reserved: never "series 4". */
+  --color-status-good: var(--status-good);
+  --color-status-critical: var(--status-critical);
+  /** One hue, light to dark — magnitude, for the utilisation heatmap. */
+  --color-seq-1: var(--seq-1);
+  --color-seq-2: var(--seq-2);
+  --color-seq-3: var(--seq-3);
+  --color-seq-4: var(--seq-4);
+  --color-seq-5: var(--seq-5);
+  --color-seq-6: var(--seq-6);
   /**
    * Domain tokens. A zone is the same colour in the map, on a status badge and
    * in a legend, because all three read these and nothing hard-codes a hex.
@@ -81,11 +102,50 @@
   --border: oklch(0.915 0.005 250);
   --input: oklch(0.915 0.005 250);
   --ring: oklch(0.45 0.078 220);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /**
+   * **Chart colour, and the only place it is written.**
+   *
+   * Hex, not oklch, and that is deliberate: these eight are a palette that was
+   * *validated* rather than chosen — lightness band, chroma floor, protanopia
+   * and deuteranopia separation, and contrast against this file's own surfaces.
+   * Re-expressing them in another colour space would let a rounding change the
+   * numbers the validation was run on, and nothing in `lint`, `typecheck` or
+   * `test` would notice. Change a value only by re-running the validator.
+   *
+   * Three of the light slots — aqua, yellow and magenta — sit below 3:1 on
+   * white. That is a known, accepted result and it carries an obligation: every
+   * chart using them ships **direct labels and a table view**, so no value is
+   * ever carried by the fill alone. `analytics/palette.ts` restates it.
+   */
+  --chart-1: #2a78d6; /* blue */
+  --chart-2: #eb6834; /* orange */
+  --chart-3: #1baf7a; /* aqua */
+  --chart-4: #eda100; /* yellow */
+  --chart-5: #e87ba4; /* magenta */
+  --chart-6: #008300; /* green */
+  --chart-7: #4a3aa7; /* violet */
+  --chart-8: #e34948; /* red */
+
+  /**
+   * Outcome colours, on steps deliberately distinct from the categorical slots
+   * so a status can never impersonate a series. Both clear 3:1 on white and on
+   * the dark card. They always ship with a written label — never colour alone.
+   */
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+
+  /**
+   * Sequential — one hue, light to dark, for *magnitude*. Six steps, so a
+   * heatmap cell's value is readable from its darkness. The lightest step is
+   * allowed to recede toward the surface because it means "almost nothing".
+   */
+  --seq-1: #cde2fb;
+  --seq-2: #9ec5f4;
+  --seq-3: #6da7ec;
+  --seq-4: #3987e5;
+  --seq-5: #256abf;
+  --seq-6: #184f95;
+
   /** Precise, not playful. */
   --radius: 0.5rem;
 
@@ -136,11 +196,39 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.74 0.095 220);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /**
+   * The same eight hues, re-stepped for the dark card and validated as a set
+   * against it — not an automatic lightening of the light column. All eight
+   * clear 3:1 here, which is why the light column's three-slot contrast
+   * exemption has no counterpart in this block.
+   */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+
+  /** Mode-invariant by design; both clear 3:1 on the dark card too. */
+  --status-good: #0ca30c;
+  --status-critical: #d03b3b;
+
+  /**
+   * **The sequential ramp inverts, it does not lighten.** On a dark ground
+   * "almost nothing" must recede toward the *card*, so the near-zero step is
+   * the darkest blue and magnitude climbs toward the lightest. Reusing the
+   * light column here would paint the emptiest hour of the week as the
+   * brightest cell on the screen.
+   */
+  --seq-1: #0d366b;
+  --seq-2: #184f95;
+  --seq-3: #256abf;
+  --seq-4: #3987e5;
+  --seq-5: #6da7ec;
+  --seq-6: #9ec5f4;
+
   /** Lifted for a dark ground, same hues. Checked against `--card`, not white. */
   --zone-permitted: oklch(0.70 0.14 152);
   --zone-permitted-foreground: oklch(0.16 0.02 152);

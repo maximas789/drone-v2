@@ -22,13 +22,25 @@ registrations that are self-built or FPV, aircraft that could not legally have r
 before — is this product's evidence, and it is the one screen a regulator is shown. It
 also establishes the palette, the date-range control and the CSV writer that F25b reuses.
 
-**It owns a decision this file does not make: there is no charting library installed.**
-`node -e` over `package.json` at the time of the split: no `recharts`, no `d3`, no
-plotting package of any kind. F25a chooses one (current stable, no version number
-anywhere — rule 2) or hand-rolls SVG as F16a's landing page already does for the twelve
-seeded polygons. **Settle it with the user before writing chart code**; it is the largest
-single scope question left in Wave 7. Load the `dataviz` skill first — the conventions
-in this file (one palette, direct labels, greyscale-distinguishable) are its conventions.
+~~It owns a decision this file does not make: there is no charting library
+installed.~~ **Settled with the user before any chart code was written (2026-08-21):
+hand-rolled SVG, no charting library, and none installed.** The reasoning, so it is
+not re-litigated:
+
+- Two of the seven forms — the turnaround histogram and the weekday × hour heatmap —
+  have no primitive in any charting library, so a library would have covered five of
+  seven and left the build carrying two chart idioms.
+- Six of the seven charts now render **on the server**. Arabic labels come from
+  `getTranslations` and every number goes through `src/lib/format.ts` *by construction*.
+  A library's own tick and tooltip formatters are a second route to `Intl` that rule 6's
+  ESLint ban cannot see, and it would have had to be threaded by hand at every call site.
+- One `"use client"` module ships to the browser — `chart-hover.tsx`, the shared hover
+  layer — instead of seven chart components.
+- No new dependency in a proposal whose credibility rests on what it does not claim.
+
+The cost, paid: axis layout, tick thinning and the hover overlay were written here, and
+four defects in them were found by opening the page rather than by any check. They are
+listed in the build log's Session 33 entry.
 
 ### F25b — Audit browser · `/[locale]/admin/audit` · admin only
 
@@ -85,13 +97,40 @@ Reviewer-accessible. Every number is derived from live queries; **nothing is pre
 | Bookings by zone | Horizontal bar | Long Arabic zone names need horizontal room |
 | Zone utilisation | Heatmap, weekday × hour | Where and when demand actually is |
 | No-show rate over time | Line | Compliance signal |
-| Remote ID resolutions | Line, split anonymous / reviewer | Shows the enforcement side is being used |
+| Remote ID resolutions | Line, split **public / staff** | Shows the enforcement side is being used |
 
 **Build-type split is the headline.** The proportion of registered drones that are self-built or FPV — aircraft that could not legally have registered before — is the product's evidence. It goes first, largest.
 
+**The resolutions split is public-against-staff, not the "anonymous / reviewer" this
+table said** (corrected in F25a). `remote_id_scan.viewer_level` takes five values, and
+the other three — `pilot`, `owner`, `admin` — are 26 of the 30 scans in this database.
+Charting two of five would have drawn a total that is not the total. The public
+(anonymous, pilot, owner) against staff (reviewer, admin) answers the question this row
+is actually asking and every scan lands in exactly one series.
+
 Charts follow the project's `dataviz` conventions: one categorical palette shared across every chart, so `self_built` is the same colour everywhere; accessible in light and dark; **direct labels rather than a legend** where a series can be labelled at its end; axes and tooltips through `src/lib/format.ts`.
 
+**"At its end" did not survive real data** (corrected in F25a). Two series whose last
+non-empty bucket is a month apart print their numbers fifteen pixels apart on a
+three-year axis, and two series ending on the same value overlap exactly. The direct
+label is therefore the **series total, carried in the legend beside its swatch** —
+which cannot collide, is present even when a series is empty for the whole window, and
+binds the number to the colour. The histogram and the horizontal bar chart, where
+collision is impossible, still label every mark in place.
+
 **RTL charts:** the plot area is not mirrored (time still runs left→right — reversing a time axis for Arabic misleads more than it accommodates), but axis labels, tooltips, and legends are Arabic and right-aligned. Numbers stay Latin. Documented on the page so it reads as a decision.
+
+**One chart is mirrored, and F25a states the exception on the page.** *Bookings by
+zone* has a **count** on its x axis and a list of names on its y axis; bars growing away
+from the names they belong to are back to front in any language. The rule the page
+states is that a *time* axis is fixed and reading order is not.
+
+**And the mechanic that nearly broke it:** SVG's `text-anchor` is relative to the inline
+base direction, so `end` anchors the **left** edge on an Arabic page. Every y-axis tick
+was anchored backwards into the plot, with every check green. `anchorAtMinX` /
+`anchorAtMaxX` in `src/lib/analytics/layout.ts` say what they mean; `dir="ltr"` on the
+SVG is **not** the fix, because it would simultaneously reorder every Arabic date label
+on the category axis.
 
 Date range: 7 / 30 / 90 days / all, defaulting to 30. Export current view to CSV with UTF-8 BOM so Arabic opens correctly in Excel.
 

@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–42). F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–43). F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,94 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 43 — Wave 8 · F29b Background jobs, the schedule, and two controls that were not built
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **Cancel and Re-run are NOT built — see below.** F29c is the email and activity logs.
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/ops/jobs.ts` | `listJobRuns`, `listScheduledFunctions`, `getJobRun` |
+| `src/lib/ops/cron.ts` | `nextCronRun` — pure |
+| `src/lib/ops/cron.test.ts` | 6 tests, half of them refusals |
+| `src/components/ops/jobs-panel.tsx` | The schedule table and the run list |
+| `src/app/[locale]/(app)/settings/system/page.tsx` | *(extended)* the jobs section |
+
+---
+
+#### Cancel and Re-run were not built, and the reason is not "no time"
+
+F29 asks for both. **Neither is implementable from what this app has, and the honest answer was to build neither rather than something that looks like them.**
+
+**Cancel.** The installed Inngest SDK exposes no cancellation method — grepped for one; `api.d.ts` has `/v1/runs/{id}/metadata` and nothing to cancel with. Cancelling means calling Inngest's REST API at an endpoint I would be **guessing**, with a signing key this machine does not have. The alternative — writing `cancelling` into our own `job` row without telling Inngest — is worse than not shipping it: the run carries on, and the app's own record says somebody stopped it. That is a lie in the one table F08 built to be trustworthy.
+
+**Re-run.** `job` stores `trigger_event` as a *name* and not a payload. Re-running an event-triggered function would mean sending that event with no data, which is not the same run and would misfire. The column that would make it work — the original event payload — does not exist.
+
+**What each needs**, so the next session does not rediscover it:
+- Cancel: `INNGEST_SIGNING_KEY`, and the cancellation endpoint confirmed from Inngest's own docs rather than inferred.
+- Re-run: either a payload column on `job`, or Inngest's REST API to replay a run by id.
+
+The `cancelling` enum value stays. It is correct, F08's comment explaining why is correct, and `run-cancelled.ts` already records a cancellation that happens **from Inngest's side** — a run cancelled in the Inngest dashboard is already mirrored into our table today.
+
+---
+
+#### The schedule is answerable in one glance, which was the point
+
+`CRON_SCHEDULES` was exported as data by F08 *"because F29's system page lists cron, timezone, last run, next due"* — so the panel reads six entries rather than importing the Inngest graph into a page render.
+
+**"Next due" needed real arithmetic**, and `nextCronRun` is deliberately **not a general cron parser**. It understands the shapes `CRON_SCHEDULES` contains — a literal minute, a literal hour, `*`, and a step form — over `* * *` for day, month and weekday. Anything else returns `null` and the cell reads *"not shown"*.
+
+**That refusal is the feature.** A parser that quietly mishandles `0 3 * * 1` prints a confident wrong answer to the one question this panel exists for, and nobody re-checks a time the page stated. Three of the six tests are refusal cases, and one asserts that *every* expression in `CRON_SCHEDULES` is understood — so adding a weekday schedule fails here rather than showing a blank in production.
+
+Riyadh being a fixed +3 with no DST is what makes it tractable without a timezone library; `RIYADH_OFFSET_MINUTES` is the one home for that fact.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| **No Cancel, no Re-run** | Above. |
+| The error is a scrolling `<pre>`, not a truncated cell | Truncating is how "an error occurred" happens. It scrolls **inside its own box** — a stack trace is the widest thing on the page, and under RTL a page that scrolls sideways hides the start of every line. |
+| `lastStatus`, not `status`, on an internal Map | ESLint rule 11 bans a `status:` property outside `src/lib/workflow/` and cannot tell a read from a write. This module must **stay** banned from writing one, so the field was named for what it holds rather than the rule relaxed. |
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1082 passed, 65 files** (6 new) |
+| `pnpm exec tsc --noEmit` · `pnpm lint` | clean; `i18n:check` — 2094 keys in sync |
+| `pnpm build` | compiled |
+| Six scheduled functions | cron **with its `TZ=Asia/Riyadh` prefix**, last run, next due |
+| Next-due arithmetic, against the clock at 22:52 Riyadh | `0 3 * * *` → 23 Aug 03:00 · `15 3 * * *` → 03:15 · `*/15 * * * *` → 23:00. **Correct in Riyadh time, not UTC** |
+| Run list | **50 rows** from 390 real runs across 8 functions |
+| A failed run | inserted synthetically, since all 390 real runs completed: status **فشل**, duration `61,234 ms` (Latin digits), and the **whole 270-character error** in a `<pre>` with `overflow: auto`. **Row deleted afterwards; 0 probe rows remain** |
+| Tables at 1024 px | fit, no overflow |
+| At 343 px | the table is wider than its box and **the box scrolls** — the page does not |
+| `pageScrollsSideways`, Arabic RTL | **false** |
+
+#### Not verified
+
+- **Cancel and Re-run** — not built.
+- **A real failed run.** All 390 in the table completed; the failure rendering was proved with a synthetic row, which exercises the template but not the middleware that would write a real one.
+- **`cancelling` and `cancelled` rendering** — no run has ever held either status here.
+- **375 px** — seven sessions. The 343 px column probe covers content overflow, not the media queries.
+
+#### Next session should know
+
+- **F29c is the email log and the activity log**, and both have their data already: `email_log` (recipient, template, locale, status, provider id, error, `sent_at`) and `audit_event`. F25b's audit browser is the full-power view — this is the operational slice with a link through to it.
+- **A skipped email must look different from a failed one.** `email_log.status` distinguishes them; conflating "no API key" with "broken" sends an operator debugging a problem that does not exist.
+- F15's `emailLogId` on the notification is what closes the loop the criteria ask for: decision → notification → email → reason.
+- Cancel/Re-run: see the table above for exactly what each needs before it can be built honestly.
 
 ---
 

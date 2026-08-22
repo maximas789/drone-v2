@@ -4,11 +4,13 @@ import { locale as localeParam } from "next/root-params";
 import { notFound } from "next/navigation";
 import { DataCountsPanel } from "@/components/ops/data-counts";
 import { HealthGrid } from "@/components/ops/health-grid";
+import { JobsPanel } from "@/components/ops/jobs-panel";
 import { RegenerateQr } from "@/components/ops/regenerate-qr";
 import { requireUser } from "@/lib/auth-guards";
 import { toLocale } from "@/lib/locale";
 import { getDataCounts } from "@/lib/ops/counts";
 import { runHealthChecks } from "@/lib/ops/health";
+import { listJobRuns, listScheduledFunctions } from "@/lib/ops/jobs";
 import { isAdmin } from "@/lib/session";
 
 /**
@@ -25,9 +27,9 @@ import { isAdmin } from "@/lib/session";
  * inside the check, because a check that read the environment for both halves
  * of the comparison would always agree with itself.
  *
- * F29b adds jobs, F29c the email and activity logs. Neither is stubbed here: an
- * empty panel headed "Background jobs" would be exactly the lie this page is
- * supposed to expose.
+ * F29c adds the email and activity logs. Neither is stubbed here: an empty
+ * panel headed "Email log" would be exactly the lie this page is supposed to
+ * expose.
  */
 export default async function SystemSettingsPage() {
   const locale = toLocale(await localeParam());
@@ -45,9 +47,11 @@ export default async function SystemSettingsPage() {
   const origin = host ? `${proto}://${host}` : null;
 
   const t = await getTranslations("ops");
-  const [checks, counts] = await Promise.all([
+  const [checks, counts, runs, scheduled] = await Promise.all([
     runHealthChecks(origin),
     getDataCounts(),
+    listJobRuns(),
+    listScheduledFunctions(),
   ]);
 
   return (
@@ -63,6 +67,14 @@ export default async function SystemSettingsPage() {
           <p className="text-muted-foreground text-sm">{t("qr.intro")}</p>
           <RegenerateQr locale={locale} />
         </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <header className="flex flex-col gap-1">
+          <h2 className="text-lg font-medium">{t("jobs.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("jobs.intro")}</p>
+        </header>
+        <JobsPanel runs={runs} scheduled={scheduled} locale={locale} />
       </section>
 
       <section className="flex flex-col gap-4">

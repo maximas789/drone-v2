@@ -2404,6 +2404,35 @@
       "permitted": "Permitted",
       "restricted": "Restricted",
       "no_fly": "No-fly"
+    },
+    "jobs": {
+      "title": "Background jobs",
+      "intro": "Every run the platform recorded in its own table rather than the provider's dashboard — so “did the expiry sweep run last night?” is answered here.",
+      "scheduledTitle": "Scheduled functions",
+      "scheduledIntro": "Each function's declared schedule in Riyadh time, with its last run and when it is next due.",
+      "runsTitle": "Recent runs",
+      "runsIntro": "The newest fifty runs, with the error in full when one failed.",
+      "noRuns": "No runs yet. Scheduled jobs do not run until an Inngest server is up — start npx inngest-cli dev.",
+      "neverRun": "Never run",
+      "nextUnknown": "Not shown",
+      "col": {
+        "function": "Function",
+        "cron": "Schedule",
+        "lastRun": "Last run",
+        "nextDue": "Next due",
+        "started": "Started",
+        "duration": "Duration",
+        "attempt": "Attempt",
+        "runId": "Run id",
+        "rerunOf": "Re-run of"
+      },
+      "status": {
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelling": "Cancelling",
+        "cancelled": "Cancelled"
+      }
     }
   }
 }

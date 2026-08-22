@@ -3,6 +3,7 @@ import "server-only";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { auditEvent, user } from "@/lib/db/schema";
+import { toLocale, type Locale } from "@/lib/locale";
 import { isAdmin, isReviewer, type Role, type Session } from "@/lib/session";
 
 /**
@@ -52,6 +53,24 @@ export async function getUserById(session: Session, userId: string) {
     },
   });
   return row ?? null;
+}
+
+/**
+ * The language this account's mail follows.
+ *
+ * Its own reader rather than `getUserById(session, session.user.id)` because
+ * the settings page needs one column and that one returns seven — and because
+ * the column is nullable in the generated schema (`.default("ar")` fills it on
+ * insert, it does not forbid a null), so somebody has to decide what a null
+ * means. `toLocale` decides: Arabic, the same default the rest of the app
+ * falls back to.
+ */
+export async function getMyPreferredLocale(session: Session): Promise<Locale> {
+  const row = await db.query.user.findFirst({
+    where: eq(user.id, session.user.id),
+    columns: { preferredLocale: true },
+  });
+  return toLocale(row?.preferredLocale);
 }
 
 export async function countUsers(session: Session) {

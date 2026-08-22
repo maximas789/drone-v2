@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–38). F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–39). F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,130 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 39 — Wave 8 · F28a The settings shell, the profile section and language
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F28b is security + notifications; F28c is the danger zone.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/settings/sections.ts` | The section list, as data. Pure |
+| `src/lib/settings/sections.test.ts` | 7 tests — the "no Billing, no Connected apps" criteria as assertions |
+| `src/app/[locale]/(app)/settings/layout.tsx` | The shell: heading, section nav, content column |
+| `src/app/[locale]/(app)/settings/page.tsx` | `/settings` — the index |
+| `src/app/[locale]/(app)/settings/language/page.tsx` | `/settings/language` |
+| `src/components/settings/section-nav.tsx` | The nav, marking the current section |
+| `src/components/settings/language-form.tsx` | Persist **and** navigate |
+| `src/components/profile/reveal-own-id.tsx` | Confirm → reveal → "this was recorded" |
+| `src/lib/actions/settings.ts` | `setPreferredLocaleAction`, `revealOwnIdentityAction` |
+| `src/lib/data/user.ts` | *(extended)* `getMyPreferredLocale` |
+| `src/lib/rate-limit/rules.ts` | *(extended)* `settings.save` — 30/min |
+| `src/app/[locale]/(app)/layout.tsx` | *(extended)* the Settings link |
+| `src/app/[locale]/(app)/settings/profile/page.tsx` | *(adapted)* into the shell, plus the reveal |
+| `src/proxy.ts` | *(extended)* `settings` in `PROTECTED_SEGMENTS` |
+
+---
+
+#### `/settings/profile` existed since F17 and nothing linked to it
+
+The page has been shipped and reachable only by typing the URL since Session 17. **F28a adds the way in** — a Settings link in the signed-in header, and the shell that makes it a section rather than a loose page. A part of the app nothing navigates to is a part of the app nobody has.
+
+Adapting it cost two changes worth naming: it rendered its own `<main>` and its own `<h1>`, and the layout now owns both. **Two `<main>` elements is not a style problem** — it gives the document two main landmarks, which a screen reader reports as a fault rather than as structure.
+
+---
+
+#### The language setting is not the language switcher
+
+They look like the same control and they are not, which is the whole reason this section exists.
+
+The header switcher (F02) changes the URL and nothing else — right for reading, because a pilot comparing a refusal reason in the other language must not thereby change what language their **approval notice** arrives in. `user.preferredLocale` is the durable choice that F06's mail and F15's notifications read, and until now **nothing wrote it after sign-up**: a pilot who switched to English in the header still received Arabic email, for ever, with no control anywhere that would change it.
+
+So `/settings/language` does both — writes the preference, then navigates — and says so on the page in as many words, in both directions:
+
+- *"This is not only the interface: the emails and notifications we send you will arrive in this language too."*
+- *"The language buttons at the top of the page change only what you are reading now — they do not change the language of your mail."*
+
+The page shows the **stored** preference, never the URL's locale. Showing the URL locale would report a choice the person never made.
+
+**Verified against the database, end to end.** With `preferred_locale = 'ar'`, clicking English in the settings form moved the row to `'en'` *and* landed on `/en/settings/language` with the path preserved; clicking Arabic put it back. Both reads were `psql` against the running container, not the UI's own word for it. **The account was left as it was found (`ar`).**
+
+---
+
+#### The owner's reveal — and why it does not weaken F17's property
+
+F28 asks for a Reveal on the owner's own document number. F17 had deliberately built the page with **no such branch**, and its comment is the reason to be careful: *"if there is no branch that ever renders the whole number, then no screen can display one."*
+
+The property F17 actually claimed is narrower and survives intact — **no screen displays a full national ID *without a logged reveal***. `revealOwnIdentityAction` is a logged reveal:
+
+```
+getSession → rateLimit(identity.reveal, 20/hr)
+  → audit_event 'pilot_profile.identity_revealed'   ← BEFORE the return
+  → the unmasked number
+```
+
+**It takes no argument.** `revealPilotIdentityAction` takes a `userId` and a written reason because a reviewer has to justify exposing a stranger; asking somebody to justify seeing their own number, to themselves, is a form with no reader. Taking no parameter means there is no identifier to tamper with — the only row it can return is the session's own.
+
+The audit row carries `reason: "owner"` and **no document number**: `before` and `after` are both null, because a reveal is a read and nothing changed. Copying the number into `audit_event` would put a second permanent unmasked copy in the one table the app never deletes from.
+
+**Verified in the running app.** The confirmation appears first and the mask is still on the page at that point; confirming revealed the number and wrote exactly one new row —
+
+```
+action                          | actor_role | reason | before | after | ip_hash
+pilot_profile.identity_revealed | admin      | owner  | null   | null  | present
+```
+
+— distinguishable at a glance from the reviewer reveal three days earlier, which carries a written Arabic reason. **While I was there I checked what that reviewer row stores in `after`: `{"userId": "…"}` and nothing else.** No document number in the log on either path.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| The nav lists **two** sections, not six | Security, Notifications and Account do not exist yet, and System is F29's. F16's footer rule, again: a nav entry pointing at a 404 is worse than one fewer entry. `sections.test.ts` asserts the list and the route directory are the same set, so F28b/c cannot forget to add theirs and cannot add one early. |
+| `settings` message namespace **rewritten** | It held placeholders from an earlier wave, including `preferredLanguage: "Interface language"` — which is precisely the framing this feature exists to correct. Nothing referenced any of them. |
+| `preferredLocale` change is **not audited** | `audit_event` is the regulator's trail: registrations, bookings, identities. A pilot choosing to read in English is none of those, and putting it there dilutes a log whose value is that everything in it matters. |
+| `settings` added to `PROTECTED_SEGMENTS` | The layout guard already protected these pages — that is what the signed-out 307s prove. The proxy entry only stops the flash. |
+| `section-nav.tsx` is a **client** component | The docs sidebar (F26) is a Server Component because each page renders it and already knows its slug. A *layout* does not know which child is rendering, so the alternatives were one small `"use client"` boundary or five copies of a `<ul>` that must agree. |
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1051 passed, 61 files** (7 new) |
+| `pnpm exec tsc --noEmit` | clean |
+| `pnpm lint` | clean; `i18n:check` — 1938 keys in sync |
+| `pnpm build` | compiled; `/settings`, `/settings/language`, `/settings/profile` in the route list |
+| Signed **out** — all four settings URLs, both locales | **307 → `/{locale}/sign-in`**, none rendered |
+| Signed **in** — `/ar/settings`, `/ar/settings/profile`, `/ar/settings/language` | **200**; index lists exactly the two sections; nav marks the current one with `aria-current="page"` |
+| Landmarks on `/ar/settings/profile` | **one `<main>`, one `<h1>`** |
+| Language: click English → `psql` | `preferred_locale` `ar` → **`en`**, URL `/en/settings/language`, path preserved. Restored to `ar` |
+| Reveal: confirmation step | shown first; **the mask is still the only number on the page at that point** |
+| Reveal: after confirming | number shown, "this was recorded" notice, **exactly one new `audit_event`**, `reason='owner'`, `before`/`after` null, `ip_hash` present |
+| Full document number anywhere on the profile page before a reveal | **no.** Mask reads `•••••2345`; the only bare 10-digit runs are the pilot's own mobile and emergency contact |
+| `pageScrollsSideways` on both new pages, Arabic RTL | **false** |
+
+#### Not verified
+
+- **375 px.** `resize_window` still does not apply — third session running, same symptom (`window.innerWidth` stays 1440, `document.visibilityState` is `"hidden"`). The pages measured clean for sideways scroll at 1440 and the nav is a `overflow-x-auto` row below `md`, but **the breakpoint itself has not been seen.** This is now a standing gap across F27b and F28a and wants one pass on a real phone-width window.
+- **Pilot B cannot reach pilot A's settings** — F28's access criterion. Every page here reads `session.user.id` and there is no route parameter to point at another account, so there is no surface to attempt it against; but it has not been *driven* with a second account. The reviewer account exists (`alshar55@hotmail.com`) and its password is not mine to have.
+- **That an email actually arrives in the new language.** `preferred_locale` is what `src/lib/inngest/queries.ts` reads, and the write is confirmed; the delivery half needs `RESEND_API_KEY`, which has never been set (log line 32).
+
+#### Next session should know
+
+- **F28b is security + notifications.** Password change (current password required, other sessions invalidated, rate-limited), the active-session list from Better Auth's `session` table — which stores `ip_address` **raw**, so the list is the one place that data surfaces in the UI — and the email-change control, which must *explain* why it is unavailable with no `RESEND_API_KEY` rather than fail silently. Notification categories are exactly the three F15 sends, and the page must say in plain words that decision notices cannot be turned off.
+- **Add the slug to `SETTINGS_SECTIONS` in the same commit as the page.** `sections.test.ts` compares the list against the route directory in both directions and will fail either way round.
+- **F28c is the one to be careful with.** `remote_id.droneId` is `on delete cascade`, so deleting a drone deletes its Remote ID — and F28 requires the Remote ID to **survive, anonymised, still resolving as "registration withdrawn"**. That needs a migration (nullable `droneId`, `on delete set null`, and a status the enum does not yet have), and it touches `redact.ts`'s `RegistrationStatus` and `registrationStatusOf` — which is F11's pure module, with its own tests. `booking.pilotUserId` and `drone.ownerUserId` are `on delete restrict`, so deletion must be ordered by hand rather than left to a cascade.
+- **F28c must also rewrite the privacy policy's retention section** (agreed with the user this session). It currently states there is no self-service deletion and that the database refuses to delete a pilot holding a booking — both true today, both false the moment F28c lands. Worth a test pinning the policy's deletion claims to what the code does, the way the terms are pinned to their constants.
 
 ---
 

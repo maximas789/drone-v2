@@ -101,6 +101,14 @@ export const LIMITS = {
   /** A reveal is a serious act. A burst of them is a signal, not traffic. */
   "identity.reveal": [{ window: HOUR, max: 20 }],
   /**
+   * Not in F09's table — added by F28's settings pages.
+   *
+   * Generous, because these are preference writes a person makes about their
+   * own account and getting one wrong costs nobody anything. The limit exists
+   * so a settings toggle cannot be turned into a write loop.
+   */
+  "settings.save": [{ window: MINUTE, max: 30 }],
+  /**
    * Not in F09's table — added by F14, which built the decision actions.
    *
    * Generous, because a reviewer working down a morning's queue is normal

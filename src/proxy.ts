@@ -26,7 +26,7 @@ const handleI18n = createMiddleware(routing);
  * added there without a segment here is still *protected* (the layout guard is
  * what protects it), it just flashes on its way to the guard's redirect.
  */
-const PROTECTED_SEGMENTS = new Set(["dashboard", "admin"]);
+const PROTECTED_SEGMENTS = new Set(["dashboard", "admin", "settings"]);
 
 function isProtected(pathname: string): boolean {
   const [, maybeLocale, segment] = pathname.split("/");

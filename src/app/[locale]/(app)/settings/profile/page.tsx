@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { locale as localeParam } from "next/root-params";
 import { MaskedId } from "@/components/profile/masked-id";
+import { RevealOwnId } from "@/components/profile/reveal-own-id";
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { VerificationStatus } from "@/components/profile/verification-status";
 import { requirePilotProfile } from "@/lib/auth-guards";
@@ -47,9 +48,15 @@ export default async function ProfileSettingsPage() {
   if (!profile) return null;
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-8 p-4 sm:p-6">
+    /**
+     * **No `<main>` and no `<h1>` here any more.** F28a put a settings layout
+     * above this page: it owns the page heading and the section nav, and a
+     * second `<main>` inside the first would give the document two main
+     * landmarks — which a screen reader reports as an error, not as structure.
+     */
+    <section className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">{t("editTitle")}</h1>
+        <h2 className="text-lg font-medium">{t("editTitle")}</h2>
         <p className="text-muted-foreground text-sm">{t("editIntro")}</p>
       </header>
 
@@ -76,10 +83,19 @@ export default async function ProfileSettingsPage() {
             </dd>
           </div>
 
-          <MaskedId
-            number={profile.idDocumentNumber}
-            documentType={profile.idDocumentType}
-          />
+          <div className="flex flex-col gap-2">
+            <MaskedId
+              number={profile.idDocumentNumber}
+              documentType={profile.idDocumentType}
+            />
+            {/**
+             * **The mask stays.** The reveal is a second, deliberate act that
+             * writes its audit row before it returns anything — so this page
+             * still has no branch that renders a whole document number without
+             * one, which is the property `MaskedId` is written around.
+             */}
+            <RevealOwnId locale={locale} />
+          </div>
 
           {profile.dateOfBirth ? (
             <div className="flex flex-col gap-1">
@@ -127,6 +143,6 @@ export default async function ProfileSettingsPage() {
           nameEn: city.nameEn,
         }))}
       />
-    </main>
+    </section>
   );
 }

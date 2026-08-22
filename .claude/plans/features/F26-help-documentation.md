@@ -7,7 +7,7 @@ sidebar, the callouts, the "last updated" line, the footer link, and **all six p
 written in Arabic and English against the running app**. **F26b** — the real
 screenshots and the `Screenshot` component, the contextual deep links from the drone
 wizard and the rejection notice, and the browser link crawl of the app's own surfaces.
-**Session 36 did the links and the crawl; the screenshots are still outstanding.**
+**Session 36 did all three.**
 Twelve files of prose plus a screenshot session is more than one sitting; the prose is
 the part that has to be true, so it went first.
 
@@ -106,7 +106,7 @@ Ticked in **F26a** (Session 35) unless marked. `⬜ F26b` is deferred, not faile
 **Truth**
 - [x] Every page describes only features that **exist and work** — each page walked against the running app.
 - [x] No page mentions payments, an AI assistant, SMS/OTP verification, or agent access. The only occurrences of "text message" are the two sentences that **deny** it.
-- [ ] Screenshots are of the **actual UI**, captured after the features were built — no mockups. ⬜ **F26b, and the only criterion still open.** Chrome's `Page.captureScreenshot` timed out on three attempts across two fresh tabs (Session 36). Two framing decisions already stand: **no admin screen** (real pilot data, public forever) and **no scan page** (the signed-in browser is the owner, so the capture would show more than the "what a stranger sees" caption claims).
+- [x] Screenshots are of the **actual UI**, captured after the features were built — no mockups. **Five**, all Arabic, all taken against a `next start` production serve so no dev indicator appears: the wizard's type and specifications steps, the slot picker showing past-vs-available, the zones map, and the airspace decision panel. Three surfaces are deliberately **not** shown: **no admin screen** (real pilot data, public forever), **no public scan page** (the only browser that could capture it is signed in as the owner, so it would show more than the caption claims), and **no aircraft list** (the demo aircraft are named `PROBE18B …`). `docs.test.ts` reads the PNG headers back to check the declared dimensions, and fails on a file no page shows.
 - [x] The zones page states the airspace is illustrative, not official GACA data — in a `warning` callout, above the first heading.
 - [x] Nothing implies GACA endorsement or adoption.
 - [x] `remote-id` cites its regulatory sources with working links. All seven re-fetched on 2026-08-22: the three GACA PDFs still `application/pdf`, the four LII pages `text/html`.

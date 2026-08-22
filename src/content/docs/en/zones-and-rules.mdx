@@ -15,6 +15,12 @@ export const meta = {
 
 Most of the map is red or amber by design, not because the data is incomplete. The default is **deny**, and permitted zones are then carved out of it with written boundaries, ceilings and hours. Any point that does not fall inside one of those permitted zones is refused with an explicit reason: "the point is outside any zone where flight is permitted".
 
+<Screenshot
+  name="zonesMap"
+  alt="A map of Riyadh with green polygons for the permitted zones, a red circle around King Khalid International Airport and two red squares over the Diplomatic Quarter, and a dashed amber boundary around the whole Riyadh area."
+  caption="The Riyadh zones as the zones page draws them: green is permitted, red is no-fly, and the dashed amber boundary is the restricted Riyadh area the green zones are carved out of. The screenshots on these pages are of the Arabic interface, which is the primary one."
+/>
+
 This means the map never promises something the server cannot deliver: **the engine that answers you instantly on the map is the same engine that decides the booking on the server.** Not two copies, and not an estimate followed by a correction.
 
 ## Kinds of zone
@@ -71,6 +77,12 @@ A refusal here is not a generic error. The engine returns **specific reasons**, 
 | Night flight is not permitted | Pick a window in daylight |
 | The slot is full | You are offered **alternative slots** on the same day |
 | Weight class or build type not accepted | Another zone that accepts your aircraft |
+
+<Screenshot
+  name="airspaceDecision"
+  alt="A result panel reading “denied” in red, then the zone name “Greater Riyadh Area”, then “reasons for refusal” with a single reason: “the point is inside a restricted zone”, and below it a smaller line suggesting choosing a permitted zone."
+  caption="Picking a point on the map answers immediately: the verdict, the zone that applied, the reason, and what would make it possible."
+/>
 
 Reasons are stored as stable codes and translated at render, so a refusal issued in Arabic today reads in English tomorrow without its meaning changing.
 

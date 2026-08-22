@@ -9,6 +9,7 @@ import {
   isDocSlug,
   textOf,
 } from "./slugs";
+import { SCREENSHOTS } from "./screenshots";
 import { LOCALES } from "@/lib/locale";
 
 /**
@@ -152,6 +153,56 @@ describe("the anchors the app links into", () => {
     expect(docAnchorHref("rejectionReasons")).toBe(
       "/docs/registering-a-drone#common-rejection-reasons",
     );
+  });
+});
+
+/**
+ * A screenshot is a maintenance cost with a picture attached, and these are the
+ * two ways the cost turns into a defect without anybody noticing.
+ */
+describe("the screenshots", () => {
+  it("all exist on disk", () => {
+    for (const shot of Object.values(SCREENSHOTS)) {
+      expect(() =>
+        readFileSync(`public/docs/screenshots/${shot.file}`),
+      ).not.toThrow();
+    }
+  });
+
+  /**
+   * **The dimensions are read back out of the PNG header**, not trusted. They
+   * are what reserves space before the image loads, so a recapture at a
+   * slightly different crop silently shifts the page as it renders — the kind
+   * of thing that is invisible in review and obvious to a reader.
+   */
+  it("declare the dimensions the files actually have", () => {
+    for (const [name, shot] of Object.entries(SCREENSHOTS)) {
+      const bytes = readFileSync(`public/docs/screenshots/${shot.file}`);
+      // PNG IHDR: width at byte 16, height at byte 20, both big-endian.
+      expect({ name, w: bytes.readUInt32BE(16), h: bytes.readUInt32BE(20) }).toEqual(
+        { name, w: shot.width, h: shot.height },
+      );
+    }
+  });
+
+  it("is referenced by name from at least one page, in both locales", () => {
+    for (const name of Object.keys(SCREENSHOTS)) {
+      for (const locale of LOCALES) {
+        const used = DOC_SLUGS.some((slug) =>
+          sourceOf(locale, slug).includes(`name="${name}"`),
+        );
+        expect({ name, locale, used }).toEqual({ name, locale, used: true });
+      }
+    }
+  });
+
+  /** An unused file is a picture nobody will remember to retake. */
+  it("has no file on disk that no page shows", () => {
+    const declared = Object.values(SCREENSHOTS).map((s) => s.file);
+    const onDisk = readdirSync("public/docs/screenshots").filter((f) =>
+      f.endsWith(".png"),
+    );
+    expect(onDisk.sort()).toEqual([...declared].sort());
   });
 });
 

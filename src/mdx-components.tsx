@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import type { MDXComponents } from "mdx/types";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { Callout } from "@/components/docs/callout";
+import { Screenshot } from "@/components/docs/screenshot";
 import { Quotation } from "@/components/landing/quotation";
 import { SourceList } from "@/components/landing/source-list";
 import { ProposalNotice } from "@/components/proposal-notice";
@@ -177,6 +178,7 @@ const components: MDXComponents = {
 
   // Available inside every page without an import.
   Callout,
+  Screenshot,
   Quotation,
   SourceList,
   ProposalNotice,

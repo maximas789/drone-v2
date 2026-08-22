@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–36).** F26b's deep links are done and crawled; **only the screenshots remain**, blocked on Chrome's capture pipeline rather than on any code. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–36). F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -116,6 +116,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 16 | **A dev-mode 404 embeds a stack trace naming the guard** (`requireReviewer`, absolute file path) in its RSC payload; the production build does not. So the "404, not a stack trace" criterion is **only meaningful against `next start`**. F31 must run its route checks against a production serve, never `next dev`. | F05 | F31 |
 | 14 | **`drone.owner_user_id` and `booking.pilot_user_id` are `ON DELETE RESTRICT`**, so deleting an account that holds registered aircraft or bookings is refused by the database — while `deleteUser` is enabled in `src/lib/auth.ts`. Deliberate: a registration record is not personal data to take away. **F28 owns the consequence** and must offer a real path (revoke, or transfer) instead of a raw delete that errors. | F05 | F28 |
 | 36 | ~~**`viewerLevelFor` was never exercised with a reviewer who is also the drone's owner.**~~ **Exercised in F22c**: `/ar/rid/AJN-7Q4M-31KD` was opened by the admin who owns that aircraft, and the staff branch rendered with its reveal control and no error — staff winning by the order of the checks, as designed. Kept as a note because the *combination* still has no test. Staff wins by the order of the checks, so such a person sees the staff branch and their own reveal control; no row like that has ever existed. Worth a deliberate case when F22 gives reviewers aircraft. | F11 | F22, F31 |
+| 77 | **The app states a national 120 m altitude limit; the documentation deliberately does not.** The airspace panel's altitude control reads *"الحد الوطني للارتفاع هو 120 مترًا"* in both languages, as fact. **No GACA document naming 120 m has ever been fetched and read** — F16b's research reached GACAR Part 107 and E-Book Volume 18, and `src/lib/landing/sources.ts` holds no such quotation. 120 m is the highest ceiling *we authored* for the Riyadh zones. `docs/zones-and-rules` therefore omits the claim, and F26b's decision-panel screenshot is **cropped above the slider** so a picture cannot smuggle it back in. Either the string is sourced and the docs should say so, or it is unsourced and the string should be softened — a product decision, and the honesty rule's exact subject matter. | F26b | F27, F30, F31 |
 | 76 | **Two rejection templates promise an upload that does not exist.** `review.templates.identity_unreadable` and `review.identityTemplates.document_unreadable` both tell a pilot *"أرفق صورة واضحة للوثيقة"*. **There is no identity-document upload anywhere in the app** — F17's profile wizard collects a document type, number and date of birth and nothing else, and the reviewer compares typed data. Anybody who receives either message is being sent to a control that has never been built. Found while writing `docs/registering-a-drone`, which describes that rejection as being about the typed details instead. Either the copy changes or F28 adds the upload; it is a product decision, not a typo. | F26a | F27, F28, F31 |
 | 15 | **`role` reaches the app as `string \| null`, not a union.** Better Auth types an `additionalField` declared as a list of literals as a plain `string`. `roleOf()` in `src/lib/session.ts` narrows it and **fails closed** — anything unrecognised is treated as `pilot`. Never read `session.user.role` directly; use `roleOf` / `isReviewer` / `isAdmin`. | F05 | Every wave that branches on role |
 | 10 | **Nothing has checked the seeded polygons for self-intersection.** **They have now been *seen*** — F16a's landing page draws all 12 as an SVG, and they render cleanly: the restricted city, the permitted carve-outs, and KKIA's ring as a genuine hole under `fill-rule="evenodd"`. They are plainly authored regular polygons, which is what the disclaimer says. Seen is not tested, and nothing computes self-intersection. **F20 is still the first interactive render.** | F04 | F20 |
@@ -254,10 +255,10 @@ What has actually been **run**, not what was written. F31 reads this.
 
 | Check | Last run | Result |
 |---|---|---|
-| `pnpm exec tsc --noEmit` | 2026-08-22 (F26a) | ✅ **Clean at F26a**, which added `src/mdx-components.tsx` and `src/lib/docs/`. `@types/mdx` types the `.mdx` default export; the named `meta` export is untyped, which is why `isDocMeta` narrows it rather than a cast. Earlier: clean at F24 too. clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
-| `pnpm lint` | 2026-08-22 (F26a) | ✅ **Clean at F26a.** Rules 1 and 4 cover `src/mdx-components.tsx`, which is where every class string on the documentation pages lives — a markdown page carries none of its own. **Rule 5 is the one that cannot reach these pages**: a `[نص](/docs/remote-id)` in an `.mdx` is not an import, so the locale prefix is protected by routing every internal href through `Link` in the element map rather than by lint. Earlier: **Clean at F24**, which added `src/lib/lookup/` and `src/components/admin/lookup/` — the logical-property and bare-`Intl` bans both cover them unchanged. clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14). **Rule 11 probed again in F23b**: it fired on a `.set({ status: … })` written into `scripts/probe-zone-lifecycle.mts`, which was then rewritten to delete the row rather than reach past the workflow. |
-| `pnpm build` | 2026-08-22 (F26a) | ✅ **F26a:** `/[locale]/docs` and `/[locale]/docs/[slug]` build **dynamic**, which they must — each reads the session for the header. **No schema change**; `pnpm db:generate` reported nothing to migrate. The `next start` port trap bit again exactly as the F24 row warns: `pnpm start` on a port a `next dev` was still holding failed with `EADDRINUSE` and the **dev** server kept answering, so the first round of "production" checks was not production at all. Kill the listener by PID and read `Ready in …` before trusting a result. Earlier — **F24:** `/[locale]/admin/lookup` and `/[locale]/admin/reveals` build **dynamic**, which they must — each reads the session; **no schema change**, `pnpm db:generate` reported nothing to migrate. **A caution learned here: `next start` on a port that is already listening fails and leaves the *old* process serving**, with the failure only in the log — kill the listener by PID and wait for `Ready in …` before trusting a production-serve result. `/[locale]/admin/zones/[id]/closures` and `/[locale]/admin/cities` build **dynamic**, which they must — each reads the session. **F23c adds no schema change**; `pnpm db:generate` reported nothing to migrate. **The build clobbers `next dev`'s `.next`** and the dev server on 3001 kept serving afterwards, but restart it if it does not. Earlier (F23b): ✅ `/[locale]/admin/zones`, `/admin/zones/new` and `/admin/zones/[id]` build **dynamic** too, and **terra-draw lands in a lazy chunk of its own** — see the bundle row below. Earlier (F22c): `/[locale]/admin/pilots` and `/[locale]/admin/pilots/[id]` build **dynamic**. Earlier (F22b): `/[locale]/admin/bookings` and `/[locale]/admin/bookings/[id]` build **dynamic**. `/[locale]/admin` and `/[locale]/admin/drones/[id]` build **dynamic**, which they must — each reads the session. `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build; F17's `/[locale]/profile/complete` and `/[locale]/settings/profile` build **dynamic**. **F23b adds no route and no schema change**; `pnpm db:generate` reported nothing to migrate. |
-| `pnpm i18n:check` | 2026-08-22 (F26a) | ✅ **1935 keys at F26a** — the `docs` namespace rewritten (its F02 keys named pages that were never built), and `nav.help` deleted as unused. Earlier: ✅ **1765 keys at F24** (+54, the `lookup` namespace, `review.tabLookup` and `review.auditActions.remote_id_lookup`); **1711 keys** (1630 at F23b (1561 at F23a (1436 at F22c, 1371 at F22b, 1303 at F22a, 1155 at F21b). Earlier: **737 keys** (690 at F18a), ar/en in sync (632 at F17, 556 at F15) |
+| `pnpm exec tsc --noEmit` | 2026-08-22 (F26b) | ✅ **Clean at F26b**, which added `src/lib/docs/screenshots.ts` and the `Screenshot` component. Earlier: ✅ **Clean at F26a**, which added `src/mdx-components.tsx` and `src/lib/docs/`. `@types/mdx` types the `.mdx` default export; the named `meta` export is untyped, which is why `isDocMeta` narrows it rather than a cast. Earlier: clean at F24 too. clean — **requires `next typegen` first** on a clean tree; use `pnpm typecheck`. Also runs F11's `@ts-expect-error` masking assertion |
+| `pnpm lint` | 2026-08-22 (F26b) | ✅ **Clean at F26b.** Earlier: ✅ **Clean at F26a.** Rules 1 and 4 cover `src/mdx-components.tsx`, which is where every class string on the documentation pages lives — a markdown page carries none of its own. **Rule 5 is the one that cannot reach these pages**: a `[نص](/docs/remote-id)` in an `.mdx` is not an import, so the locale prefix is protected by routing every internal href through `Link` in the element map rather than by lint. Earlier: **Clean at F24**, which added `src/lib/lookup/` and `src/components/admin/lookup/` — the logical-property and bare-`Intl` bans both cover them unchanged. clean. Both rules probed rather than assumed: the **airspace purity** bans all fire on `evaluate.ts` (F12), and **rule 11** fires on a `.set({ status: … })` written into `src/lib/data/` while the four workflow files stay clean (F14). **Rule 11 probed again in F23b**: it fired on a `.set({ status: … })` written into `scripts/probe-zone-lifecycle.mts`, which was then rewritten to delete the row rather than reach past the workflow. |
+| `pnpm build` | 2026-08-22 (F26b) | ✅ **F26b:** no route change, no schema change. **The `.next`-clobbering caution below bit again** — the dev server left running across a build serves broken chunks, and the symptom was `img.complete === false` on the new screenshots, which reads exactly like a broken image path. Restart dev after every build. Earlier — **F26a:** `/[locale]/docs` and `/[locale]/docs/[slug]` build **dynamic**, which they must — each reads the session for the header. **No schema change**; `pnpm db:generate` reported nothing to migrate. The `next start` port trap bit again exactly as the F24 row warns: `pnpm start` on a port a `next dev` was still holding failed with `EADDRINUSE` and the **dev** server kept answering, so the first round of "production" checks was not production at all. Kill the listener by PID and read `Ready in …` before trusting a result. Earlier — **F24:** `/[locale]/admin/lookup` and `/[locale]/admin/reveals` build **dynamic**, which they must — each reads the session; **no schema change**, `pnpm db:generate` reported nothing to migrate. **A caution learned here: `next start` on a port that is already listening fails and leaves the *old* process serving**, with the failure only in the log — kill the listener by PID and wait for `Ready in …` before trusting a production-serve result. `/[locale]/admin/zones/[id]/closures` and `/[locale]/admin/cities` build **dynamic**, which they must — each reads the session. **F23c adds no schema change**; `pnpm db:generate` reported nothing to migrate. **The build clobbers `next dev`'s `.next`** and the dev server on 3001 kept serving afterwards, but restart it if it does not. Earlier (F23b): ✅ `/[locale]/admin/zones`, `/admin/zones/new` and `/admin/zones/[id]` build **dynamic** too, and **terra-draw lands in a lazy chunk of its own** — see the bundle row below. Earlier (F22c): `/[locale]/admin/pilots` and `/[locale]/admin/pilots/[id]` build **dynamic**. Earlier (F22b): `/[locale]/admin/bookings` and `/[locale]/admin/bookings/[id]` build **dynamic**. `/[locale]/admin` and `/[locale]/admin/drones/[id]` build **dynamic**, which they must — each reads the session. `/api/zones/geojson` builds as a dynamic route; `/[locale]/rid/[code]` and `/api/rid/[code]` build as dynamic routes, `/robots.txt` static; `/api/upload`, `/api/files/[...path]` and `/api/inngest` too; migrates first; `/[locale]/dev/emails` still prerenders as a **404** in a production build; F17's `/[locale]/profile/complete` and `/[locale]/settings/profile` build **dynamic**. **F23b adds no route and no schema change**; `pnpm db:generate` reported nothing to migrate. |
+| `pnpm i18n:check` | 2026-08-22 (F26b) | ✅ **1937 keys at F26b** (+2: the two deep links' copy). Earlier: ✅ **1935 keys at F26a** — the `docs` namespace rewritten (its F02 keys named pages that were never built), and `nav.help` deleted as unused. Earlier: ✅ **1765 keys at F24** (+54, the `lookup` namespace, `review.tabLookup` and `review.auditActions.remote_id_lookup`); **1711 keys** (1630 at F23b (1561 at F23a (1436 at F22c, 1371 at F22b, 1303 at F22a, 1155 at F21b). Earlier: **737 keys** (690 at F18a), ar/en in sync (632 at F17, 556 at F15) |
 | **A booking decision driven over HTTP** | 2026-08-19 (F22b) | ✅ **all three, from the panel.** Approve → `approved` with a `decisionSnapshot`; authority-cancel with a written reason → `cancelled`, the reason stored byte-for-byte and shown back verbatim; the reject panel's 20-character floor disabling the button, flagging `aria-invalid` and naming the shortfall. Trail: `booking.requested` → `booking.approved` → `booking.cancelled_by_authority`, each with `actorRole: admin`, each rendered with a real label |
 | **Approval refused by a closure published after the request** | 2026-08-19 (F22b) | ✅ **F22's headline criterion, driven in a browser.** A published `zone_closure` was inserted over the booked slot; the page's re-run flipped to **denied** with `zone_closed_window` and its fix, and pressing Approve was **refused with those same reasons** — the row stayed `pending`, `decided_at` null. Closure deleted, the booking then approved normally. F14's probe had proved the transaction; this is the first time a reviewer has been refused on screen |
 | 375 px, Arabic, F22b's two routes | 2026-08-19 (F22b) | ✅ via the iframe (thread 44) — `body.scrollWidth === clientWidth` (356) and `scrollTo(9999,0)` leaves `scrollX` at 0 on both the queue and the detail page; the 46 rem booking table scrolls **inside its own box** (322 visible, 736 content). `resize_window` not used |
@@ -293,7 +294,7 @@ What has actually been **run**, not what was written. F31 reads this.
 | A decision driven over HTTP | 2026-08-19 (F22a) | ✅ **done — the drought is over.** A rejection written from the reject panel (edited template, reason stored byte-for-byte, `rejectionCount` 1 → 2, **exactly one** `drone.rejected` event with `actorRole: admin`) and an approval pressed on the next drone. Six refusals driven straight at the actions wrote nothing. Earlier: ❌ **still not run.** F18b drove every *pilot* action over HTTP, but `approveDroneAction`, `rejectDroneAction`, `revokeDroneAction` and `reinstateDroneAction` have no caller — F18b's `approved` / `rejected` / `revoked` rows were seeded by SQL. **F22 owns closing this** |
 | Approval → QR → email, as one flow | 2026-08-19 (F22a) | ✅ **run as one, from a button.** `approveDroneAction` → `approved`, registration 2026-08-19 → 2029-08-19, Remote ID `AJN-GCBR-3KJN` issued, the Inngest event reaching a live dev server, `qr-render` storing `qrPathname`, `email_log` `drone-approved` / `skipped` (no Resend key). Earlier: ❌ **never run as one.** The action sends the event and F08's job was proven separately; Inngest was not running during F14's probe |
 | Identity reveal | 2026-08-17 (F11) | ✅ in Chrome — audit event with reason written **before** the value returned; forcing the audit write to fail refused the reveal and showed nothing |
-| `pnpm test` | 2026-08-22 (F26a) | ✅ **1019 passed, 59 files at F26a** (+18 in `src/lib/docs/docs.test.ts`: the manifest ↔ file check in both directions, the order permutation matched across locales, the no-`h1` rule, `/docs/*` links resolving to a real slug, and `headingSlug` — including the **hamza fold**, pinned deliberately so it reads as a decision rather than an accident). The `.mdx` files are read as **text**, never imported: Vitest has no MDX loader and adding one would be a second compiler pipeline maintained alongside the bundler's, with the usual result that the two disagree. Earlier (F25b): **1001 passed, 58 files**. Earlier: ✅ **898 passed, 50 files at F24** (+41 in `src/lib/lookup/__tests__/detect.test.ts`: the six input kinds including Arabic-Indic digits and the four Saudi mobile spellings, the `flightAuthorisationOf` branches, and **a source scan standing in for F24's "verify by grep"** — the candidate projection carries no identity column and the action reaches the record only through `resolveRemoteId`). **Three mutations run, all three caught** — an identity column added to the projection, `getRemoteIdRecordByCode` imported into the action, and the eight-letter-name/valid-code collision. Earlier: **857 passed, 49 files** (26 new: the closure window's arithmetic against Riyadh civil time, the half-open overlap rule, and the city rules including a reversed Riyadh centroid). **Three mutations run, all three caught** — `closureOverlaps` made closed rather than half-open → 2 failures, a zero-length window allowed → 3, and a blank coordinate let through as `Number("") === 0` → 1. All reverted. Earlier (F23b): ✅ **831 passed, 47 files** (39 new: the hours grid's week rules against the real `deriveSlots`, publish readiness including the no-fly overlap, `geometryShrinks`, and the zone lifecycle's place in the transition table). **Three mutations run, all three caught** — the half-open overlap rule closed, the "a permitted zone needs hours" clause dropped, and `zone.suspended` opened to a reviewer. Earlier (F23a): **792 passed, 45 files** (45 new: winding and area, the geometry validator, and the zone form's rules). **Two mutations run, one initially survived**: `j = i + 2` → `i + 1` in the self-intersection scan was caught by five tests, but **dropping the latitude cosine from the area calculation was not** — the assertion window spanned 1.0–1.25 km² and both the right answer (1.12) and the wrong one (1.24) fell inside it. Tightened to 1.05–1.18, which fails on the mutation. A test that cannot fail is not a test. Earlier: **747 passed, 42 files** (5 new: `isOwnSubmission`, including the case that would stop the clock — a **system** actor with a null id must never match a null subject). The audit-label scan was **widened after it missed something on screen**: it matched `action: "x.y"` literally, so `action: isComplete ? "pilot_profile.completed" : …` slipped past and printed a raw dotted path on the English pilot page. It now reads a 200-character window after each `action:`, which covers a ternary; matching *any* quoted action-shaped string was tried first and pulled in rate-limit keys (`booking.create`, `drone.draft`). Earlier: **742 passed, 41 files** (13 new: the urgency buckets and their boundaries, and `registrationAtSlot` against the engine's own `<= slotEnd`). **One mutation run and caught by a test that already existed**: adding `booking.requested` to the audit table without a label failed `audit-actions.test.ts`'s source scan — which is how the two unlabelled booking actions were found at all. Earlier: **729 passed, 40 files** (28 new: the queue's age arithmetic and search, the validity-window round trip across month ends and a leap day, and the audit-label suite). **Four mutations run, all four caught** — a label dropped from *both* catalogues, a newly-audited action absent from `DRONE_TRAIL_ACTIONS` (caught by the source scan), `isOverdue` flipped `>` → `>=`, and the dotted catalogue keys restored. Earlier: **701 passed** (F21b). Earlier: **589 passed, 26 files**. F18b **ran the mutations F18a skipped**: 25 against `validation/drone.ts`, 21 caught, **3 real gaps (every length ceiling untested)** closed, 1 equivalent mutant recorded; then 4 more on `isDroneEditable`, all caught. Also **fixed two failing tests it did not cause** — `codec.test.ts` asserted zero collisions in 100 000 draws of a 2⁴⁰ space (birthday bound ~4.6 × 10⁻³, so ~1 run in 220 fails; now ≤ 3), and the suite's 5 s default was flaking three different expensive tests run to run (global `testTimeout: 20_000` in `vitest.config.mts`; **four consecutive green runs** after). Earlier: **583 passed, 26 files** (15 new: the weight-class boundaries, the serial-iff-commercial rule and the type/specs validators — **no mutations run on them yet**, see the session entry). Earlier: **568 passed, 25 files** (48 new: the Saudi ID checksum, the mobile normaliser, the profile validators, the open-redirect guard, and a **source scan** asserting the mask exists in one file and no page renders a raw document number; **12 mutations run, all 12 caught** — one initially "survived" and turned out to be a mis-aimed mutation, not a gap). Earlier: **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
+| `pnpm test` | 2026-08-22 (F26b) | ✅ **1027 passed, 59 files at F26b** (+8: the anchors the app links into, and the screenshot registry — which **reads the PNG headers back** rather than trusting the declared dimensions, and fails on a file no page shows). Earlier: ✅ **1019 passed, 59 files at F26a** (+18 in `src/lib/docs/docs.test.ts`: the manifest ↔ file check in both directions, the order permutation matched across locales, the no-`h1` rule, `/docs/*` links resolving to a real slug, and `headingSlug` — including the **hamza fold**, pinned deliberately so it reads as a decision rather than an accident). The `.mdx` files are read as **text**, never imported: Vitest has no MDX loader and adding one would be a second compiler pipeline maintained alongside the bundler's, with the usual result that the two disagree. Earlier (F25b): **1001 passed, 58 files**. Earlier: ✅ **898 passed, 50 files at F24** (+41 in `src/lib/lookup/__tests__/detect.test.ts`: the six input kinds including Arabic-Indic digits and the four Saudi mobile spellings, the `flightAuthorisationOf` branches, and **a source scan standing in for F24's "verify by grep"** — the candidate projection carries no identity column and the action reaches the record only through `resolveRemoteId`). **Three mutations run, all three caught** — an identity column added to the projection, `getRemoteIdRecordByCode` imported into the action, and the eight-letter-name/valid-code collision. Earlier: **857 passed, 49 files** (26 new: the closure window's arithmetic against Riyadh civil time, the half-open overlap rule, and the city rules including a reversed Riyadh centroid). **Three mutations run, all three caught** — `closureOverlaps` made closed rather than half-open → 2 failures, a zero-length window allowed → 3, and a blank coordinate let through as `Number("") === 0` → 1. All reverted. Earlier (F23b): ✅ **831 passed, 47 files** (39 new: the hours grid's week rules against the real `deriveSlots`, publish readiness including the no-fly overlap, `geometryShrinks`, and the zone lifecycle's place in the transition table). **Three mutations run, all three caught** — the half-open overlap rule closed, the "a permitted zone needs hours" clause dropped, and `zone.suspended` opened to a reviewer. Earlier (F23a): **792 passed, 45 files** (45 new: winding and area, the geometry validator, and the zone form's rules). **Two mutations run, one initially survived**: `j = i + 2` → `i + 1` in the self-intersection scan was caught by five tests, but **dropping the latitude cosine from the area calculation was not** — the assertion window spanned 1.0–1.25 km² and both the right answer (1.12) and the wrong one (1.24) fell inside it. Tightened to 1.05–1.18, which fails on the mutation. A test that cannot fail is not a test. Earlier: **747 passed, 42 files** (5 new: `isOwnSubmission`, including the case that would stop the clock — a **system** actor with a null id must never match a null subject). The audit-label scan was **widened after it missed something on screen**: it matched `action: "x.y"` literally, so `action: isComplete ? "pilot_profile.completed" : …` slipped past and printed a raw dotted path on the English pilot page. It now reads a 200-character window after each `action:`, which covers a ternary; matching *any* quoted action-shaped string was tried first and pulled in rate-limit keys (`booking.create`, `drone.draft`). Earlier: **742 passed, 41 files** (13 new: the urgency buckets and their boundaries, and `registrationAtSlot` against the engine's own `<= slotEnd`). **One mutation run and caught by a test that already existed**: adding `booking.requested` to the audit table without a label failed `audit-actions.test.ts`'s source scan — which is how the two unlabelled booking actions were found at all. Earlier: **729 passed, 40 files** (28 new: the queue's age arithmetic and search, the validity-window round trip across month ends and a leap day, and the audit-label suite). **Four mutations run, all four caught** — a label dropped from *both* catalogues, a newly-audited action absent from `DRONE_TRAIL_ACTIONS` (caught by the source scan), `isOverdue` flipped `>` → `>=`, and the dotted catalogue keys restored. Earlier: **701 passed** (F21b). Earlier: **589 passed, 26 files**. F18b **ran the mutations F18a skipped**: 25 against `validation/drone.ts`, 21 caught, **3 real gaps (every length ceiling untested)** closed, 1 equivalent mutant recorded; then 4 more on `isDroneEditable`, all caught. Also **fixed two failing tests it did not cause** — `codec.test.ts` asserted zero collisions in 100 000 draws of a 2⁴⁰ space (birthday bound ~4.6 × 10⁻³, so ~1 run in 220 fails; now ≤ 3), and the suite's 5 s default was flaking three different expensive tests run to run (global `testTimeout: 20_000` in `vitest.config.mts`; **four consecutive green runs** after). Earlier: **583 passed, 26 files** (15 new: the weight-class boundaries, the serial-iff-commercial rule and the type/specs validators — **no mutations run on them yet**, see the session entry). Earlier: **568 passed, 25 files** (48 new: the Saudi ID checksum, the mobile normaliser, the profile validators, the open-redirect guard, and a **source scan** asserting the mask exists in one file and no page renders a raw document number; **12 mutations run, all 12 caught** — one initially "survived" and turned out to be a mis-aimed mutation, not a gap). Earlier: **520 passed, 20 files** (11 new: the bilingual collapse and the catalogue/source cross-checks). Earlier: **509 passed, 19 files** (30 new: the transition table and the workflow's arithmetic; **seven mutations run, all caught**). Earlier: **479 passed, 17 files** (106 new: geometry, Riyadh time, evaluate, precedence, reason catalogues, slots; **eight mutations run, all caught**). Earlier: **373 passed, 11 files** (32 new: codec and redaction; **six mutations run, all caught**). Earlier: **341 passed, 9 files** (22 new for the upload validator; four mutations run, one initially survived and the claim it tested was corrected). Earlier: **319 passed, 8 files** (31 new for the job rules; four mutations run, one initially survived). Earlier: **288 passed, 7 files** — 24 new for the rate-limit rules and the 429 branch. Four mutations run; **two initially passed**, and the tests were rewritten until they failed. See the session entry. |
 | **Declared-module verify / reject** | 2026-08-19 (F22a) | ✅ over HTTP — a validity window stored as Riyadh civil midnight (exclusive end bound), `broadcastCapable` flipped with its own audit event, a window the wrong way round refused `invalid_validity`, and superseded rows offering no controls. **Closes thread 49** — all four columns are now written by somebody |
 | **Identity reveal from a pilot profile** | 2026-08-19 (F22a) | ✅ over HTTP — the whole number returned only after the `pilot_profile.identity_revealed` event committed, carrying the reason and **no digits**. **Closes thread 45**: F11's reveal keys on a Remote ID code, which a `pending` drone does not have |
 | **Admin routes, production serve** | 2026-08-19 (F22a) | ✅ on port **3002** with a real probe pilot account: 404 on `/ar/admin`, `/en/admin` and `/admin/drones/[id]`, **no guard named, no data**. The same request against `next dev` **does** name the guard — thread 16 reconfirmed. A forged cookie reaches every action and every one answers `not_authenticated`; a pilot POSTing the five reviewer actions gets `not_found`. Probe account deleted |
@@ -358,11 +359,10 @@ Newest at the top.
 
 ---
 
-### Session 36 — Wave 8 · F26b The contextual deep links (**partial — the screenshots are not done**)
+### Session 36 — Wave 8 · F26b Screenshots and the contextual deep links (**F26 complete**)
 
 **Date:** 2026-08-22
-**Status:** ⚠️ partial. Two of F26b's three parts are done; **the screenshots are
-blocked on the machine, not on the code.**
+**Status:** ⚠️ done with deviations. **F26 is complete.**
 
 ---
 
@@ -370,13 +370,16 @@ blocked on the machine, not on the code.**
 
 | File | What |
 |---|---|
+| `public/docs/screenshots/*.png` | **Five real captures**, Arabic, against a production serve. |
+| `src/lib/docs/screenshots.ts` | Pure. The registry, with dimensions read off the PNG headers. |
+| `src/components/docs/screenshot.tsx` | `next/image` in a `<figure>`; `alt` and `caption` are separate required props. |
 | `src/lib/docs/slugs.ts` | `DOC_ANCHORS` and `docAnchorHref` — the sections the app links into, by an id that does not change with the language. |
 | `src/mdx-components.tsx` | `<H2 id="…">`, a heading with an explicit anchor. |
 | `src/content/docs/{ar,en}/registering-a-drone.mdx` | That heading now carries `id="common-rejection-reasons"` in both languages. |
 | `src/components/drones/step-remote-id.tsx` | Links to `docs/remote-id`. |
 | `src/components/drones/rejection-notice.tsx` | Links to the common-reasons section. |
 
-**1023 tests** (+4), 1937 catalogue keys, `ar`/`en` in sync. No schema change.
+**1027 tests** (+8), 1937 catalogue keys, `ar`/`en` in sync. No schema change.
 
 ---
 
@@ -430,59 +433,112 @@ redundant.
 
 ---
 
-#### Not done, and why — both blocked on the machine
+#### The screenshots, and the two errors they found
 
-**1. The screenshots.** Not started. Chrome's capture pipeline went unreliable partway
-through: `Page.captureScreenshot` timed out after 30 s on **three** attempts across
-**two** freshly created tabs, while the window resized itself unprompted between calls
-(`innerWidth` read 1440, then 784, then 569, with `resize_window` reporting success each
-time) and every tab reported `document.visibilityState === "hidden"`. **`javascript_tool`
-kept working perfectly throughout** — which is what made the link verification above
-possible, and is worth remembering: when capture dies, the DOM is still readable, and
-reading `getBoundingClientRect` is a better check than a screenshot anyway (thread 67,
-and the SVG `text-anchor` bug).
+Five, all Arabic, all captured against a `next start` **production** serve so no dev
+indicator sits in the corner: the wizard's type step and specifications step, the slot
+picker, the zones map, and the airspace decision panel.
 
-Two decisions made while surveying for screenshots, which stand whenever capture works
-again:
+**Capture worked on the second attempt, in a genuinely fresh window** — and the diagnosis
+from the failed attempt was exact. In the dead window `requestAnimationFrame` **never
+fired** and the WebGL centre pixel read `[0,0,0,0]` with the context *not* lost: the tab
+was `document.visibilityState === "hidden"`, so nothing was rendering and the compositor
+had nothing to hand `Page.captureScreenshot`. In the fresh window the same page reported
+`visible`, rAF fired, and both capture and the map worked first time.
 
-- **No admin screenshot on `for-authorities`.** Every review screen shows a real pilot's
-  name, city and history, and these pages are public forever. The page describes those
-  screens in words instead.
-- **No scan-page screenshot on `remote-id`.** The signed-in browser is the aircraft's
-  **owner**, so a capture would show the owner branch — i.e. a picture claiming to be
-  "what a stranger sees" that shows more than a stranger sees. Capturing it honestly needs
-  a signed-out session, which would mean signing the user out. The page's viewer table is
-  more precise than the picture would have been.
-- **The demo aircraft are named `PROBE18B ملغاة`, `PROBE18B مرفوضة`, …** — probe fixtures.
-  Any screenshot of the aircraft list or a booking's drone step puts that in the public
-  documentation. Presentable demo data is a prerequisite for those shots, not an
-  afterthought.
+**The screenshot pass paid for itself immediately by finding two factual errors in my own
+prose**, neither of which any check could see:
 
-**2. The rejection notice on screen. Blocked by four eyes, and it is thread 64's blocker
-wearing a different hat.** No aircraft is currently in `rejected` — `PROBE18B مرفوضة` is
-named for a state it is not in (it reads `pending`; it was resubmitted). Putting one back
-into `rejected` means a reviewer deciding it, and **every aircraft belongs to the admin**,
-so the workflow refuses the decision as a self-submission. It needs somebody signed in as
-`alshar55@hotmail.com`. The link itself is a `Link` with an `href` from `docAnchorHref`,
-which is unit-tested, and the target anchor is confirmed to render — but **nobody has seen
-that notice on a screen**, and this entry says so rather than implying otherwise.
+1. **Propulsion is on step 1, not step 2.** `docs/registering-a-drone` put "نظام الدفع"
+   under المواصفات. It is on النوع, and it is optional. Corrected in both languages.
+2. **The serial-number field is on step 2, and only for a commercial build.** The page's
+   step-1 table implied it was asked for there. Corrected: the column now reads "is a
+   serial number asked for?" and says where, and step 2 states that a self-built or FPV
+   aircraft never sees the field at all.
+
+Both are exactly what this feature's own rule exists to prevent — a page sending somebody
+to look for a control that is not where it says. **They were found by looking at a picture
+of the screen, and by nothing else.**
+
+**What is deliberately not photographed**, recorded so nobody adds it later thinking it
+was an oversight:
+
+- **No admin screen.** Every review surface carries a pilot's name, city and history, and
+  these pages are public forever.
+- **No public scan page.** The only browser that could capture it is signed in as the
+  aircraft's **owner**, so the picture would show more than a "what a stranger sees"
+  caption claims. The viewer table on `docs/remote-id` is more precise than the picture.
+- **No aircraft list, and no booking drone step.** The demo aircraft are named
+  `PROBE18B ملغاة`, `PROBE18B مرفوضة` and so on. Presentable demo data is a prerequisite
+  for those shots.
+- **The decision-panel capture is cropped above the altitude slider** — see thread 77.
+
+`docs.test.ts` covers the two ways a screenshot rots: it **reads the PNG headers back** and
+fails if a declared dimension is wrong (a wrong intrinsic size reserves the wrong space and
+shifts the page as it loads), and it fails on a file no page shows.
 
 ---
 
-**State of the machine at the end of the session:** 3001 is serving **`next dev`**
-(switched back from the production build for the edit cycle). Inngest is **not running**.
-Docker Postgres is up. **No demo data was created, changed or deleted this session.**
+#### A third thing the screenshots found: the app makes a claim the docs will not
+
+The airspace panel's altitude control says, in both languages, *"الحد الوطني للارتفاع هو
+120 مترًا"* — **the national altitude limit is 120 metres**, stated as fact.
+
+Session 35 removed exactly that claim from `docs/zones-and-rules` and corrected the feature
+file, because **no GACA document naming 120 m was ever fetched and read** and
+`src/lib/landing/sources.ts` holds no such quotation. So the app asserts something its own
+documentation deliberately will not, and a screenshot of that panel would have smuggled the
+claim back in through a picture. **The capture is cropped above the slider for that
+reason**, and the contradiction is **thread 77** — either the string is sourced and the docs
+should say so, or it is not and the string should be softened. Not mine to decide.
+
+---
+
+#### Not done
+
+**The rejection notice has still never been seen on a screen.** No aircraft is in
+`rejected` — `PROBE18B مرفوضة` is named for a state it is not in — and putting one there
+means a reviewer deciding it, while **every aircraft belongs to the admin**, so four eyes
+refuses it. It needs somebody signed in as `alshar55@hotmail.com`. The link is a `Link`
+with an `href` from the unit-tested `docAnchorHref`, and the target anchor is confirmed to
+render in both locales; **nobody has seen the notice itself**, and this says so.
+
+Its sibling — the drone wizard's link — **was** seen end to end: the existing draft reopens
+at step 3, the link renders locale-prefixed, and clicking it lands on `/ar/docs/remote-id`.
+No data was created or changed to check it.
+
+---
+
+#### One more thing that looked like a defect and was not
+
+After embedding the images, `img.complete` was `false` and `naturalWidth` was `0` on both
+screenshots — while `fetch(img.src)` **from the same page** returned 200 and 22 KB of PNG.
+The images were fine. **`loading="lazy"` does not load in a hidden tab**, and the tab had
+gone to the background again. Setting `loading = "eager"` loaded it instantly.
+
+**This is thread 67 in its third costume** — after the dead map and the timing-out capture
+— and `CLAUDE.md`'s `visibilityState` trap now names all three, with the `eager` flip as
+the one-line way to tell it from a genuinely broken image.
+
+**State of the machine at the end of the session:** 3001 is serving **`next dev`**,
+restarted **after** the last `pnpm build` — the build clobbers the dev server's `.next` and
+the running dev server then serves broken chunks, which is one of the reasons the images
+first appeared not to load. Inngest is **not running**. Docker Postgres is up. **No demo
+data was created, changed or deleted this session** — the wizard checks read an existing
+draft rather than making one.
 
 **Next session should know:**
 
-- **F26b's remaining part is the screenshots alone.** The deep links are done. Retry
-  capture in a fresh Chrome window; if `Page.captureScreenshot` still times out, the whole
-  of F26b's picture half needs the user's help, and the pages are complete and honest
-  without it — screenshots are the one acceptance criterion still open.
-- **Sort the demo aircraft names before capturing anything.** `PROBE18B *` in public
-  documentation is worse than no picture.
-- **Two checks now wait on the same thing**: thread 64's reviewer 404, and seeing the
-  rejection notice. One sign-in as the reviewer closes both.
+- **F26 is complete. F27 is next**, and Wave 8 is strictly serial: F30's sitemap reads one
+  list of public pages and both docs and legal add to it.
+- **F27 should reuse `src/components/landing/source-list.tsx`**, which reads the
+  `remoteIdPage` catalogue namespace — not write a second copy of seven translated
+  citations.
+- **F30 wants `listDocs`**, and `meta.description` was written to serve as the `llms.txt`
+  line as well as the index card's.
+- **Sort the demo aircraft names** (`PROBE18B *`) before any future screenshot of a list.
+- **Two checks still wait on one thing**: thread 64's reviewer 404, and seeing the
+  rejection notice. One sign-in as `alshar55@hotmail.com` closes both.
 
 ---
 

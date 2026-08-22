@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–39). F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–40). F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,134 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 40 — Wave 8 · F28b Security and notifications
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F28c is the danger zone, and it is the one to be careful with.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/app/[locale]/(app)/settings/security/page.tsx` | Password, email address, active sessions |
+| `src/app/[locale]/(app)/settings/notifications/page.tsx` | The categories that are genuinely optional |
+| `src/components/settings/password-form.tsx` | Better Auth's `changePassword`, `revokeOtherSessions: true` |
+| `src/components/settings/session-list.tsx` | The device rows |
+| `src/components/settings/revoke-session-button.tsx` | Two-click revoke |
+| `src/components/settings/notification-toggles.tsx` | `useOptimistic` over F15's existing action |
+| `src/components/ui/switch.tsx` | A native checkbox — see below |
+| `src/lib/data/sessions.ts` | `listMySessions`, and the freshness refusal as a value |
+| `src/lib/settings/user-agent.ts` + test | 9 tests, every case a real UA string |
+| `src/lib/settings/notification-categories.ts` + test | Which categories may be switched, and the drift guard |
+| `src/lib/validation/password.ts` | `MIN_PASSWORD_LENGTH`, de-duplicated |
+| `src/lib/actions/settings.ts` | *(extended)* `revokeSessionAction` |
+
+---
+
+#### Two bugs that only a production serve could find
+
+**1. `listSessions` threw and the page rendered blank.**
+
+Better Auth puts `/list-sessions` behind `freshSessionMiddleware`: with `session.freshAge` non-zero — it defaults to `3600 * 24` and this app does not override it — a session older than 24 hours gets a **thrown** 403 `SESSION_NOT_FRESH`. Called straight from a Server Component that is an unhandled error, and the whole page renders as nothing at all. Type-check, lint, build and 1064 tests were all green.
+
+**The freshness rule is right and was left alone** — a stolen laptop must not be able to enumerate and revoke the owner's other devices days later. What was wrong was the handling, so the refusal became a value the page renders: *sign out and sign in again to manage your devices*, with the reason.
+
+Note the asymmetry, which is Better Auth's: **revoking** is behind `sensitiveSessionMiddleware`, which wants a valid session but **not** a fresh one. A stale session cannot see the list but could still revoke a token it already knew — which is why `revokeSessionAction` guards on its own rather than trusting the reader gated it.
+
+**2. A function passed for an ICU value, not a tag.**
+
+`t.rich("…", { address: () => <bdi>…</bdi> })` against a message reading `{address}`. A function may only be passed for a rich **tag** (`<addr>…</addr>`); passing one for a `{value}` hands React a function as a child and it fails at render with *"Functions cannot be passed directly to Client Components"*. The message now carries `<addr>{address}</addr>` — a value **and** a tag — which is also the better shape: the `<bdi>` isolation survives translation and the word order stays the translator's.
+
+F27b's `AcceptanceLine` worked because its message was all tags and no values, so the pattern looked proven when it was not.
+
+---
+
+#### The switch that changed colour and never moved
+
+`components/ui/switch.tsx` began as a sliding switch: a track with a knob travelling toward the end of the inline direction, which in Arabic is leftward. **Three implementations failed, and all three failed silently** — `checked:bg-primary` on the track works, so every version *looked* alive while the knob sat still:
+
+| Attempt | What happened |
+|---|---|
+| `peer-checked:ltr:translate-x-4` + `rtl:` mirror | Stacked variant generated a rule that never matched |
+| `peer-checked:start-[1.125rem]` | Rule generated **and** matched; resolved to the same used value in both states |
+| Inline `insetInlineStart` from the `checked` prop | Style attribute updated on every toggle; `getBoundingClientRect()` never moved |
+
+None failed a build, a lint, a type-check or a test, and none is visible in a screenshot of a switch that happens to be on. All three were caught by measuring the knob in both states — **the same instrument that caught the analytics axis anchors, and for the same reason: an RTL layout bug is a geometry question and only geometry answers it.**
+
+The fix is the rule this project already had: **use the native control.** `Select` and `Slider` both made that call for RTL, mobile and accessibility reasons; the switch now does too. It is a checkbox with `accent-color`, the browser draws it correctly under `dir="rtl"` with no work from us, and there is no geometry left to get backwards. `role="switch"` is deliberately **not** set — it would announce a switch while showing a checkbox.
+
+**Where this stopped:** three failed attempts is where a cosmetic detail stops being worth more probes. The native control is not a workaround dressed as a decision — it is the same call the two sibling components made on purpose.
+
+---
+
+#### The third notification category is a switch that would do nothing
+
+`notification_category` has three values. **Only two are ever passed to `notify()`:**
+
+| Category | Passed by | Switchable |
+|---|---|---|
+| `booking_reminder` | `inngest/functions/booking-reminders.ts` | yes |
+| `registration_expiry` | `inngest/functions/expiry-reminders.ts` | yes |
+| `zone_closure` | **nobody** | no |
+
+F23c's closure fan-out sends `zoneClosed` with no category, and says why: *"A cancellation is not a preference — a pilot who muted it would turn up to a closed zone."* **That call is right.** So the spec's third toggle would have been a control that changes nothing — the empty-Billing-tab failure in miniature, and worse than absent because somebody who switches it off believes they have acted.
+
+So the page offers **two** switches and names closures in the always-sent sentence instead. `SWITCHABLE_CATEGORIES` carries the reasoning and `notification-categories.test.ts` reads every `category:` literal out of `src/lib` and fails if the list and the code disagree **in either direction**. Proved it bites: adding `zone_closure` to the list turned two tests red, removing it turned them green.
+
+The enum value stays. Dropping a value from a Postgres enum is a migration far larger than the tidiness is worth, and it is what a future closure *digest* would key on.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| **Two** notification toggles, not three | Above. |
+| No email-change control, only an explanation | Changing an address people are notified at needs a verification message first, and `RESEND_API_KEY` has never been set here. F28's criterion is that this *explains itself* rather than failing silently — so the address is shown, no control is offered, and the sentence names the reason. `emailConfigured` is read at request time, so the same build tells the truth on a deployment that has a key. **Enabling Better Auth's `changeEmail` would mean editing `src/lib/auth.ts`**, which per the CLAUDE.md rule means re-running the CLI and a migration; deferred until mail exists to verify with. |
+| "Approximate location from `ipHash` region" — not built | An `ipHash` is `sha256(pepper + ip)`. It cannot be reversed, so there is no region to resolve from it; the spec line is not implementable as written. Better Auth's own `session` row stores the address **raw**, so the list shows that instead, to the only person entitled to see it. No geolocation service is called — that would send the user's address to a third party the privacy policy does not name. |
+| `revokeOtherSessions: true` always, not a checkbox | A password change is what somebody does when they think a password is compromised. Offering to leave the other sessions signed in is offering to leave the intruder signed in. The form says it happens rather than asking. |
+| Password change goes through **Better Auth**, not a server action | It is the thing that already verifies a password against the stored hash; a second comparison in this codebase would be worse than none. Its rate limit is declared in `src/lib/auth.ts` (`/change-password`, 5/min), which is why the form calls no `enforceLimit`. |
+| `MIN_PASSWORD_LENGTH` extracted to `src/lib/validation/password.ts` | It was `const MIN_PASSWORD_LENGTH = 8` in `sign-up-form.tsx` **and** in `reset-password-form.tsx`; this form would have been the third copy. 8 is Better Auth's default, and `src/lib/auth.ts` does not override it. |
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1064 passed, 63 files** (13 new) |
+| `pnpm exec tsc --noEmit` | clean |
+| `pnpm lint` | clean; `i18n:check` — 1973 keys in sync |
+| `pnpm build` | compiled; `/settings/security` and `/settings/notifications` in the route list |
+| Signed **out** — `/ar/settings/security`, `/ar/settings/notifications`, `/en/settings/security` | **307 → sign-in**, with `?next=` preserved |
+| Security page, signed in | three headings; password form with its three labelled fields; the address shown; the email explanation; *"changing your password ends every session on your other devices"* |
+| The freshness branch | **rendered** — this session is older than 24 h, which is exactly the case that used to blank the page |
+| Notifications page | 2 categories × 2 channels = **4 controls**, all on (absent means on); the always-sent sentence includes closures; **no `zone_closure` toggle** |
+| Toggle → `psql` | no rows → click *email* off → `booking_reminder / f / t`; clicked back → `t / t`. **A row is written only when somebody chooses** |
+| The control toggles visibly, and labels are clickable | yes — `true → false → true`, every `<label>` contains its input |
+| `pageScrollsSideways`, Arabic RTL, both pages | **false** |
+| Category drift test bites | adding `zone_closure` → **2 tests red**; removing it → green |
+| Account left as found | `preferred_locale = ar`; the one preference row back at its defaults |
+
+#### Not verified
+
+- **The password change itself was never executed.** It needs the account password, which is not mine to have. So *"a wrong current password is rejected"* and *"after a password change the other sessions are invalidated"* are **unverified** — the wiring is Better Auth's own endpoint with `revokeOtherSessions: true`, but nobody has watched it happen.
+- **The session list has never been seen populated**, for the same reason the freshness branch renders: this session is stale. Revoking a device is therefore also unverified. Both need one fresh sign-in.
+- **375 px** — still. `resize_window` has now failed in four consecutive sessions.
+- **That a notification actually stops arriving** when switched off. The preference write is confirmed against the database; `notify()` reading it is F15's tested code, but the two have not been driven end to end.
+
+#### Next session should know
+
+- **A fresh sign-in unblocks three checks at once**: the session list, revoking a device, and the password change. Worth doing first.
+- **F28c is the careful one.** `remote_id.droneId` is `on delete cascade`, so deleting a drone deletes its Remote ID — and F28 requires the Remote ID to **survive, anonymised, still resolving as "registration withdrawn"**. That needs a migration (nullable `droneId`, `on delete set null`, and a status the enum does not have) and it touches `redact.ts`'s `RegistrationStatus` and `registrationStatusOf` — F11's pure module, with its own tests. `booking.pilotUserId` and `drone.ownerUserId` are `on delete restrict`, so deletion must be ordered by hand.
+- **F28c also rewrites the privacy policy's retention section** (agreed with the user in Session 39). It currently states there is no self-service deletion and that the database refuses to delete a pilot holding a booking — both true today, both false the moment F28c lands. Pin the policy's deletion claims to the code with a test, the way the terms are pinned to their constants.
+- **`t.rich` takes a function for a `<tag>` and a value for a `{value}`.** Mixing them up is a render-time crash with every static check green.
+- **Adding a settings section is two edits in one commit**: the route directory and `SETTINGS_SECTIONS`. `sections.test.ts` compares them both ways.
 
 ---
 

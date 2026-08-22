@@ -9,9 +9,9 @@ import { useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
 import { toLocale } from "@/lib/locale";
+import { MIN_PASSWORD_LENGTH } from "@/lib/validation/password";
 
 /** Minimum enforced by Better Auth's own default; stated to the reader too. */
-const MIN_PASSWORD_LENGTH = 8;
 
 export function SignUpForm() {
   const t = useTranslations("auth");

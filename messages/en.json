@@ -1451,6 +1451,53 @@
       "intro": "The language your mail and notifications arrive in.",
       "affectsMail": "This is not only the interface: the emails and notifications we send you will arrive in this language too.",
       "headerNote": "The language buttons at the top of the page change only what you are reading now — they do not change the language of your mail."
+    },
+    "security": {
+      "title": "Security",
+      "intro": "Your password, and the devices holding a session.",
+      "changePassword": "Change password",
+      "changing": "Changing…",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "revokesOthers": "Changing your password ends every session on your other devices. This one stays signed in.",
+      "passwordChanged": "Password changed, and your other sessions were ended.",
+      "emailTitle": "Email address",
+      "emailCurrent": "Your account email is <addr>{address}</addr>",
+      "emailChangeUnavailableNoMail": "Changing your email is unavailable in this build: it requires sending a verification message to the new address, and mail delivery is not configured here.",
+      "emailChangeUnavailableBuild": "Changing your email is not available yet. To change it, write to us from the address on file.",
+      "sessionsTitle": "Active sessions",
+      "sessionsIntro": "Devices currently signed in to your account. If you do not recognise one, end its session and then change your password.",
+      "currentSession": "This session",
+      "lastActive": "Last active {when}",
+      "fromAddress": "From <addr>{address}</addr>",
+      "deviceBoth": "{browser} on {platform}",
+      "deviceUnknown": "Unknown device",
+      "revoke": "End session",
+      "revokeConfirm": "Confirm",
+      "revokeCancel": "Cancel",
+      "sessionsNeedFreshSignIn": "To see your devices and end their sessions, sign out and sign in again. This list is only available to a recent sign-in, so that somebody who took your device days ago cannot see or end your other sessions."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "intro": "What reaches you, and how.",
+      "decisionsAlways": "Decision notices are always sent and cannot be turned off: registration approval and rejection, revocation, booking decisions, and expiry. Switching off “your registration was rejected” is not a preference — it is hiding a decision that concerns you. Zone-closure notices are always sent for the same reason: somebody who muted them would turn up to a closed zone.",
+      "inApp": "In the app",
+      "email": "By email",
+      "category": {
+        "booking_reminder": {
+          "title": "Booking reminder",
+          "body": "A reminder before an approved flight window starts."
+        },
+        "registration_expiry": {
+          "title": "Registration expiry",
+          "body": "A warning before an aircraft registration runs out."
+        },
+        "zone_closure": {
+          "title": "Zone closure",
+          "body": "A published closure covering a zone you have a booking in."
+        }
+      }
     }
   },
   "system": {

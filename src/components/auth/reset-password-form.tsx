@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
+import { MIN_PASSWORD_LENGTH } from "@/lib/validation/password";
 
-const MIN_PASSWORD_LENGTH = 8;
 
 export function ResetPasswordForm({ token }: { token: string | null }) {
   const t = useTranslations("auth");

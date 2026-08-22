@@ -23,7 +23,11 @@ import type { Role } from "@/lib/session";
  * index page is another; both read it, and a unit test reads it without either.
  */
 
-export type SettingsSectionSlug = "profile" | "language";
+export type SettingsSectionSlug =
+  | "profile"
+  | "language"
+  | "security"
+  | "notifications";
 
 export type SettingsSection = {
   slug: SettingsSectionSlug;
@@ -39,6 +43,8 @@ export type SettingsSection = {
 export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { slug: "profile", href: "/settings/profile", adminOnly: false },
   { slug: "language", href: "/settings/language", adminOnly: false },
+  { slug: "security", href: "/settings/security", adminOnly: false },
+  { slug: "notifications", href: "/settings/notifications", adminOnly: false },
 ];
 
 /**

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { audit, type Actor } from "@/lib/audit";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
+import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { pilotProfile } from "@/lib/db/schema";
@@ -140,4 +141,59 @@ export async function revealOwnIdentityAction(): Promise<
       idDocumentNumber: profile.idDocumentNumber,
     },
   };
+}
+
+/**
+ * Sign one other device out.
+ *
+ * **The current session cannot be revoked from here, and the check is on the
+ * server.** The list greys its own row, but a disabled button is a courtesy;
+ * this is what makes it true. Signing yourself out is what the Sign out button
+ * is for — routing it through here would leave somebody on a settings page that
+ * 307s on its next render, which reads as a crash rather than as a sign-out.
+ *
+ * The token is not a secret the caller could usefully forge: `revokeSession`
+ * scopes to the caller's own account, so a token belonging to somebody else
+ * simply is not found.
+ */
+export async function revokeSessionAction(
+  token: string,
+): Promise<ActionResult<{ token: string }>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("settings.save", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  if (!token) return refuse("not_found");
+  if (token === session.session.token) return refuse("cannot_revoke_current");
+
+  const requestHeaders = await headers();
+  try {
+    await auth.api.revokeSession({ headers: requestHeaders, body: { token } });
+  } catch (error) {
+    /**
+     * `revokeSession` is behind Better Auth's `sensitiveSessionMiddleware`,
+     * which wants a valid session but **not** a fresh one — unlike
+     * `listSessions`, which wants both. The asymmetry is theirs. Named
+     * separately anyway so that if it ever tightens, the reader is told to
+     * sign in again rather than told the device was not found.
+     */
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { body?: { code?: unknown } }).body?.code ===
+        "SESSION_NOT_FRESH"
+    ) {
+      return refuse("session_not_fresh");
+    }
+    return refuse("not_found");
+  }
+
+  revalidatePath("/[locale]/settings/security", "page");
+  return { ok: true, data: { token } };
 }

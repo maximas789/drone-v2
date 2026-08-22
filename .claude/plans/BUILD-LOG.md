@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–36). F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–37). F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,125 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 37 — Wave 8 · F27a Legal fields, the legal MDX loader, and the privacy policy
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F27 is half done — F27b is terms, the footer links, the sign-up acceptance line and the signed-in cookie check.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/legal/fields.ts` | The five human-fillable values: `CONTACT_EMAIL`, `ORGANISATION_NAME`, `GOVERNING_LAW`, `JURISDICTION`, `EFFECTIVE_DATE` |
+| `src/lib/legal/documents.ts` | `LEGAL_SLUGS`, `LEGAL_SECTIONS`, `LegalMeta` + guard, `legalSectionHref`. Pure |
+| `src/lib/legal/load.ts` | `loadLegal(locale, slug)` — dynamic `import()`, not `readFile` |
+| `src/lib/legal/index.ts` | Barrel |
+| `src/lib/legal/legal.test.ts` | 13 tests — the thing that lets the TOC exist at all |
+| `src/components/legal/toc.tsx` | Table of contents. No JavaScript |
+| `src/app/[locale]/(public)/privacy/page.tsx` | `/ar/privacy`, `/en/privacy` |
+| `src/content/legal/{ar,en}/privacy.mdx` | The policy, 12 sections, Arabic authored first |
+| `src/mdx-components.tsx` | *(extended)* `<ContactEmail />`, `<Org />`, `<GoverningLaw />`, `<Jurisdiction />` |
+| `src/i18n/routing.ts` | *(changed)* `localeCookie: false` — see below |
+| `messages/{ar,en}.json` | `legal` namespace rewritten |
+
+---
+
+#### The finding: the app was setting a cookie nothing read
+
+F27's acceptance criteria say *"Only the session cookie and the locale cookie are set — verified in devtools"*. Reading `src/i18n/routing.ts` first, I wrote the policy claiming the opposite — that the locale is in the URL and there is **no** locale cookie, since `localeDetection: false`.
+
+Both were wrong, and a `curl -D -` against a production serve is what said so:
+
+```
+set-cookie: NEXT_LOCALE=ar; Path=/; SameSite=lax
+```
+
+**`localeDetection` and `localeCookie` are different options.** Turning detection off stops next-intl *reading* the cookie and leaves its middleware *writing* one on every response. Measured three ways against the production serve — `/` with `NEXT_LOCALE=en`, with `Accept-Language: en-US`, and with neither — the redirect was `→ /ar` every time. **The cookie decided nothing.**
+
+A cookie nothing reads is the one kind this app must not set: it is not "strictly necessary", so it is the thing a consent banner would have to exist for, bought for no feature at all. Describing it in the policy would have been an awkward footnote on the one page that cannot afford one. So `localeCookie: false` — verified after a rebuild: **no `Set-Cookie` at all on `/ar/privacy`, `/en` or `/ar/sign-in` signed out**, both locales still serve, and `/` still redirects to `/ar` under `Accept-Language: en-US`.
+
+The spec's cookie table is now wrong in the other direction and is left as-is deliberately — its *conclusion* (no banner) survives, and its reasoning is corrected here. **The build log wins.**
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| `src/lib/legal.ts` → **`src/lib/legal/`** | The feature needs the fields *and* a loader *and* a section table. One directory mirroring `src/lib/docs/` beats one file plus two oddly-named neighbours. `@/lib/legal` still resolves, so the criterion ("the pages read from it") is met unchanged. |
+| `content/legal/…` → **`src/content/legal/…`** | The Files list says `content/`; the repo's actual MDX root is `src/content/`, and F26's loader is built on it. |
+| **Two cookies → one.** | Above. |
+| `LEGAL_SLUGS = ["privacy"]`, not `["privacy", "terms"]` | A slug listed before its file is a build-time import failure, and `legal.test.ts` asserts slugs and files are the same set. **F27b adds `"terms"` and the file in the same commit.** |
+| No `DocsShell` twin for legal | The frame is identical; only the aside differs. A `LegalShell` would have bought a name and cost a second grid to fix. |
+| `legal` message namespace **shrunk** | It already existed with placeholders from an earlier wave, including `cookieBannerBody` and `cookieAccept` — strings for a banner F27 forbids. Nothing referenced them (`grep` for `legal.` found nothing outside this feature). Kept `terms` and `privacy` for F27b's footer; added `tocLabel`, `effectiveDate`. |
+
+---
+
+#### The table of contents, and F26's objection to it
+
+F26 **deliberately shipped no TOC** (log line 588): the `.mdx` sources are compiled into the bundle and unreadable at runtime in a deployed function, so a TOC needs a generated manifest that goes stale or a hand-kept list that drifts.
+
+F27's criteria require one. The objection is answered rather than ignored:
+
+- Section **ids** are fixed once, language-independently, in `LEGAL_SECTIONS`.
+- Each `.mdx` exports its own localised titles against those ids, and writes its headings as `<H2 id="…">`.
+- `legal.test.ts` reads the **source as text** (Vitest has no MDX loader — F26's call, unchanged) and fails if a file's TOC ids are not exactly `LEGAL_SECTIONS` in order, or if the `<H2 id>` list is not the same list.
+
+A renamed heading, an entry with no heading, a section added to Arabic and forgotten in English: each is now a red test. **A hand-kept list that cannot drift silently is a different object from the one F26 turned down.**
+
+---
+
+#### The policy is assembled from the schema, not from a template
+
+Every disclosure was read out of the code before it was written down. Three things the spec's own disclosure table does not list, found that way:
+
+- **`booking_copilot` stores a third party's name, mobile and ID number** — a person who may have no account here at all. Disclosed, with a line telling the pilot not to enter someone's details without their knowledge.
+- **Better Auth's `session` table stores the IP address raw.** Our own tables (`audit_event`, `remote_id_scan`, `drone_report`) store `sha256(pepper + ip)`. Rule 4 says the generated tables stay as the CLI wrote them, so this is a real exception — stated twice on purpose, in *what we collect* and again in *security*, because an exception missing from the security section is not a disclosed exception.
+- **`booking.pilotUserId` and `drone.ownerUserId` are `on delete restrict`.** The database physically refuses to delete a pilot holding a registration or a booking, and there is no account-deletion path anywhere in `src/`. The policy therefore says plainly that **there is no self-service deletion**, rather than promising an erasure the app cannot perform.
+
+Retention claims were checked against every `delete` in the codebase — there are six, and only two touch personal data: a **draft** drone (with its photos, from storage too) and a single photo. The rate-limit and review-presence sweeps are the only automatic deletion in the app, and the policy says exactly that.
+
+The masking table was transcribed field by field from `redactRemoteId`, including the two things easy to get wrong: **a signed-in pilot scanning someone else's code sees exactly what an anonymous visitor sees** (`level === "anonymous" || level === "pilot"` take the same branch), and **the ID stays masked even for a reviewer** until an explicit reveal. `legal.test.ts` pins the mask string `•••••1234` against what `maskIdDocument` produces.
+
+Named recipients: Resend, Vercel Blob, Inngest, OpenFreeMap — and the test asserts a forbidden list (Google Analytics, Sentry, PostHog, Plausible, Mixpanel, Cloudflare, Mapbox) appears in neither locale, so the day one of them is added the policy fails a test instead of going quietly out of date. The policy also states that **no mail has ever been sent through Resend and no file has ever been stored in Vercel Blob**, which is what log lines 32 and 332 say.
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1040 passed, 60 files** (13 new) |
+| `pnpm exec tsc --noEmit` | clean |
+| `pnpm lint` | clean; `i18n:check` — 1933 keys in sync |
+| `pnpm build` | compiled; `/[locale]/privacy` in the route list |
+| `curl /ar/privacy`, `/en/privacy` on `next start` | **200** both, signed out |
+| `Set-Cookie` on `/ar/privacy`, `/en`, `/ar/sign-in` signed out | **none** |
+| `/` under `Accept-Language: en-US` | `→ /ar`, unchanged by the routing edit |
+| 12 TOC anchors vs 12 `<h2 id>` in the live DOM | **0 broken** |
+| `document.documentElement.scrollWidth > clientWidth` at 1440 | **false** — no sideways scroll |
+| Every `dir="ltr"` in the rendered Arabic page | only Latin runs (`•••••1234`, `/ar/…`, the mailto). **No Arabic inside one** |
+| Effective-date line, Arabic | `تاريخ النفاذ 22 أغسطس 2026` — Gregorian, Latin numerals |
+
+#### Not verified
+
+- **Rendering at 375 px.** `resize_window` did not take: the tab was backgrounded, `window.innerWidth` stayed 1440 after the call. Stopped rather than rabbit-holing. F27b does one browser pass covering privacy *and* terms.
+- **The signed-in cookie load**, which is how F27's criterion is actually worded. Signed out sets nothing; the session cookie is the only remaining candidate. Needs an account password I don't have — **for the user, or F27b.**
+- **No screenshot of either page.** `Page.captureScreenshot` timed out at 30 s; `document.visibilityState` was `"hidden"`, which is the trap CLAUDE.md already names. The layout was measured with `getBoundingClientRect` instead — the method that found the `text-anchor` bug that screenshots missed.
+
+#### Next session should know
+
+- **F27b is: `terms.mdx` ar+en, `"terms"` into `LEGAL_SLUGS` and `LEGAL_SECTIONS`, `/[locale]/terms/page.tsx`, footer links, the sign-up acceptance line (a line with links, *not* a pre-ticked checkbox), the 375 px pass, and the signed-in cookie check.** The loader, the TOC, the fields and the test harness are all built and take `"terms"` with no new machinery.
+- The terms content has three clauses the criteria single out, and each must be checked against code rather than written from memory: revocation grounds and no-show consequences against `src/lib/workflow/`, cancellation against `booking.status`, and eligibility against `MIN_AGE_YEARS = 18` in `src/lib/validation/profile.ts`.
+- **`<Org />` and friends cannot start a markdown block.** A line beginning `<Org /> is a …` is an MDX parse error (content after a self-closing flow element). Both files were reworded to put text first. Same applies to any component added later.
+- `src/mdx-components.tsx` now imports `@/lib/legal/fields` **directly, not through the barrel** — it is reached from a compiled `.mdx`, and `load.ts` imports those modules back.
+- Docker Desktop was not running at the start of this session; `pnpm db:up` fails with `npipe:////./pipe/dockerDesktopLinuxEngine` until it is. Started it from `C:\Program Files\Docker\Docker\Docker Desktop.exe`.
+- `pnpm start -p 3001` left a listener behind after the task was stopped; `Get-NetTCPConnection -LocalPort 3001` then `Stop-Process` is what cleared `EADDRINUSE`. **A stale server serves the previous build and will happily "confirm" a change you have not deployed** — that is what briefly hid the `localeCookie` fix.
 
 ---
 

@@ -1476,12 +1476,8 @@
   "legal": {
     "terms": "Terms of use",
     "privacy": "Privacy policy",
-    "cookies": "Cookies",
-    "dataRetention": "Data retention",
-    "contact": "Contact",
-    "lastUpdated": "Last updated {date}",
-    "cookieBannerBody": "We use strictly necessary cookies to run this site.",
-    "cookieAccept": "Got it"
+    "tocLabel": "On this page",
+    "effectiveDate": "Effective {date}"
   },
   "airspace": {
     "decisionAllowed": "Allowed",

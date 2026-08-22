@@ -1476,12 +1476,8 @@
   "legal": {
     "terms": "الشروط والأحكام",
     "privacy": "سياسة الخصوصية",
-    "cookies": "ملفات الارتباط",
-    "dataRetention": "الاحتفاظ بالبيانات",
-    "contact": "تواصل معنا",
-    "lastUpdated": "آخر تحديث {date}",
-    "cookieBannerBody": "نستخدم ملفات ارتباط ضرورية لتشغيل الموقع فقط.",
-    "cookieAccept": "حسناً"
+    "tocLabel": "محتويات الصفحة",
+    "effectiveDate": "تاريخ النفاذ {date}"
   },
   "airspace": {
     "decisionAllowed": "مسموح",

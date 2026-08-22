@@ -1,4 +1,4 @@
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { MDXComponents } from "mdx/types";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { Callout } from "@/components/docs/callout";
@@ -8,6 +8,13 @@ import { SourceList } from "@/components/landing/source-list";
 import { ProposalNotice } from "@/components/proposal-notice";
 import { Link } from "@/i18n/navigation";
 import { headingSlug, textOf } from "@/lib/docs/slugs";
+import {
+  CONTACT_EMAIL,
+  GOVERNING_LAW,
+  JURISDICTION,
+  ORGANISATION_NAME,
+} from "@/lib/legal/fields";
+import { toLocale } from "@/lib/locale";
 
 /**
  * How a markdown element becomes a piece of this app.
@@ -124,6 +131,45 @@ function Anchor({ href = "", children, ...props }: ComponentPropsWithoutRef<"a">
   );
 }
 
+/**
+ * The four values from `@/lib/legal/fields` that legal prose needs, as
+ * components — so an author writing the policy has no way to type the contact
+ * address into a sentence even by accident.
+ *
+ * The email is a `mailto:` and is isolated `dir="ltr"`, exactly as `code` is
+ * and for exactly the same reason: an address is a Latin run inside Arabic
+ * prose, and without the isolation the bidi algorithm reorders the neutral
+ * characters around it.
+ */
+function ContactEmail() {
+  return (
+    <a
+      href={`mailto:${CONTACT_EMAIL}`}
+      dir="ltr"
+      className="text-primary underline underline-offset-4"
+    >
+      {CONTACT_EMAIL}
+    </a>
+  );
+}
+
+/**
+ * `useLocale()` rather than a prop: an `.mdx` file has nothing to pass. It
+ * reads the same next-intl context `useTranslations` above already relies on,
+ * so if one works here both do.
+ */
+function Org() {
+  return <>{ORGANISATION_NAME[toLocale(useLocale())]}</>;
+}
+
+function GoverningLaw() {
+  return <>{GOVERNING_LAW[toLocale(useLocale())]}</>;
+}
+
+function Jurisdiction() {
+  return <>{JURISDICTION[toLocale(useLocale())]}</>;
+}
+
 const components: MDXComponents = {
   a: Anchor,
   h2: (props) => <Heading level={2} {...props} />,
@@ -182,6 +228,10 @@ const components: MDXComponents = {
   Quotation,
   SourceList,
   ProposalNotice,
+  ContactEmail,
+  Org,
+  GoverningLaw,
+  Jurisdiction,
 };
 
 export function useMDXComponents(): MDXComponents {

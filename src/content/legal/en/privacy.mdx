@@ -1,0 +1,313 @@
+export const meta = {
+  title: "Privacy policy",
+  description:
+    "What Ajniha stores about you, why, who can see it, and how long it stays — assembled from the code itself, not from a template.",
+  sections: [
+    { id: "about-this-document", title: "About this document" },
+    { id: "what-we-collect", title: "What we collect" },
+    { id: "why-we-collect-it", title: "Why we collect it" },
+    { id: "what-a-scan-reveals", title: "What a Remote ID scan reveals" },
+    { id: "identity-reveal", title: "Identity reveal by authorities" },
+    { id: "who-else-receives-data", title: "Who else receives your data" },
+    { id: "cookies", title: "Cookies, and why there is no consent banner" },
+    { id: "how-long-we-keep-it", title: "How long we keep it" },
+    { id: "your-rights", title: "Your rights, and how to use them" },
+    { id: "cross-border-transfer", title: "Transfers outside the Kingdom" },
+    { id: "security", title: "How the data is held" },
+    { id: "changes-and-contact", title: "Changes and contact" },
+  ],
+};
+
+<ProposalNotice />
+
+<H2 id="about-this-document">About this document</H2>
+
+<Callout kind="warning">
+  This is a **first draft**, assembled from what the platform actually does in
+  its own code. It is not legal advice and has not been reviewed by a
+  practitioner. Anyone intending to run a system like this for real needs an
+  independent legal review before the first user signs up.
+</Callout>
+
+This platform, <Org />, is a **proposal** for registering drones and booking
+flight windows. It is not an official system of the General Authority of Civil
+Aviation, and it is not endorsed by them. Registering here grants you no legal
+permission to fly.
+
+This policy covers anyone who opens an account, and anyone whose details are
+entered into the platform **without** an account — which happens in exactly one
+case, described below: a **co-pilot** added to a booking. It also covers, in
+part, anyone who scans a Remote ID code while signed out.
+
+The platform is for people aged **18 or over**, checked from the date of birth
+when a pilot profile is completed. We do not knowingly collect data about
+minors; if an account turns out to belong to one, we delete what can be deleted
+within the limits set out under [how long we keep it](#how-long-we-keep-it).
+
+<H2 id="what-we-collect">What we collect</H2>
+
+In the platform's own nouns, not in general terms:
+
+**Your account.** Name, email address, a **hash of your password** rather than
+the password, your preferred language, and your role (pilot, reviewer, admin).
+Each sign-in has a session record holding the session token, its expiry, and
+**your IP address and browser as they are** — that record is created by the
+authentication library and is not ours to reshape, unlike our own tables
+described under [how the data is held](#security).
+
+**Your pilot profile.** Full name in Arabic and English, the type of your
+identity document (national ID or Iqama) and **its number**, a hash of that
+number used to stop one person holding two profiles, date of birth, mobile
+number, city, address, and an emergency contact if you give one. We also record
+who reviewed the profile and when, and the reason if it was rejected.
+
+**Your drones.** The name you give the aircraft, its manufacturer and model if
+it has them, **its serial number if it has one** — the fact that it may not is
+the reason this platform exists — build type, weight, whether it carries a
+camera, and the photographs and documents you upload.
+
+**Remote IDs.** The issued code, when it was issued and when it expires, whether
+the aircraft can broadcast directly or over the network, and any Remote ID
+module declarations you attach (manufacturer, module serial, document reference,
+and its validity window).
+
+**Bookings.** The zone, the start and end of the window, the purpose of the
+flight, the planned altitude, and a snapshot of the airspace decision as it
+stood at approval. If you add a **co-pilot**, we store their name, mobile number
+and identity document number — a person who may have no account here at all. Do
+not enter someone's details without their knowledge.
+
+**Scans.** Every opening of a Remote ID page is recorded: the code that was
+scanned, the viewer's level, a **hash of the IP address** rather than the
+address, the browser, and whether identity was revealed during that scan.
+
+**Reports.** If someone reports a drone, we store their description and note,
+their location if they chose to share it, and a hash of the IP address. Filing a
+report needs no account, and that is deliberate.
+
+**The log.** Every decision in the platform — approval, rejection, cancellation,
+revocation, identity reveal — is written to a single log with the actor, their
+role **at the time**, the state before and after, the reason they typed, and a
+hash of the IP address.
+
+**Notifications and email.** A notification is stored as a **type and its
+parameters, never as rendered text**, so that someone who switches language
+reads their old notifications in the new one. We also keep a log of mail sent:
+recipient address, subject, template, language, and delivery status.
+
+**Operational data.** Rate-limit counters keyed by a hashed identifier, markers
+showing that a reviewer currently has a record open, and a record of background
+job runs.
+
+<H2 id="why-we-collect-it">Why we collect it</H2>
+
+| What | Why |
+| --- | --- |
+| Account and password hash | Signing in, and nothing else |
+| Identity document and date of birth | Verifying the pilot **by a human reviewer**, and checking they are 18 |
+| Drone details and photographs | So a reviewer can assess the registration |
+| Remote ID | Issuing a code that proves an aircraft is registered and accountable |
+| Booking and its window | Allocating a seat in a zone and time, and preventing conflicts |
+| The log and scan records | An audit trail a regulator can review afterwards |
+| Email and notifications | Telling you about a decision that affects you — service mail, **not marketing** |
+| Rate limiting | Protecting the platform from abuse |
+
+We do not sell your data, do not use it for advertising, and do not build
+interest profiles from it.
+
+<H2 id="what-a-scan-reveals">What a Remote ID scan reveals</H2>
+
+This is the most important section here. A Remote ID code is a **licence plate,
+not an identity**: it shows that an aircraft is somebody's responsibility
+without showing whose.
+
+The table below is what the redaction function in the code returns, field by
+field:
+
+| Field | Anonymous visitor, or another signed-in pilot | The owner | Reviewer or admin |
+| --- | --- | --- | --- |
+| The code | ✓ | ✓ | ✓ |
+| Registration status (active, expired, suspended, revoked, unregistered) | ✓ | ✓ | ✓ |
+| Valid-until date | ✓ | ✓ | ✓ |
+| Build type and weight class | ✓ | ✓ | ✓ |
+| City of registration | ✓ | ✓ | ✓ |
+| **Whether a flight is in progress** | Yes or no only | ✓ | ✓ |
+| **Which zone, and when** | ✗ | ✓ | ✓ |
+| Direct and network broadcast capability | ✓ | ✓ | ✓ |
+| Aircraft name, manufacturer, model | ✗ | ✓ | ✓ |
+| Serial number | ✗ | ✓ | ✓ |
+| Weight in grams, and whether it has a camera | ✗ | ✓ | ✓ |
+| Owner's name and mobile number | ✗ | ✓ | ✓ |
+| Owner's identity document type | ✗ | ✓ | ✓ |
+| Identity document number | ✗ | Masked: `•••••1234` | Masked: `•••••1234` |
+| Photographs, declarations and bookings | ✗ | ✓ | ✓ |
+| Who has scanned this code before | ✗ | ✗ | ✓ |
+| The **Reveal identity** control | ✗ | ✗ | ✓ |
+
+Three notes on that table:
+
+- **A signed-in pilot scanning someone else's code sees no more than a stranger
+  in the street does.** Holding an account here opens no door onto other
+  people's data.
+- **"Is a flight in progress" is yes or no, never where.** Knowing that the
+  aircraft overhead is authorised is what a bystander needs in order to decide
+  whether to report it; *which zone* would indicate where its operator is
+  standing.
+- **The identity document number is masked even from a reviewer** when the page
+  opens. The mask is five fixed dots whatever the number's length, so that the
+  mask itself does not disclose how long the number is.
+
+<H2 id="identity-reveal">Identity reveal by authorities</H2>
+
+A **reviewer or admin** can reveal the full identity document number. It never
+happens as a side effect of opening a page: it is an explicit action, and **the
+log entry, with its stated reason, is written before the number is returned** —
+the trace precedes the reveal rather than following it. The matching scan record
+is marked as one in which identity was revealed.
+
+The result is that every reveal leaves two answers on record: "was this code's
+owner ever exposed?" and "who did it, when, and why?". Neither record can be
+edited or deleted.
+
+<H2 id="who-else-receives-data">Who else receives your data</H2>
+
+This list is complete. There are no others:
+
+| Recipient | What it receives | When |
+| --- | --- | --- |
+| Resend | Your email address and the text of a service message | When a decision notice is sent |
+| Vercel Blob | Drone photographs and uploaded documents | Once deployed only |
+| Inngest | Identifiers of the records being processed in the background | When a deferred job runs |
+| OpenFreeMap | **Your IP address** when map tiles load | Whenever you open a page with a map |
+
+The database server and the application host necessarily receive all of the
+above.
+
+On OpenFreeMap specifically: it is a third party, but it is **the feature you
+asked for** when you opened the map, it sets no cookies, and it does no
+cross-site tracking. That is why it is listed here as a recipient rather than as
+something to consent to — see [the next section](#cookies).
+
+<Callout kind="note">
+  In this proposal build, **no mail has ever actually been sent through Resend
+  and not one file has been stored in Vercel Blob**: the platform has not been
+  deployed, and everything runs on a local machine. The table above describes
+  what will happen on deployment, and it is written now because writing it after
+  the first user would be late.
+</Callout>
+
+<H2 id="cookies">Cookies, and why there is no consent banner</H2>
+
+**The platform sets one cookie: the session cookie.** Without it, signing in
+does not work. It is strictly necessary in the literal sense, not the
+convenient one.
+
+Your language is **not in a cookie** — it is in the address itself (`/ar/…` or
+`/en/…`), which is why a link you send a friend opens in the language you were
+reading.
+
+There is **no** analytics, no advertising, no tracking tool, and nothing
+embedded from another site anywhere in the platform.
+
+So there is **no cookie consent banner**, and its absence is a decision rather
+than an oversight. The test is not "does it set a cookie" but "does anything
+non-essential load". Nothing here is non-essential, so a banner would be
+theatre: a click that changes nothing, training people to dismiss consent
+notices without reading them.
+
+<Callout kind="note">
+  **What would change this decision:** adding analytics, an embedded video, or
+  any advertising. At that point there would be something genuinely to consent
+  to, and this section gets rewritten.
+</Callout>
+
+<H2 id="how-long-we-keep-it">How long we keep it</H2>
+
+What follows describes what the code does, not what we would like it to do:
+
+| Data | How long |
+| --- | --- |
+| A drone registration | **3 years** from issue, then marked expired — **not deleted** |
+| The log | Kept **indefinitely**, and kept after account deletion with the actor's identity cleared |
+| Scan and reveal records | Kept indefinitely, and kept after the registration they pointed at is gone |
+| Reports | Kept indefinitely |
+| The sent-mail log | Kept indefinitely, and kept after account deletion |
+| Rate-limit counters and reviewer presence markers | Deleted automatically once their window passes — the **only automatic deletion** in the platform |
+| A drone still in **draft** | Deletable by its owner at any time, and its photographs are deleted from storage with it |
+| A drone once submitted for review | Not deletable |
+
+**There is currently no way to delete your account from inside the platform**,
+and the database itself refuses to delete a pilot who holds a registered drone
+or a booking. Deletion happens by writing to <ContactEmail />; we then delete
+what can be deleted and tell you plainly what cannot.
+
+As for why the log outlives the account: the log is the **audit trail** a
+regulator can go back to. A reviewer who deletes their account and takes every
+approval they ever made with them leaves a trail worth no more than no trail at
+all. So the event stays and the actor's identity is cleared from it.
+
+<H2 id="your-rights">Your rights, and how to use them</H2>
+
+Under the **Personal Data Protection Law** of the Kingdom of Saudi Arabia, you
+have:
+
+- **The right to be informed** — which this document exists to discharge.
+- **The right of access** to your data, and to a copy of it.
+- **The right to correction** — most of which you can do directly from your
+  profile and drone pages.
+- **The right to erasure**, within the limits set out under
+  [how long we keep it](#how-long-we-keep-it): what stays, stays because the
+  audit trail requires it, not because we want to hold on to it.
+- **The right to withdraw consent** where consent was the basis.
+- **The right to complain** to the Saudi Data and AI Authority.
+
+These rights are exercised by writing to <ContactEmail />. A **person** handles
+the request, not an automated system, and we may ask for something establishing
+that the data is yours before acting — an erasure carried out without that check
+is a way to erase somebody else's data.
+
+<H2 id="cross-border-transfer">Transfers outside the Kingdom</H2>
+
+The recipients named under [who else receives your data](#who-else-receives-data)
+run their services outside the Kingdom, and the platform itself may be hosted
+outside it. Any such transfer is subject to the Personal Data Protection Law and
+its implementing regulations on transfer abroad.
+
+In this proposal build specifically: **the platform has not been deployed**, and
+all data sits on a single machine. Nothing has been transferred to anyone yet.
+
+<H2 id="security">How the data is held</H2>
+
+- **Passwords are stored as a hash**, never as text.
+- **Identity document numbers carry a hash** combined with a fixed secret, and
+  the "one profile per person" rule is enforced on that hash — rather than on an
+  index over the plain number, which would disclose membership to anyone able to
+  read the index.
+- **IP addresses in our own tables are stored hashed, not in the clear.** The
+  one exception is the session table created by the authentication library,
+  which stores the address as it is; that was said under
+  [what we collect](#what-we-collect) and is repeated here, because an exception
+  missing from the security section is not a disclosed exception.
+- **A single redaction function** decides what leaves every Remote ID request,
+  whether it came from a page or from the API, so no individual endpoint
+  assembles its own answer.
+- **The log is append-only**: no update path, no delete path, and no button for
+  either.
+- Access to pilot data is limited to the **reviewer** and **admin** roles, and
+  the role is checked on every action rather than only at sign-in.
+
+<Callout kind="warning">
+  This is a proposal build running locally, not a security-audited production
+  system. Do not put real data into it that you could not afford to lose or to
+  have seen.
+</Callout>
+
+<H2 id="changes-and-contact">Changes and contact</H2>
+
+The **effective date** appears at the top of this page. It is changed
+deliberately when the policy changes, and does not move for a typo fix — a date
+that moves for no reason stops meaning that something actually changed.
+
+For questions, or to exercise any right above: <ContactEmail />
+
+This policy is governed by <GoverningLaw />, with jurisdiction in <Jurisdiction />.

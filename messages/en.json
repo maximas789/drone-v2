@@ -2433,6 +2433,36 @@
         "cancelling": "Cancelling",
         "cancelled": "Cancelled"
       }
+    },
+    "email": {
+      "title": "Email log",
+      "intro": "Every message the platform tried to send, and the provider's own reason when it refused. “Not sent” is not “failed”: the first means mail was never configured.",
+      "none": "No messages in the log yet.",
+      "accompanied": "An in-app notification went with this message.",
+      "viewNotifications": "View notifications",
+      "filterStatus": "Status",
+      "filterTemplate": "Template",
+      "filterAll": "All",
+      "filterApply": "Filter",
+      "col": {
+        "to": "To",
+        "template": "Template",
+        "locale": "Language",
+        "at": "When",
+        "providerId": "Provider id"
+      },
+      "status": {
+        "queued": "Queued",
+        "sent": "Sent",
+        "skipped": "Not sent — mail not configured",
+        "failed": "Failed"
+      }
+    },
+    "activity": {
+      "title": "Activity",
+      "intro": "The newest events from the audit trail itself — not a second log. The full browser, with its filters, is on the audit page.",
+      "none": "No events yet.",
+      "openBrowser": "Open the audit browser"
     }
   }
 }

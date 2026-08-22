@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–43). F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–44). F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,102 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 44 — Wave 8 · F29c The email log and the activity slice (**F29 complete, with two controls unbuilt**)
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F29 is complete except Cancel and Re-run, deferred in F29b with reasons.** Next is F30.
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/ops/email-log.ts` | `listEmailLog`, `listEmailTemplates`, the status vocabulary |
+| `src/components/ops/email-log.tsx` | The rows, with the provider's error in full |
+| `src/components/ops/email-filters.tsx` | Status + template, a plain GET form |
+| `src/components/ops/activity-log.tsx` | The newest 25 audit events, and the way through to F25b |
+| `src/app/[locale]/(app)/settings/system/page.tsx` | *(extended)* both sections |
+
+---
+
+#### "Not sent" is not "failed", and it is styled that way
+
+`sendEmail` writes four statuses, and the pair that matters is `skipped` versus
+`failed`: the first means only that no `RESEND_API_KEY` was configured, so the
+message printed to the terminal. **Conflating them sends an operator to debug a
+delivery failure that never happened** — and on this machine every one of the 82
+real rows is `skipped`, so getting it wrong would have made the whole panel
+look like an outage.
+
+They are **styled** apart, not merely labelled apart, and that was measured
+rather than asserted: `failed` computes to `lab(48.4 77.4 61.5)` — red — and
+`skipped` to `lab(46.0 -1.5 -5.0)` — muted grey. Only `failed` is destructive.
+
+#### One log, not two
+
+The activity slice calls **`listAuditEvents`, F25b's own reader**, with a limit
+of 25 and no filters. There is no second query and no second table, which is
+F14's rule made structural rather than promised. The panel is the newest events
+plus a link to the browser: an operator on the system page wants *"what has been
+happening"*, not a query builder.
+
+The action labels come from F25b's table, keyed the same way, with a fallback to
+the raw code — so an action added by a future feature renders as its code rather
+than as a blank.
+
+#### The filters live in the URL
+
+A plain `method="get"` form, no client component and no JavaScript. Filters in
+the URL mean an operator can send somebody *"look at this"* and have them see
+the same rows; a `<select onChange>` router push gives the same list and a link
+that means nothing when pasted. An unrecognised `status` falls back to showing
+everything rather than to an empty page — `isEmailStatus` narrows it.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| No **resend** action | F29's Files list names `resendEmail`. With no `RESEND_API_KEY` there is nothing to resend *through* — the button would refuse every time it was pressed, on a page whose entire job is to explain why things do not work. It belongs in the session that first has a working key. |
+| The notification link goes to `/notifications`, not to one notification | There is no per-notification route — F15 built a list, not detail pages. Linking to a URL that does not exist would be worse than linking to the list that does. |
+| Activity rows are not filterable here | That is F25b's browser, one click away. Two filter UIs over one table is how they start to disagree. |
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1082 passed, 65 files** |
+| `pnpm exec tsc --noEmit` · `pnpm lint` | clean; `i18n:check` — 2116 keys in sync |
+| `pnpm build` | compiled |
+| Email panel | **50 rows** from 82 real sends |
+| `skipped` vs `failed` | **measurably distinct colours**, and the failed row carries the provider's message in a scrolling `<pre>` |
+| A failed send | inserted synthetically (all 82 real rows are `skipped`), rendered, **then deleted — 0 `failed` rows remain** |
+| Filtering | `?status=failed` → 3 skipped strings on the page; `?status=skipped` → 103. An unrecognised status falls back to everything |
+| Activity slice | **25 rows** from the same reader F25b uses, with actor, action label and Riyadh timestamp |
+| Link to the audit browser | present |
+| Sections on the page | five — health, jobs, email, activity, counts. **No agent-activity section** |
+| Three `probe%` addresses left in `email_log` | **pre-existing**, from the F18b and F24 probes on 18–20 August. Not mine, left alone |
+
+#### Not verified
+
+- **A real failed or sent email.** Every one of the 82 is `skipped`, because `RESEND_API_KEY` has never been set. The failure rendering was proved with a synthetic row, which exercises the template but not `sendEmail`'s error path.
+- **The full loop the criteria describe** — approve a drone with a broken mail config and trace audit → notification → failed email. The three halves each render; the walk has not been done end to end, and it needs a key that fails rather than no key at all.
+- **375 px** — eight sessions.
+- **Cancel and Re-run** — still unbuilt, see Session 43.
+
+#### Next session should know
+
+- **F30 is SEO & discoverability, and it is the last build feature.** It writes the sitemap from one list of public pages, and F26's docs and F27's legal pages both added to that list — which is exactly why the plan put it after them.
+- `robots.txt` already exists and **must keep disallowing `/*/rid/`**: indexing the Remote ID scan page turns it into a browsable national drone registry.
+- The public surface is now: landing, how-it-works, remote-id, zones, docs (6 pages), privacy, terms. `LEGAL_SLUGS` and `DOC_SLUGS` are the two lists to read rather than hand-copy.
+- After F30, only **F31** remains — the gate, and the two rounds of fresh-eyes critics.
 
 ---
 

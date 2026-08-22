@@ -2,7 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import { locale as localeParam } from "next/root-params";
 import { notFound } from "next/navigation";
+import { ActivityLog } from "@/components/ops/activity-log";
 import { DataCountsPanel } from "@/components/ops/data-counts";
+import { EmailFilters } from "@/components/ops/email-filters";
+import { EmailLogPanel } from "@/components/ops/email-log";
 import { HealthGrid } from "@/components/ops/health-grid";
 import { JobsPanel } from "@/components/ops/jobs-panel";
 import { RegenerateQr } from "@/components/ops/regenerate-qr";
@@ -10,7 +13,9 @@ import { requireUser } from "@/lib/auth-guards";
 import { toLocale } from "@/lib/locale";
 import { getDataCounts } from "@/lib/ops/counts";
 import { runHealthChecks } from "@/lib/ops/health";
+import { listEmailLog, listEmailTemplates, isEmailStatus } from "@/lib/ops/email-log";
 import { listJobRuns, listScheduledFunctions } from "@/lib/ops/jobs";
+import { listAuditEvents } from "@/lib/data/audit";
 import { isAdmin } from "@/lib/session";
 
 /**
@@ -27,11 +32,13 @@ import { isAdmin } from "@/lib/session";
  * inside the check, because a check that read the environment for both halves
  * of the comparison would always agree with itself.
  *
- * F29c adds the email and activity logs. Neither is stubbed here: an empty
- * panel headed "Email log" would be exactly the lie this page is supposed to
- * expose.
+ * **There is no agent-activity section**, and there never will be: no MCP
+ * server was ever built, so a panel for it would describe a product this is
+ * not.
  */
-export default async function SystemSettingsPage() {
+export default async function SystemSettingsPage({
+  searchParams,
+}: PageProps<"/[locale]/settings/system">) {
   const locale = toLocale(await localeParam());
   const session = await requireUser(locale);
   if (!isAdmin(session)) notFound();
@@ -46,13 +53,33 @@ export default async function SystemSettingsPage() {
   const proto = requestHeaders.get("x-forwarded-proto") ?? "http";
   const origin = host ? `${proto}://${host}` : null;
 
+  /**
+   * The email filters live in the **URL**, so a link to a filtered view is a
+   * link somebody else can open and see the same rows.
+   */
+  const params = await searchParams;
+  const rawStatus = typeof params.status === "string" ? params.status : "";
+  const rawTemplate =
+    typeof params.template === "string" ? params.template : "";
+  const status = isEmailStatus(rawStatus) ? rawStatus : undefined;
+  const template = rawTemplate || undefined;
+
   const t = await getTranslations("ops");
-  const [checks, counts, runs, scheduled] = await Promise.all([
-    runHealthChecks(origin),
-    getDataCounts(),
-    listJobRuns(),
-    listScheduledFunctions(),
-  ]);
+  const [checks, counts, runs, scheduled, emails, templates, activity] =
+    await Promise.all([
+      runHealthChecks(origin),
+      getDataCounts(),
+      listJobRuns(),
+      listScheduledFunctions(),
+      listEmailLog({ status, template }),
+      listEmailTemplates(),
+      /**
+       * **The same reader F25b's browser uses** — one log, one query. A second
+       * source here is how the admin's trail and the regulator's start to
+       * disagree.
+       */
+      listAuditEvents(session, undefined, null, 25),
+    ]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -75,6 +102,27 @@ export default async function SystemSettingsPage() {
           <p className="text-muted-foreground text-sm">{t("jobs.intro")}</p>
         </header>
         <JobsPanel runs={runs} scheduled={scheduled} locale={locale} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <header className="flex flex-col gap-1">
+          <h2 className="text-lg font-medium">{t("email.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("email.intro")}</p>
+        </header>
+        <EmailFilters
+          templates={templates}
+          status={status}
+          template={template}
+        />
+        <EmailLogPanel rows={emails} locale={locale} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <header className="flex flex-col gap-1">
+          <h2 className="text-lg font-medium">{t("activity.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("activity.intro")}</p>
+        </header>
+        <ActivityLog rows={activity.rows} locale={locale} />
       </section>
 
       <section className="flex flex-col gap-4">

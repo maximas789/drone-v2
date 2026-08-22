@@ -1,0 +1,97 @@
+export const meta = {
+  title: "For authorities",
+  description:
+    "What a reviewer sees and can do: the review queues, Remote ID lookup, identity reveal and its logging, zone management, and the audit trail.",
+  order: 6,
+};
+
+<Callout kind="warning">
+
+<ProposalNotice />
+
+This page describes what has actually been built in this prototype — not what the General Authority of Civil Aviation does, and not anything it has committed to. Ajniha has been adopted by nobody and endorsed by nobody.
+
+</Callout>
+
+## Three roles, and no self-promotion
+
+There are three roles: **pilot**, **reviewer** and **system administrator**. Nowhere in the application can anybody raise their own role — a role is granted from the roles screen, by a system administrator alone, and every role change is written into the audit log against the person who made it.
+
+A role that is not recognised is treated as **pilot**; any unexpected value in that column lowers access rather than raising it.
+
+## The review queues
+
+A reviewer opens a panel holding the queues that concern them:
+
+- **Aircraft registrations** — the waiting applications, ordered, showing **how long each has been waiting**, with overdue ones flagged. An application with no serial number is explicitly marked, so its absence is not read as missing data.
+- **Flight bookings** — requests in zones that do not auto-approve, with airspace re-evaluated **at the moment of opening** rather than at the moment of submission.
+- **Operators** — search over pilot profiles, and verifying or rejecting an identity.
+- **Reports** filed from the public scan page.
+
+On every decision screen the reviewer sees the applicant's **record**: how many aircraft they have registered, how many were approved, how many bookings they hold, how many times they failed to show up, and how many applications of theirs were rejected and for what.
+
+### Four eyes
+
+**Nobody decides their own submission.** Where the submitter is the reviewer, the decision controls disappear and a note explaining why takes their place — and more importantly, **the system refuses the action independently of the screen**, because a disabled button is a courtesy, not a check. That covers approving and rejecting a registration, approving, rejecting and authority-cancelling a booking, verifying a broadcast module, and verifying an identity.
+
+A decision refused on this ground **changes no status and writes no event**; it is not recorded as something that happened and was then undone.
+
+### A soft lock
+
+If another reviewer has the same record open at the same time, a note naming them appears. It is not a lock that blocks — it is a warning that stops duplicated work.
+
+## Refusals are written out
+
+Every rejection and every authority cancellation **requires a written reason**, with a minimum length, and the button does not work without one. The reason is stored character for character and shown back to the applicant exactly as written — not summarised, not rephrased.
+
+The screen offers the reviewer ready-written texts **to edit**, not codes to pick. The point is to speed the writing up, not to replace it.
+
+## Remote ID lookup
+
+A search screen for an inspector in the field, accepting three kinds of input: a **Remote ID code** in the form `AJN-XXXX-XXXX`, an **identity document number**, or **part of a name**.
+
+- The search is a `POST`, not a `GET`: what was searched for does not appear in the address bar, in the server log, or in the browser history.
+- A document number is matched **on its hash**, never on the number itself; the system does not look up a number because it does not compare numbers.
+- **Every search is written into the audit log** against the person who ran it.
+
+## Revealing an owner identity
+
+The public scan page **shows nobody the owner name, mobile number or document number**. A reviewer who opens it sees the owner details and the document number **masked** — last four digits only.
+
+The full number is obtained by a separate action:
+
+1. The reviewer writes a **clear reason**, with a minimum length.
+2. The **audit event is written first** — who revealed, for which record, and why.
+3. **Then** the number is shown.
+
+The order is deliberate: a number cannot reach anybody's screen without a written trace preceding it. And a system administrator has an **oversight screen for reveals**, listing every reveal that has happened, by whom, and for what reason.
+
+## Zone management
+
+A system administrator owns the whole life of a zone:
+
+- **Drawing the boundary** on the map, with every boundary change kept — so a decision made against an older boundary stays readable against the boundary of its time.
+- **An opening-hours grid** across the week, which starts on Sunday.
+- **The zone's rules**: ceiling, capacity, slot length, lead times, the daily cap per pilot, the weight-class cap, permitted build types, whether a verified broadcast module is required, and auto-approval.
+- **Publishing, suspending and archiving.**
+- **Closures** — a time window with a reason written in Arabic and English. Before saving, **the bookings that will be cancelled are shown**, and then the cancellations are carried out and the pilots notified.
+
+## The audit log
+
+**One log, not two.** The approval trail a regulator cares about and the operational activity log are the same table; two logs that branch are two logs that disagree.
+
+- **Append-only.** No update path, no delete path, and no control in any screen. There is a test in the repository that greps the whole application for any write that updates or deletes from this table, and fails the build if it finds one.
+- Every event carries **who did it and what role they held at the time** — not the role they hold today — the time, the record concerned, and **before and after** at field level.
+- **A boundary change is rendered as a map**: the old boundary dashed and the new one solid, over the map itself.
+- **Automatic events are marked "System"** — a registration expiring, a reminder, a closure that carried out cancellations — and are not attributed to a person.
+- **Export to `CSV`** is available, and **it writes an audit event for itself** recording who exported, under what filters, and how many rows. Reading the whole log and taking it out of the system is an act that deserves a trace like any other.
+
+## Analytics
+
+An analytics screen for reviewers: application volumes and how long they took, the distribution of decisions, slot utilisation per zone, and an export.
+
+## What this system does not do
+
+- **It does not verify identity automatically.** Verification is a human decision every time, and there are no text messages and no verification codes.
+- **It does not receive live broadcasts** from aircraft and does not show their positions in real time.
+- **It does not issue regulatory authorisations**, and a booking in it does not replace an authorisation a competent authority requires.

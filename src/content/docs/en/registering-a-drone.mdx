@@ -1,0 +1,111 @@
+export const meta = {
+  title: "Registering a drone",
+  description:
+    "The five wizard steps, what a reviewer actually checks, and the common rejection reasons and how to fix them.",
+  order: 3,
+};
+
+## Before you start
+
+Your **pilot profile has to be complete**. An application submitted with an incomplete profile is refused before it reaches the review queue, with a message asking you to finish the profile.
+
+Your identity does **not** have to be verified yet. Verification is a condition of booking, not of registering — you can register your aircraft while your profile is still in the identity queue.
+
+## The five steps
+
+The wizard saves from the specifications step onwards, so you can close the page and come back. Until you submit it, the application is a **draft** and nobody has looked at it.
+
+### 1 · Type
+
+A name you will know the aircraft by inside the app, then the **build type**:
+
+| Type | What it means | Serial number |
+| --- | --- | --- |
+| Commercial | Bought ready-made from a manufacturer | Required, as marked on the aircraft |
+| Self-built | You built it | **Not asked for, and not stored** |
+| FPV | A racing or freestyle aircraft | **Not asked for, and not stored** |
+
+<Callout kind="note">
+
+The self-built path is not a secondary one here. The manufacturer field asks for **your own name** — because you are the manufacturer — and the model field may be left empty. An application with no serial number reaches the reviewer explicitly marked as such, so that its absence is not read as missing data.
+
+</Callout>
+
+### 2 · Specifications
+
+Weight **in grams**, as a whole number, is what decides the aircraft class:
+
+| Class | Weight |
+| --- | --- |
+| Micro | Under 250 g |
+| Light | Under 4 kg |
+| Medium | Under 25 kg |
+| Heavy | 25 kg and above |
+
+The class appears in front of you as you type the weight. It is not a formality: some zones cap the weight class they accept, and an aircraft above a zone cap is not accepted there.
+
+This step also records the **propulsion** (four rotors, for example) and whether the aircraft **carries a camera**.
+
+<Callout kind="note">
+
+Aircraft under 250 g may be exempt from registration. That is the regulator's decision, not ours, and the system says so in place rather than assuming on your behalf.
+
+</Callout>
+
+### 3 · Remote ID
+
+A step that explains and asks for nothing: on approval, the aircraft is issued its own [Remote ID](/docs/remote-id), which is its **registration identity**, and the QR code is printed from it.
+
+If your aircraft carries a third-party broadcast module, you declare it **after** approval, from the aircraft page.
+
+### 4 · Photographs
+
+**At least one photograph of the whole aircraft**, and that is a condition of submitting. The kinds of photograph the system accepts are: the whole aircraft, the serial plate, the Remote ID module, and the payload.
+
+Accepted formats are `JPEG`, `PNG` and `WebP`, and the size limit is stated on the page itself. Photographs are reordered with the "move earlier" and "move later" buttons — not by dragging, because dragging has no keyboard path.
+
+### 5 · Review and submit
+
+Check what you have written, then submit. On submission:
+
+- The application becomes **under review** and enters the reviewers' queue.
+- It **cannot be edited or deleted** until a decision is made. What the reviewer decides has to be what the reviewer saw.
+
+## What the reviewer checks
+
+The reviewer opens the application and sees: the specifications as you wrote them, the photographs at full size, the owner details from their profile — and their record: how many aircraft they have registered, how many were approved, how many bookings they hold, how many times they failed to show up, and how many applications of theirs were rejected and why.
+
+They also see **how long this application has been waiting**, and overdue ones are flagged.
+
+<Callout kind="note">
+
+**No reviewer decides their own application.** Where the application is for the reviewer's own aircraft, the decision controls disappear and a note explaining why takes their place — and the system refuses the action even if it is sent from outside the page.
+
+</Callout>
+
+## Common rejection reasons
+
+A reviewer writes the reason in their own words rather than picking a code. But the page offers four ready-written texts they can edit, and these are the reasons that recur most:
+
+| Reason | What it means, and what to do |
+| --- | --- |
+| **Photographs unclear** | The photographs do not show the aircraft well enough to match it against the specifications. Photograph the whole aircraft in good light, and the Remote ID module if it has one. |
+| **Specifications inconsistent** | What you wrote does not agree with what the photographs show. Check the weight, the propulsion and whether there is a camera. |
+| **Weight class mismatch** | The aircraft in the photographs is not of the class declared. Weigh it again **ready to fly** — battery, propellers and payload — and correct the figure. |
+| **Identity document unreadable** | This concerns your identity details in your pilot profile, not the aircraft. Correct them from the profile page. |
+
+## After a rejection
+
+A rejected application **becomes editable again**, with its data intact — you do not start over. Correct what the reviewer named, from the aircraft page, then resubmit. You are shown how many times this application has been rejected before, because the reviewer sees that too.
+
+## After approval
+
+- The aircraft is **issued a Remote ID**, and its public page becomes scannable.
+- Registration is valid for **three years**, and the date is on the card.
+- You are notified as the expiry approaches, and renewal is from the aircraft page.
+
+<Callout kind="warning">
+
+**An aircraft must not be operated on an expired registration.** And if a registration is revoked administratively, the Remote ID is suspended and the aircraft's upcoming bookings are cancelled; reinstating it is an administrative decision and is not taken from your own page.
+
+</Callout>

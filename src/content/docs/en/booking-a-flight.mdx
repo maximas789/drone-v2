@@ -1,0 +1,96 @@
+export const meta = {
+  title: "Booking a flight",
+  description:
+    "Slots, seats and lead times, the difference between an auto-approving zone and one a reviewer decides, and check-in, cancellation and no-shows.",
+  order: 5,
+};
+
+## Before a single slot appears
+
+Booking requires four things together: a **complete pilot profile**, an **identity a human reviewer has verified**, an **approved aircraft whose registration is still in force**, and an **active Remote ID** for that aircraft.
+
+Missing any one of them is refused by name — not with a generic message. Somebody who has filled in every field and has simply not been verified yet is told exactly that, not told their profile is incomplete.
+
+## The six steps
+
+### 1 · Zone and day
+
+You pick a published permitted zone, then a day from the day strip. How far ahead you may pick is set by the zone itself.
+
+### 2 · Slot
+
+Slots are derived from the zone's **opening hours** and the **slot length** it publishes, and each slot shows its state and its seats taken out of its capacity:
+
+| State | What it means |
+| --- | --- |
+| Available | A seat is free |
+| Full | The zone has reached its capacity for this slot |
+| Closed | A published closure covers this time |
+| Past | The slot is in the past |
+| You already have a booking at this time | Your own booking, in this zone or another |
+
+<Callout kind="note">
+
+A closed or full slot is **shown, not hidden**. Hiding it would make hours vanish from the screen with no visible cause, and send a pilot hunting for another zone without knowing what stopped them.
+
+</Callout>
+
+### 3 · Aircraft
+
+All your aircraft are listed, and any that cannot be booked shows **why**: not approved yet, registration expired, registration revoked, no Remote ID, or Remote ID not active.
+
+### 4 · Flight details
+
+- **Planned altitude**. The page tells you the zone ceiling and warns you before you submit if you exceed it.
+- **Purpose** — recreational, training, photography, inspection, research — and an optional note.
+- **Co-pilots**, up to three, each with a name in Arabic and English and an optional mobile number.
+
+### 5 · Safety acknowledgement
+
+You are shown this particular zone's rules — its ceiling, its hours on the day you chose, whether night flight is allowed there, and that the aircraft stays in your line of sight — and you acknowledge having read them.
+
+### 6 · Review and confirm
+
+Before you press the button you know which of the two paths you are on, because the page says so:
+
+- **An auto-approving zone**: confirming **takes the slot** immediately. The booking is approved.
+- **A zone that does not auto-approve**: confirming **submits a request**, a reviewer decides it, and you are notified of the outcome.
+
+<Callout kind="warning">
+
+**Airspace is re-evaluated on confirmation, on the server.** What you saw on the map is not a promise — it is the same calculation, but the one that counts is the one that runs at the moment of saving. If a closure is published or the slot fills while you are filling in the form, the request is refused with an explicit reason rather than a generic error.
+
+</Callout>
+
+The seat is claimed by a unique constraint in the database, not by counting and then writing. Two people pressing "confirm" on the last seat at the same instant — one wins, and the other is told the slot is full.
+
+## After the request: what the reviewer does
+
+In a zone that does not auto-approve, the reviewer opens your request and sees: the slot and the zone, **airspace re-evaluated at the moment they open it** rather than at the moment you asked, a map of the zone, your aircraft's registration status **at the start of the slot** rather than today, and who holds the other seats.
+
+And if the request has become refusable between being submitted and being looked at — by a closure published afterwards, say — **approval itself is refused**, and the request stays pending rather than being approved on a basis that no longer holds.
+
+The most frequent rejection reasons, as texts the reviewer edits:
+
+- **The zone is closed** at the requested time under a published closure.
+- **The registration expires** before the end of the slot, so the flight would land unregistered.
+- **The slot is congested** — the number has reached what the zone can safely take.
+- **The purpose is not clear** enough to assess the request.
+
+## Before and during the flight
+
+- You get a **reminder the day before** each approved slot.
+- **Check in during the window.** The button does not work before it or after it; checking in is what records that you flew.
+- Carry the aircraft's [Remote ID](/docs/remote-id) with you.
+
+## Cancelling
+
+You can cancel your own booking up to **two hours** before the slot starts, and the page writes out the time at which cancellation closes.
+
+After that, cancellation closes for you. The reason is that a seat given up ten minutes beforehand is of no use to anybody; a late cancellation is a no-show with better manners. **The authority is not bound by that limit** — cancelling a booking twenty minutes before the flight is exactly the case that power exists for.
+
+## No-shows
+
+**Thirty minutes** after the slot ends, an approved booking with no check-in becomes a **no-show**. The grace period exists because check-in is manual, and somebody packing a drone away is not looking at a phone.
+
+Your no-show count **is shown to the reviewer** in your record whenever they look at a later request of yours. There is no fine and no automatic suspension; what there is, is a record a person reads.

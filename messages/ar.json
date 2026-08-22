@@ -46,7 +46,6 @@
     "profile": "الملف الشخصي",
     "notifications": "الإشعارات",
     "settings": "الإعدادات",
-    "help": "المساعدة",
     "admin": "لوحة التحكم",
     "signIn": "تسجيل الدخول",
     "signUp": "إنشاء حساب",
@@ -1458,14 +1457,19 @@
     "appUrlWarning": "عنوان التطبيق ما زال محلياً — رموز QR المطبوعة لن تعمل."
   },
   "docs": {
-    "title": "المساعدة",
-    "gettingStarted": "البداية",
-    "registeringDrone": "تسجيل طائرة",
-    "bookingFlight": "حجز رحلة",
-    "remoteIdExplained": "ما هي الهوية عن بُعد",
-    "forInspectors": "للمفتّشين",
-    "faq": "الأسئلة الشائعة",
-    "searchPlaceholder": "ابحث في المساعدة"
+    "title": "الدليل",
+    "indexTitle": "دليل أجنحة",
+    "indexLead": "ست صفحات تشرح ما يفعله هذا النظام فعلاً: كيف تُسجّل طائرة بلا رقم تسلسلي، وكيف تحجز فترة طيران، وما الذي يراه المراجع.",
+    "indexNextTitle": "جاهز للبدء؟",
+    "indexNextBody": "القراءة لا تُسجّل طائرة. ابدأ من صفحة البداية، أو اذهب مباشرة إلى التسجيل.",
+    "indexNextCta": "تسجيل طائرة",
+    "indexHowItWorksCta": "كيف يعمل النظام",
+    "sidebarLabel": "صفحات الدليل",
+    "lastUpdated": "آخر تحديث للصفحة: {date}",
+    "calloutNote": "ملاحظة",
+    "calloutWarning": "انتبه",
+    "calloutSource": "المصدر النظامي",
+    "headingAnchor": "رابط إلى: {heading}"
   },
   "legal": {
     "terms": "الشروط والأحكام",

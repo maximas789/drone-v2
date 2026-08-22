@@ -46,7 +46,6 @@
     "profile": "Profile",
     "notifications": "Notifications",
     "settings": "Settings",
-    "help": "Help",
     "admin": "Admin",
     "signIn": "Sign in",
     "signUp": "Create account",
@@ -1458,14 +1457,19 @@
     "appUrlWarning": "APP_URL is still local — printed QR codes will not resolve."
   },
   "docs": {
-    "title": "Help",
-    "gettingStarted": "Getting started",
-    "registeringDrone": "Registering a drone",
-    "bookingFlight": "Booking a flight",
-    "remoteIdExplained": "What Remote ID is",
-    "forInspectors": "For inspectors",
-    "faq": "FAQ",
-    "searchPlaceholder": "Search help"
+    "title": "Docs",
+    "indexTitle": "Ajniha documentation",
+    "indexLead": "Six pages on what this system actually does: how to register an aircraft with no serial number, how to book a flight window, and what a reviewer sees.",
+    "indexNextTitle": "Ready to start?",
+    "indexNextBody": "Reading does not register an aircraft. Begin with the getting-started page, or go straight to registration.",
+    "indexNextCta": "Register a drone",
+    "indexHowItWorksCta": "How it works",
+    "sidebarLabel": "Documentation pages",
+    "lastUpdated": "Page last updated {date}",
+    "calloutNote": "Note",
+    "calloutWarning": "Careful",
+    "calloutSource": "Regulatory source",
+    "headingAnchor": "Link to {heading}"
   },
   "legal": {
     "terms": "Terms of use",

@@ -1,0 +1,107 @@
+export const meta = {
+  title: "Remote ID",
+  description:
+    "What Remote ID is, what Saudi regulation requires and from when, and why an Ajniha Remote ID stands in for a manufacturer serial number.",
+  order: 2,
+};
+
+## What Remote ID means
+
+Remote ID is an aircraft announcing itself while it is in the air: which aircraft it is, where it is, at what altitude, and where the control station flying it stands. The original model — as the United States Federal Aviation Administration wrote it — is a local radio broadcast picked up by any nearby device, with no call to a central database.
+
+The first element of that message is the **identity of the aircraft**, and the American rule defines it like this:
+
+<Quotation id="faaIdentity" />
+
+Note the second alternative. Even in the text that begins with a serial number, the serial number is not the only route.
+
+And where the aircraft itself cannot broadcast, a separate **broadcast module** is fitted, and the aircraft's identity becomes the module's identity:
+
+<Quotation id="faaModule" />
+
+## What Saudi regulation requires, and from when
+
+Subpart F of `GACAR Part 107` states its own commencement:
+
+<Quotation id="gacaDate" />
+
+And what it requires on that date:
+
+<Quotation id="gacaMandate" />
+
+So every registered aircraft — **model aircraft included** — must be equipped with Direct or Network Remote Identification.
+
+## Why an Ajniha Remote ID stands in for a serial number
+
+The common assumption is that lawful registration requires a manufacturer serial number. Reading the source says otherwise: the authority's own E-Book, Volume 18, asks for the serial number **if it is available**:
+
+<Quotation id="gacaSerialOptional" />
+
+And when it comes to the identifier the aircraft must display, it gives two alternatives rather than one:
+
+<Quotation id="gacaIdentifier" />
+
+<Callout kind="source">
+
+This is the passage the whole product rests on: **a registration certificate number stands in for a serial number.** And that is exactly what Ajniha issues — a stable registration identifier for an aircraft with no factory marking.
+
+</Callout>
+
+The same volume expects the aircraft to carry a label or a QR code:
+
+<Quotation id="gacaLabel" />
+
+## How an Ajniha Remote ID is issued
+
+- It is issued **automatically on approval of the registration**, and not before. An application under review has no Remote ID.
+- Its form is `AJN-XXXX-XXXX` — two groups of four. It reads aloud in the field without ambiguity.
+- A printable **QR code** is built from it and fixed to the airframe.
+- It is valid for **three years** from the date of issue.
+
+<Callout kind="note">
+
+**The code survives renewal.** The sticker already on your aircraft stays valid; you do not print a new code every three years. That is deliberate: a sticker on an airframe cannot be recalled.
+
+</Callout>
+
+## Declaring a broadcast module you already have
+
+An Ajniha Remote ID is **an identifier in a registry**, not a transmitter. If your aircraft carries a real broadcast module, declare it from the aircraft page once the registration is approved. Each declaration records:
+
+- **Its kind** — an FAA-accepted broadcast module, Direct Remote ID, Network Remote ID, or other.
+- **The manufacturer and the module serial number** — here the serial is the module's, not the aircraft's.
+- **A declaration-of-compliance reference** where there is one, and the **validity window** stated for it.
+
+A **human reviewer then verifies or rejects it**. An unverified declaration stays visibly unverified and does not count.
+
+<Quotation id="faaDoc" />
+
+Some zones require a verified module that is valid at the time of the flight, not merely an Ajniha Remote ID. A booking attempt in those zones is refused with an explicit reason if you do not have one.
+
+## What the code reveals, and to whom
+
+Scanning the code opens a public page, and what it shows depends on who is reading:
+
+| Who is reading | What they see |
+| --- | --- |
+| Anyone, with no account | Registration status, the date it is valid until, weight class and build type, city of registration, and whether an authorised flight is in progress right now |
+| A registered pilot who is not the owner | Exactly the same |
+| The owner | Their own details and their aircraft's |
+| A reviewer or system administrator | Aircraft and owner details, with the document number **masked** — last four digits only |
+
+**No visitor sees the owner name, mobile number or document number.** Nor does the full document number appear for a reviewer merely by opening the page: revealing it is a separate action, in which the reviewer writes a reason, and the reason is recorded against their name in the audit log **before** any number is shown.
+
+## What an Ajniha Remote ID is not
+
+- **It is not a transmitter.** It sends nothing over the air and does not replace a broadcast module where one is required.
+- **It is not a certified Direct or Network Remote ID system** in the regulatory sense, and it has been approved by nobody.
+- **It is not issued by the General Authority of Civil Aviation.**
+- **It does not by itself make a flight lawful.** Authorisations are sought from the competent authority.
+
+<ProposalNotice />
+
+## Sources
+
+Every document below was opened and read on the date beside it, and every quotation on this page is copied from it verbatim, in its original language.
+
+<SourceList />

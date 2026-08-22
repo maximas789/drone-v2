@@ -1,0 +1,79 @@
+export const meta = {
+  title: "Zones and rules",
+  description:
+    "Why most of the map is red, what each permitted zone publishes, and how the allow-or-refuse decision is made.",
+  order: 4,
+};
+
+<Callout kind="warning">
+
+**The zones in this system are authored for demonstration. They are not official airspace.** Their boundaries, ceilings and hours were written by us for this proposal; they did not come from the General Authority of Civil Aviation or from anybody else. Do not plan a real flight on them.
+
+</Callout>
+
+## Default-deny
+
+Most of the map is red or amber by design, not because the data is incomplete. The default is **deny**, and permitted zones are then carved out of it with written boundaries, ceilings and hours. Any point that does not fall inside one of those permitted zones is refused with an explicit reason: "the point is outside any zone where flight is permitted".
+
+This means the map never promises something the server cannot deliver: **the engine that answers you instantly on the map is the same engine that decides the booking on the server.** Not two copies, and not an estimate followed by a correction.
+
+## Kinds of zone
+
+| Kind | Colour | What it means |
+| --- | --- | --- |
+| **Permitted** | Green | Flight is allowed inside it under its published rules, with a booked window |
+| **Restricted** | Amber | Flight is not allowed inside it except within a published permitted zone contained in it |
+| **No-fly** | Red | No flight, at any altitude, at any time |
+
+A no-fly zone **always wins**. Where a permitted zone overlaps an airport control ring or a protected site, the no-fly zone is what applies at the overlap.
+
+<Callout kind="note">
+
+A no-fly zone is stored with a ceiling of `0` metres, which is a sentinel for "no altitude at all" and not a limit you could fly under. That is why no ceiling is displayed for one anywhere: showing it under the heading "ceiling" reads as permission.
+
+</Callout>
+
+## What each permitted zone publishes
+
+Every permitted zone carries its own rules, and those are what your request is measured against:
+
+- **A ceiling** in metres above ground level, and a **floor** where there is one.
+- **Opening hours** for each day of the week. The week starts on Sunday, and a day may split into two windows — a morning one and another after Friday prayers, for instance.
+- **Night flight**: permitted or not. Night here is computed from actual sunrise and sunset in Riyadh rather than a fixed hour; the difference between December and June is over an hour and a half.
+- **Capacity** — how many aircraft are accepted in one slot — and the **slot length** in minutes.
+- **Lead time**: the closest you may book before a slot, and the furthest day ahead you may book.
+- **A daily cap on slots per pilot**.
+- **Auto-approval**: whether bookings there are approved immediately or decided by a reviewer.
+- **A weight-class cap**, where there is one. The classes are cumulative: a zone capped at "medium" accepts micro, light and medium.
+- **Permitted build types**, where they are stated. A zone that states none accepts all.
+- **A verified broadcast module requirement** — some zones are not satisfied by an Ajniha Remote ID and want a real module, valid at the time of the flight.
+
+Each zone's published rules are listed on the [Zones](/zones) page, and on its interactive map the zone's rules appear when you pick a point inside it.
+
+## Closures
+
+Above the fixed opening hours sit **published closures**: a defined window in which one zone is closed, with a written reason shown to you in your language.
+
+A closure **does not hide the slot**; it shows it closed. Hiding it would make hours disappear from the screen with no explanation.
+
+And if a closure is published over a slot that was already booked, the existing booking is cancelled and you are notified — and the reviewer publishing the closure is shown, before saving, how many bookings will be cancelled.
+
+## What happens when your request is refused
+
+A refusal here is not a generic error. The engine returns **specific reasons**, and each reason comes with what would make it possible. The most frequent:
+
+| Reason | What would make it possible |
+| --- | --- |
+| Outside any permitted zone | Pick a point inside a green zone |
+| Inside a no-fly zone | Nothing; the zone is closed at any altitude |
+| Above the zone ceiling | Lower the requested altitude to the published ceiling |
+| The zone is closed at this time | You are shown **when the zone next opens** |
+| Night flight is not permitted | Pick a window in daylight |
+| The slot is full | You are offered **alternative slots** on the same day |
+| Weight class or build type not accepted | Another zone that accepts your aircraft |
+
+Reasons are stored as stable codes and translated at render, so a refusal issued in Arabic today reads in English tomorrow without its meaning changing.
+
+## Why there is no "book" button on the zones page
+
+Because the answer depends on your aircraft: its weight, its build type, its registration status, and its Remote ID. A button on a page that knows none of that would promise an outcome it cannot check. Booking starts from the [booking page](/docs/booking-a-flight), where the aircraft is chosen.

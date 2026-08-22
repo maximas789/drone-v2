@@ -1,15 +1,9 @@
-import { locale as localeParam } from "next/root-params";
 import { getTranslations } from "next-intl/server";
+import { Quotation } from "@/components/landing/quotation";
+import { SourceList } from "@/components/landing/source-list";
 import { PublicPage, Section } from "@/components/layout/public-page";
 import { ButtonLink } from "@/components/ui/button-link";
 import { getSession } from "@/lib/auth-guards";
-import { formatDate } from "@/lib/format";
-import {
-  REMOTE_ID_QUOTES,
-  REMOTE_ID_SOURCES,
-  type Quote,
-} from "@/lib/landing/sources";
-import { toLocale } from "@/lib/locale";
 
 /**
  * The intellectual core of the pitch, and the one page here that is a research
@@ -45,12 +39,7 @@ import { toLocale } from "@/lib/locale";
  * Nothing in `<head>` is set here. F30 owns the title.
  */
 
-const QUOTES_BY_ID = new Map<string, Quote>(
-  REMOTE_ID_QUOTES.map((quote) => [quote.id, quote]),
-);
-
 export default async function RemoteIdPage() {
-  const locale = toLocale(await localeParam());
   const t = await getTranslations("remoteIdPage");
   const session = await getSession();
   const signedIn = Boolean(session);
@@ -149,36 +138,7 @@ export default async function RemoteIdPage() {
       </Section>
 
       <Section title={t("sourcesTitle")} lead={t("sourcesLead")}>
-        <ol className="flex flex-col gap-4">
-          {REMOTE_ID_SOURCES.map((source) => (
-            <li key={source.id} className="flex flex-col gap-1">
-              <a
-                href={source.url}
-                /**
-                 * `noopener` because these open a new tab; `noreferrer` because
-                 * a regulator's server log has no business learning that the
-                 * visitor came from a page arguing about their own rules.
-                 */
-                target="_blank"
-                rel="noopener noreferrer"
-                dir="ltr"
-                className="text-primary text-start text-sm underline underline-offset-4"
-              >
-                {source.title}
-              </a>
-              <p className="text-muted-foreground text-xs">
-                {locale === "ar" ? source.publisherAr : source.publisherEn}
-                {" · "}
-                {t("retrievedOn", {
-                  date: formatDate(new Date(source.retrievedOn), locale),
-                })}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {t(`sources.${source.id}`)}
-              </p>
-            </li>
-          ))}
-        </ol>
+        <SourceList />
       </Section>
 
       <section className="bg-card flex flex-col gap-3 rounded-lg border p-5">
@@ -194,37 +154,5 @@ export default async function RemoteIdPage() {
         </div>
       </section>
     </PublicPage>
-  );
-}
-
-/**
- * A verbatim passage, in the document's own language and direction.
- *
- * **`dir="ltr"` on the quotation itself, always.** Every source here is written
- * in English; dropping English legal text into an RTL paragraph makes the bidi
- * algorithm reorder its punctuation and section numbers, so `§ 107.302(b)`
- * arrives as `(b)107.302 §` and the quotation stops being a quotation. The
- * gloss around it is translated; the words inside the marks are not.
- */
-async function Quotation({ id }: { id: string }) {
-  const quote = QUOTES_BY_ID.get(id);
-  // A missing quote is a programming error, not a runtime state to render.
-  if (!quote) throw new Error(`Unknown remote-id quote: ${id}`);
-
-  const source = REMOTE_ID_SOURCES.find((item) => item.id === quote.sourceId);
-  if (!source) throw new Error(`Quote ${id} cites an unknown source`);
-
-  return (
-    <figure className="border-primary/40 bg-muted/40 flex flex-col gap-2 rounded-e-lg border-s-4 p-4">
-      <blockquote dir="ltr" cite={source.url} className="text-start text-sm">
-        {`“${quote.text}”`}
-      </blockquote>
-      <figcaption
-        dir="ltr"
-        className="text-muted-foreground text-start font-mono text-xs"
-      >
-        {quote.cite}
-      </figcaption>
-    </figure>
   );
 }

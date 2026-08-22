@@ -121,7 +121,7 @@ Ticked in **F26a** (Session 35) unless marked. `⬜ F26b` is deferred, not faile
 - [x] `/docs` lists all six in `order`, in both locales.
 - [x] Sidebar collapses to a working select at 375 px — and the select navigates, keeping the locale prefix.
 - [x] Heading anchors are copyable and resolve on reload — proven on an Arabic fragment loaded cold.
-- [~] "Last updated" reflects real git history. The git path is implemented and the fallback is the file's mtime; **as shipped these files are not committed yet, so what renders today is the mtime.** It becomes the commit date on the first commit that touches them.
+- [x] "Last updated" reflects real git history — `git log -1 --format=%cI` on the file, with the file's mtime as the fallback for a page written but not yet committed. Exercised on the real path once F26a was committed (`6430ee8`).
 - [x] Every page is reachable **signed out** — every check above ran over `curl`, which carries no session.
 - [x] The Docs link appears in the footer and resolves.
 - [ ] The drone wizard's Remote ID step links to `docs/remote-id`; a rejection notice links to the common-reasons section. ⬜ **F26b**

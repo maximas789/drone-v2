@@ -516,8 +516,9 @@ running for it. Any session that wants to *edit* must kill that PID first and ru
 `pnpm dev --port 3001`; `next start` and `next dev` both fail silently onto a port already
 held, and the old process keeps answering. Inngest is **not running**; nothing in F26
 needs it. Docker Postgres is up.
-**Nothing was committed**, so the working tree carries all of F26a; the "last updated"
-line changes from mtime to commit date on the first commit that touches the content.
+**F26a is committed and pushed** (`6430ee8` on `main`), so the "last updated" line is now
+the **git committer date** rather than the mtime fallback — the production path is
+exercised, not just implemented.
 
 **No demo data was changed.** No rows written, no migration, no seed run.
 

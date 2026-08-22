@@ -27,7 +27,8 @@ export type SettingsSectionSlug =
   | "profile"
   | "language"
   | "security"
-  | "notifications";
+  | "notifications"
+  | "account";
 
 export type SettingsSection = {
   slug: SettingsSectionSlug;
@@ -45,6 +46,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { slug: "language", href: "/settings/language", adminOnly: false },
   { slug: "security", href: "/settings/security", adminOnly: false },
   { slug: "notifications", href: "/settings/notifications", adminOnly: false },
+  // Last, deliberately: it is the one that ends things.
+  { slug: "account", href: "/settings/account", adminOnly: false },
 ];
 
 /**

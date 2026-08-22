@@ -69,6 +69,7 @@ async function candidatesWhere(
       droneId: drone.id,
       droneStatus: drone.status,
       validUntil: drone.registrationExpiresAt,
+      ownerUserId: drone.ownerUserId,
       buildType: drone.buildType,
       weightClass: drone.weightClass,
       manufacturer: drone.manufacturer,
@@ -103,6 +104,11 @@ async function candidatesWhere(
      * clock makes a registration lapse, not the nightly sweep, and a
      * disambiguation list that said "active" until 03:00 would be wrong for
      * exactly the hours an officer is standing in a field.
+     */
+    /**
+     * `ownerUserId` is in the row for one reason: `registrationStatusOf` reads
+     * it to answer `withdrawn`. An officer holding a code whose owner deleted
+     * their account must be told that, not shown `active`.
      */
     registrationStatus: registrationStatusOf(row, now),
   }));

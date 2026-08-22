@@ -43,6 +43,13 @@
       "when": 1787168213053,
       "tag": "0005_old_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787424187352,
+      "tag": "0006_cynical_master_mold",
+      "breakpoints": true
     }
   ]
 }

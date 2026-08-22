@@ -7,6 +7,11 @@ import { audit, type Actor } from "@/lib/audit";
 import { refuse, refuseWith, type ActionResult } from "@/lib/actions/result";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/auth-guards";
+import {
+  deleteAccount,
+  deletionBlock,
+  type DeletionSummary,
+} from "@/lib/data/account-deletion";
 import { db } from "@/lib/db";
 import { pilotProfile } from "@/lib/db/schema";
 import { user } from "@/lib/db/auth-schema";
@@ -196,4 +201,73 @@ export async function revokeSessionAction(
 
   revalidatePath("/[locale]/settings/security", "page");
   return { ok: true, data: { token } };
+}
+
+/**
+ * Close the account.
+ *
+ * ```
+ * getSession → rateLimit → the typed email must match
+ *   → deletionBlock() re-checked HERE, not trusted from the page
+ *   → audit + delete in one transaction
+ *   → sign out
+ * ```
+ *
+ * **The block is re-checked inside the action.** The page renders the refusal
+ * and hides the button, but a server action is an ordinary POST: the page may
+ * never have run, and the state can change between rendering it and clicking.
+ * A booking approved in the meantime must stop the deletion, not lose to a
+ * check made thirty seconds ago.
+ *
+ * **The email is compared case-insensitively and trimmed.** The point of typing
+ * it is to make the act deliberate, not to test whether somebody can reproduce
+ * their own capitalisation.
+ */
+export async function deleteAccountAction(
+  confirmation: string,
+): Promise<ActionResult<DeletionSummary>> {
+  const session = await getSession();
+  if (!session) return refuse("not_authenticated");
+
+  const limit = await enforceLimit("settings.save", "user", session.user.id);
+  if (!limit.ok) {
+    return refuseWith("rate_limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
+
+  if (
+    confirmation.trim().toLowerCase() !== session.user.email.trim().toLowerCase()
+  ) {
+    return refuse("confirmation_mismatch");
+  }
+
+  const block = await deletionBlock(session);
+  if (block) {
+    return block.reason === "last_admin"
+      ? refuse("last_admin")
+      : refuseWith("approved_bookings", { count: block.bookings.length });
+  }
+
+  const requestHeaders = await headers();
+  const ip = clientIpFrom(requestHeaders);
+
+  const summary = await deleteAccount(session, actorFrom(session), {
+    ipHash: ip ? hashIp(ip) : null,
+    userAgent: requestHeaders.get("user-agent"),
+  });
+
+  /**
+   * **After the delete, and it must not fail the delete.** The session rows are
+   * already gone with the cascade, so the account is closed whatever happens
+   * here; this only clears the cookie so the next request does not arrive with
+   * a token pointing at nothing.
+   */
+  try {
+    await auth.api.signOut({ headers: requestHeaders });
+  } catch {
+    // The session is already deleted; there may be nothing to sign out of.
+  }
+
+  return { ok: true, data: summary };
 }

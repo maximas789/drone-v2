@@ -21,6 +21,13 @@ const VARIANT: Record<
   // Both are "this aircraft should not be flying", and both look like it.
   suspended: "destructive",
   revoked: "destructive",
+  /**
+   * **Not destructive.** Nobody did anything wrong: the owner closed their
+   * account. It is still "do not fly this", which is why it is not `default`
+   * either — the same weight as `unregistered`, which is the same situation
+   * from the other end.
+   */
+  withdrawn: "secondary",
   unregistered: "secondary",
 };
 
@@ -29,6 +36,7 @@ const LABEL = {
   expired: "statusExpired",
   suspended: "statusSuspended",
   revoked: "statusRevoked",
+  withdrawn: "statusWithdrawn",
   unregistered: "statusUnregistered",
 } as const;
 
@@ -40,6 +48,7 @@ const BODY = {
   expired: "statusExpiredBody",
   suspended: "statusSuspendedBody",
   revoked: "statusRevokedBody",
+  withdrawn: "statusWithdrawnBody",
   unregistered: "statusUnregisteredBody",
 } as const;
 

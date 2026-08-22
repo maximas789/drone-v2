@@ -222,6 +222,55 @@ describe("the privacy policy's substance", () => {
   });
 });
 
+describe("the privacy policy's deletion claims", () => {
+  /**
+   * **F28c made this section false and then true again.** Until account
+   * deletion existed the policy said, correctly, that there was none — and the
+   * day the feature landed that sentence became the most misleading paragraph
+   * in the document. These assertions are what stops the pair drifting a second
+   * time: they tie the prose to the two refusals and the one survival rule that
+   * `src/lib/data/account-deletion.ts` actually implements.
+   */
+  it("says deletion is self-service, and no longer says it is not", () => {
+    for (const locale of LOCALES) {
+      const source = sourceOf(locale, "privacy");
+      expect(source).toContain("/settings/account");
+    }
+    // The sentence F27a shipped. It must not survive the feature.
+    expect(sourceOf("en", "privacy")).not.toContain(
+      "no way to delete your account",
+    );
+    expect(sourceOf("ar", "privacy")).not.toContain(
+      "لا توجد اليوم أداة لحذف الحساب",
+    );
+  });
+
+  it("names both refusals the code enforces", () => {
+    const en = sourceOf("en", "privacy");
+    expect(en).toContain("approved upcoming booking");
+    expect(en).toContain("only administrator account");
+
+    const ar = sourceOf("ar", "privacy");
+    expect(ar).toContain("حجز معتمد قادم");
+    expect(ar).toContain("حساب المسؤول الوحيد");
+  });
+
+  /**
+   * The survival rule, in both directions: what is kept, and that the kept
+   * Remote ID is owner-less rather than merely present.
+   */
+  it("says the Remote ID and the audit log survive, anonymised", () => {
+    const en = sourceOf("en", "privacy");
+    expect(en).toContain("registration withdrawn");
+    expect(en).toContain("**Kept, with no owner**");
+    expect(en).toContain("**Kept**, with your identity cleared from it");
+
+    const ar = sourceOf("ar", "privacy");
+    expect(ar).toContain("تسجيل مسحوب");
+    expect(ar).toContain("**تبقى بلا مالك**");
+  });
+});
+
 describe("the terms' operational clauses", () => {
   /**
    * **The clauses F27 singles out, each against the constant that enforces it.**

@@ -63,7 +63,13 @@ export type DroneQueueRow = {
   serialNumber: string | null;
   submittedAt: Date | null;
   rejectionCount: number;
-  ownerUserId: string;
+  /**
+   * Null only for a **withdrawn** registration — the owner deleted their
+   * account (F28c). Such a drone cannot appear in a review queue, since it is
+   * approved or revoked rather than pending, but the column is nullable now and
+   * the type says so rather than asserting otherwise.
+   */
+  ownerUserId: string | null;
   pilotNameAr: string | null;
   pilotNameEn: string | null;
   pilotCityNameAr: string | null;
@@ -107,7 +113,19 @@ export async function listDroneQueue(
   if (drones.length === 0) return [];
 
   const droneIds = drones.map((row) => row.id);
-  const ownerIds = [...new Set(drones.map((row) => row.ownerUserId))];
+  /**
+   * `filter` before the `inArray`: `owner_user_id` is nullable since F28c, and
+   * a null in an `IN (…)` list is both a type error and a query that silently
+   * matches nothing. A queue row with no owner cannot occur — pending implies
+   * an account — so dropping nulls here loses nothing.
+   */
+  const ownerIds = [
+    ...new Set(
+      drones
+        .map((row) => row.ownerUserId)
+        .filter((value): value is string => value !== null),
+    ),
+  ];
 
   const [profiles, codes, photoCounts] = await Promise.all([
     db
@@ -140,7 +158,7 @@ export async function listDroneQueue(
   );
 
   return drones.map((row) => {
-    const profile = byOwner.get(row.ownerUserId);
+    const profile = row.ownerUserId ? byOwner.get(row.ownerUserId) : undefined;
     return {
       id: row.id,
       nickname: row.nickname,
@@ -183,22 +201,36 @@ export async function getDroneForReview(session: Session, id: string) {
   const row = await db.query.drone.findFirst({ where: eq(drone.id, id) });
   if (!row) return null;
 
+  /**
+   * **A withdrawn registration has no owner to look up.** `owner_user_id` is
+   * nullable since F28c, so the two owner-keyed reads are skipped rather than
+   * issued with a null — the reviewer still gets the aircraft, its photos and
+   * its Remote ID, and the pilot panel renders empty because there is no pilot
+   * any more. That is the true answer, and it is the one a reviewer opening an
+   * old decision needs to see.
+   */
+  const ownerUserId = row.ownerUserId;
+
   const [photos, rid, profileRows, account] = await Promise.all([
     db.query.dronePhoto.findMany({
       where: eq(dronePhoto.droneId, id),
       orderBy: [asc(dronePhoto.sortOrder)],
     }),
     db.query.remoteId.findFirst({ where: eq(remoteId.droneId, id) }),
-    db
-      .select({ profile: pilotProfile, city })
-      .from(pilotProfile)
-      .leftJoin(city, eq(city.id, pilotProfile.addressCityId))
-      .where(eq(pilotProfile.userId, row.ownerUserId))
-      .limit(1),
-    db.query.user.findFirst({
-      where: eq(user.id, row.ownerUserId),
-      columns: { id: true, email: true, name: true, createdAt: true },
-    }),
+    ownerUserId
+      ? db
+          .select({ profile: pilotProfile, city })
+          .from(pilotProfile)
+          .leftJoin(city, eq(city.id, pilotProfile.addressCityId))
+          .where(eq(pilotProfile.userId, ownerUserId))
+          .limit(1)
+      : Promise.resolve([]),
+    ownerUserId
+      ? db.query.user.findFirst({
+          where: eq(user.id, ownerUserId),
+          columns: { id: true, email: true, name: true, createdAt: true },
+        })
+      : Promise.resolve(undefined),
   ]);
 
   /**
@@ -771,16 +803,15 @@ export async function searchPilots(
       .innerJoin(drone, eq(drone.id, remoteId.droneId))
       .where(eq(remoteId.code, code))
       .limit(limit);
-    if (owners.length === 0) return { kind: "remote_id", rows: [] };
+    // Nulls dropped, not passed: a withdrawn registration has no pilot to
+    // find, and a null inside `IN (…)` matches nothing while type-erroring.
+    const ownerIds = owners
+      .map((row) => row.ownerUserId)
+      .filter((value): value is string => value !== null);
+    if (ownerIds.length === 0) return { kind: "remote_id", rows: [] };
     return {
       kind: "remote_id",
-      rows: await pilotRowsWhere(
-        inArray(
-          pilotProfile.userId,
-          owners.map((row) => row.ownerUserId),
-        ),
-        limit,
-      ),
+      rows: await pilotRowsWhere(inArray(pilotProfile.userId, ownerIds), limit),
     };
   }
 

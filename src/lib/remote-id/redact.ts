@@ -32,6 +32,14 @@ export type RegistrationStatus =
   | "expired"
   | "suspended"
   | "revoked"
+  /**
+   * **The owner deleted their account.** F28c: `drone.owner_user_id` is set
+   * null on account deletion, and that is the only thing that ever writes a
+   * null there — so the registration record and the Remote ID survive with
+   * nobody behind them, and a sticker already on an airframe keeps resolving
+   * instead of 404ing.
+   */
+  | "withdrawn"
   | "unregistered";
 
 export type ActiveFlight = {
@@ -88,7 +96,8 @@ export type FullRemoteIdRecord = {
   hasCamera: boolean;
 
   droneId: string;
-  ownerUserId: string;
+  /** Null once the owner has deleted their account — see `withdrawn`. */
+  ownerUserId: string | null;
   nickname: string;
   manufacturer: string | null;
   model: string | null;
@@ -227,11 +236,19 @@ export function maskIdDocument(value: string | null): string | null {
 export function registrationStatusOf(
   record: Pick<
     FullRemoteIdRecord,
-    "remoteIdStatus" | "droneStatus" | "validUntil"
+    "remoteIdStatus" | "droneStatus" | "validUntil" | "ownerUserId"
   >,
   now: Date = new Date(),
 ): RegistrationStatus {
+  /**
+   * **Revoked outranks withdrawn**, and the order is the answer to a field
+   * inspector's question rather than a preference. Both mean "not authorised";
+   * `revoked` additionally means *an authority grounded this aircraft*, which
+   * is the more actionable of the two. Only when nobody revoked it does the
+   * absent owner become the headline.
+   */
   if (record.droneStatus === "revoked") return "revoked";
+  if (record.ownerUserId === null) return "withdrawn";
   if (record.remoteIdStatus === "suspended") return "suspended";
   if (record.droneStatus === "expired") return "expired";
   if (record.droneStatus !== "approved") return "unregistered";

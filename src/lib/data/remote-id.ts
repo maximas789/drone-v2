@@ -185,12 +185,23 @@ async function findActiveFlight(
  */
 export async function listBookingsForRemoteId(
   session: Session | null,
-  { remoteIdId, ownerUserId }: { remoteIdId: string; ownerUserId: string },
+  {
+    remoteIdId,
+    ownerUserId,
+  }: { remoteIdId: string; ownerUserId: string | null },
   limit = 20,
 ): Promise<BookingSummary[]> {
   if (!session) return [];
   const staff = isReviewer(session);
-  if (!staff && session.user.id !== ownerUserId) return [];
+  /**
+   * A withdrawn registration has **no owner**, so no pilot can be one. Written
+   * as an explicit null check rather than left to `!==`: `null !== "someId"` is
+   * true and would refuse correctly by luck, and a guard that is right by luck
+   * is one refactor from being wrong.
+   */
+  if (!staff && (ownerUserId === null || session.user.id !== ownerUserId)) {
+    return [];
+  }
 
   return db
     .select({

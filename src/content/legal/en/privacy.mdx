@@ -234,12 +234,28 @@ What follows describes what the code does, not what we would like it to do:
 | The sent-mail log | Kept indefinitely, and kept after account deletion |
 | Rate-limit counters and reviewer presence markers | Deleted automatically once their window passes — the **only automatic deletion** in the platform |
 | A drone still in **draft** | Deletable by its owner at any time, and its photographs are deleted from storage with it |
-| A drone once submitted for review | Not deletable |
+| A drone once submitted for review | Not deletable by you. On account closure it is **kept without an owner**, and its photographs are deleted |
 
-**There is currently no way to delete your account from inside the platform**,
-and the database itself refuses to delete a pilot who holds a registered drone
-or a booking. Deletion happens by writing to <ContactEmail />; we then delete
-what can be deleted and tell you plainly what cannot.
+**You can close your account yourself**, from the
+[account page](/settings/account). It happens immediately — it is not a request
+that gets reviewed. When you do:
+
+| Data | What happens |
+| --- | --- |
+| Account, pilot profile, sessions, notifications | Deleted |
+| Aircraft photographs and documents | Deleted from storage and from the database |
+| Bookings | Deleted |
+| **Aircraft and Remote ID records** | **Kept, with no owner** — the code on the sticker still resolves, and reads "registration withdrawn" |
+| **The audit log** | **Kept**, with your identity cleared from it |
+
+**Closing is refused in two cases**, each for a reason: while you hold an
+**approved upcoming booking** — an authorised flight with no accountable
+operator is the thing this platform exists to prevent, so cancel it first — or
+if yours is the **only administrator account**, because closing it would leave
+the platform with nobody to run it and no way back in.
+
+If you would rather write to us, or need something the page does not do:
+<ContactEmail />.
 
 As for why the log outlives the account: the log is the **audit trail** a
 regulator can go back to. A reviewer who deletes their account and takes every

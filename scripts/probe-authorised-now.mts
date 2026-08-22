@@ -78,13 +78,19 @@ const now = new Date();
 const slotStart = new Date(now.getTime() - 60 * 60 * 1000);
 const slotEnd = new Date(now.getTime() + 60 * 60 * 1000);
 
+// `drone.owner_user_id` is nullable since F28c (null = the owner deleted
+// their account). A probe wants a real pilot, so this asserts rather than
+// silently booking for nobody.
+const pilotUserId = target.ownerUserId;
+if (!pilotUserId) throw new Error("probe: target has no owner");
+
 const [row] = await db
   .insert(booking)
   .values({
     zoneId: permitted.id,
     droneId: target.droneId,
     remoteIdId: target.remoteIdId,
-    pilotUserId: target.ownerUserId,
+    pilotUserId,
     slotStart,
     slotEnd,
     // Seat 0 of a slot nothing else holds — `booking_seat_uniq` is partial on

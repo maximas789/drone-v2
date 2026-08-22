@@ -60,6 +60,9 @@ export default async function RemoteIdCardPage({
     remoteIdStatus: remoteId.status,
     droneStatus: drone.status,
     validUntil: drone.registrationExpiresAt,
+    // Never null here: this is the owner's own card, reached through a guard
+    // that already established they own it.
+    ownerUserId: drone.ownerUserId,
   });
 
   /**

@@ -81,7 +81,10 @@ export const qrRender = inngest.createFunction(
        * approval and the notification are already committed, and a missing link
        * is a worse report, not a worse outcome.
        */
-      if (sent.logId) {
+      // A withdrawn registration has nobody to link the mail to — and no
+      // mail was sent, because approval is what triggers this job and an
+      // owner-less drone cannot be approved.
+      if (sent.logId && row.ownerUserId) {
         await linkNotificationEmail(db, {
           userId: row.ownerUserId,
           entityId: droneId,

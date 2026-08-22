@@ -152,15 +152,32 @@ export const drone = pgTable(
   {
     id: id(),
     /**
-     * `restrict`, not `cascade`. A registration record is not the pilot's
-     * personal data to take with them — deleting an account that still holds
-     * registered aircraft is refused at the database, and F28 has to offer a
-     * real path (transfer, or revoke first) rather than quietly erasing an
-     * airframe that may be flying with an Ajniha sticker on it.
+     * **`set null`, and nullable — changed by F28c.** It was `restrict` and
+     * `not null`, with this reasoning: *a registration record is not the
+     * pilot's personal data to take with them, and deleting an account that
+     * still holds registered aircraft must not quietly erase an airframe that
+     * may be flying with an Ajniha sticker on it.*
+     *
+     * **That reasoning was right and is what this change preserves.** What was
+     * wrong was the mechanism. `restrict` does not protect the airframe; it
+     * only makes account deletion impossible, which is not a policy anybody
+     * chose — F27's privacy policy had to disclose it as "there is no
+     * self-service deletion".
+     *
+     * F28 requires two things that cannot both be literal: *drones deleted*,
+     * and *the Remote ID retained and still resolving*. `remote_id.drone_id` is
+     * `not null` and every fact a scan displays — build type, weight class —
+     * lives on this row, so deleting the drone takes the Remote ID with it and
+     * leaves a QR sticker resolving to nothing. **A null owner is what satisfies
+     * both**: the person is gone, the accountability record is not, and the code
+     * on the airframe answers `withdrawn` instead of 404.
+     *
+     * A null here therefore means exactly one thing — **the owner deleted their
+     * account** — and `registrationStatusOf` reads it as `withdrawn`. Nothing
+     * else in the app ever writes null: a drone is created with an owner and
+     * only account deletion removes one.
      */
-    ownerUserId: text()
-      .notNull()
-      .references(() => user.id, { onDelete: "restrict" }),
+    ownerUserId: text().references(() => user.id, { onDelete: "set null" }),
 
     nickname: text().notNull(),
     manufacturer: text(),

@@ -56,6 +56,8 @@ export async function submitDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
 
   const guard = await submissionGuards(tx, row);
   if (guard) return { ok: false, reason: guard };
@@ -80,6 +82,8 @@ export async function resubmitDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
 
   const guard = await submissionGuards(tx, row);
   if (guard) return { ok: false, reason: guard };
@@ -116,6 +120,8 @@ export async function renewDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
 
   const guard = await submissionGuards(tx, row);
   if (guard) return { ok: false, reason: guard };
@@ -156,6 +162,8 @@ export async function approveDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
   /**
    * **Four eyes, refused here rather than in the action.** The panel greys the
    * buttons and says why, but a server action is an ordinary POST and the
@@ -180,7 +188,7 @@ export async function approveDrone(
         registrationExpiresAt: registrationExpiryFrom(at),
       },
       notification: {
-        userId: row.ownerUserId,
+        userId: ownerUserId,
         type: "droneApproved",
         params: { drone: row.nickname },
         entityType: "drone",
@@ -222,6 +230,8 @@ export async function rejectDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
   // Four eyes applies to a refusal as much as to an approval: a reviewer who
   // can reject their own submission can clear their own queue.
   if (isOwnSubmission(actor.userId, row.ownerUserId)) {
@@ -241,7 +251,7 @@ export async function rejectDrone(
           rejectionReason: reason.trim(),
         },
         notification: {
-          userId: row.ownerUserId,
+          userId: ownerUserId,
           type: "droneRejected",
           params: { drone: row.nickname },
           entityType: "drone",
@@ -275,6 +285,8 @@ export async function revokeDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
 
   const outcome = await applyTransition(
     {
@@ -289,7 +301,7 @@ export async function revokeDrone(
         decidedByUserId: actor.userId,
       },
       notification: {
-        userId: row.ownerUserId,
+        userId: ownerUserId,
         type: "droneRevoked",
         params: { drone: row.nickname },
         entityType: "drone",
@@ -318,6 +330,8 @@ export async function reinstateDrone(
 ): Promise<DroneOutcome> {
   const row = await tx.query.drone.findFirst({ where: eq(drone.id, droneId) });
   if (!row) return { ok: false, reason: "not_found" };
+  const ownerUserId = row.ownerUserId;
+  if (ownerUserId === null) return { ok: false, reason: "not_found" };
 
   const outcome = await applyTransition(
     {
@@ -332,7 +346,7 @@ export async function reinstateDrone(
         decidedByUserId: actor.userId,
       },
       notification: {
-        userId: row.ownerUserId,
+        userId: ownerUserId,
         type: "droneReinstated",
         params: { drone: row.nickname },
         entityType: "drone",
@@ -362,6 +376,13 @@ async function submissionGuards(
   tx: DbExecutor,
   row: DroneRow,
 ): Promise<"profile_incomplete" | "photo_required" | "serial_required" | null> {
+  /**
+   * A drone with no owner has no profile to be complete — `owner_user_id` is
+   * null only after account deletion (F28c), and such a drone can no longer be
+   * submitted by anybody. Reported as `profile_incomplete` because that is what
+   * it is: there is no profile.
+   */
+  if (row.ownerUserId === null) return "profile_incomplete";
   const profile = await tx.query.pilotProfile.findFirst({
     where: eq(pilotProfile.userId, row.ownerUserId),
     columns: { completedAt: true },

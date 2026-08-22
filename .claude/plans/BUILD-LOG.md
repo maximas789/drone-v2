@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–40). F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–41). F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,150 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 41 — Wave 8 · F28c Account deletion, the `withdrawn` registration, and the policy rewrite (**F28 complete**)
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F28 is complete. Next is F29.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `drizzle/0006_cynical_master_mold.sql` | `drone.owner_user_id` → nullable, `on delete set null` |
+| `src/lib/data/account-deletion.ts` | `deletionBlock`, `deleteAccount` |
+| `src/lib/actions/settings.ts` | *(extended)* `deleteAccountAction` |
+| `src/app/[locale]/(app)/settings/account/page.tsx` | `/settings/account` |
+| `src/components/settings/delete-account.tsx` | Type-your-address confirmation |
+| `scripts/probe-account-deletion.mts` | **20 assertions against the live database** |
+| `src/lib/remote-id/redact.ts` | *(changed)* `RegistrationStatus` gains `withdrawn` |
+| `src/content/legal/{ar,en}/privacy.mdx` | *(rewritten)* the retention section |
+| `src/lib/legal/legal.test.ts` | *(extended)* the policy's deletion claims, pinned |
+| 11 more files | nullable-owner fallout — see below |
+
+---
+
+#### The spec asks for two things that cannot both be literal
+
+F28's deletion table says **drones deleted** *and* **Remote ID records retained, still resolving as "registration withdrawn"**. Those contradict each other in this schema: `remote_id.drone_id` is `not null`, and every fact a scan displays — build type, weight class, city — lives on the drone row. Deleting the drone takes the Remote ID with it and leaves a QR sticker on a real airframe resolving to nothing.
+
+F03 had already anticipated the collision, in a comment on the column itself: *"a registration record is not the pilot's personal data to take with them … F28 has to offer a real path rather than quietly erasing an airframe that may be flying with an Ajniha sticker on it."* **That reasoning was right; the mechanism was not.** `restrict` does not protect the airframe — it only makes account deletion impossible, which is not a policy anybody chose, and which F27's privacy policy then had to disclose as *"there is no self-service deletion"*.
+
+So: **`drone.owner_user_id` is nullable and `set null`.** The person goes, the accountability record stays, and the code answers `withdrawn` instead of 404. A null there means exactly one thing — the owner deleted their account — and nothing else in the app ever writes one.
+
+**The migration is three statements and I read them before applying** (rule 1): drop the FK, drop `not null`, re-add with `set null`. No data touched.
+
+---
+
+#### Most of the deletion is the schema's, not the code's
+
+Of the **22 foreign keys pointing at `user`**, six are `cascade` and fourteen are `set null` — including `audit_event.actor_user_id`, `email_log.user_id` and `remote_id_scan.viewer_user_id`. Deleting the row erases the personal record and anonymises the trail **in one statement**, which is what F28 asks for and is far more trustworthy than a hand-written sequence that has to remember all twenty-two.
+
+`account-deletion.ts` therefore handles only the four things the schema deliberately leaves:
+
+| | |
+|---|---|
+| `booking.pilot_user_id` | `restrict` — deleted first |
+| `drone.owner_user_id` | `set null` — the aircraft survives, owner-less |
+| `drone_photo` | hangs off `drone`, which survives — deleted explicitly |
+| stored blobs | not in the database — deleted **before** the rows that name them |
+
+**Blob order is deliberate.** Storage is not transactional. Files first means a failure leaves rows pointing at missing files — a broken image. The other order leaves files nothing can name — an orphaned blob nobody can find or delete, which is a privacy leak. F19b made the same call.
+
+---
+
+#### `withdrawn`, and where it ranks
+
+`RegistrationStatus` gains `withdrawn`, derived from `ownerUserId === null` rather than from a new enum value — so it is true by construction and needed no second migration.
+
+**Revocation outranks withdrawal.** Both mean "not authorised"; `revoked` additionally means *an authority grounded this aircraft*, which is the more actionable answer for an officer standing in front of it. A deleted account must not overwrite an enforcement decision in what a scan reports. Both orderings are now pinned by tests.
+
+The nullable owner rippled through **11 files** — the review queue, the reviewer's drone page, the officer's disambiguation list, the QR job, the drone workflow, three probe scripts. Every one is handled by *not looking up an owner that is not there*, never by asserting one is. `src/lib/workflow/drone.ts` gained a guard at all seven entry points: a transition that notifies an owner refuses when there is none.
+
+---
+
+#### The two refusals
+
+**An approved future booking blocks deletion**, and the refusal names the bookings with their dates — a pilot holding four cannot act on "you have approved bookings". An authorised flight with no accountable operator is precisely what this platform exists to prevent.
+
+**The last admin is blocked**, because the first account created becomes admin and there is no promotion path back. Checked on `role`, not on a count of promotable people — there would be nobody left to do the promoting.
+
+Both are re-checked **inside the action**, not trusted from the page: an action is an ordinary POST, the page may never have run, and a booking approved in the meantime must stop the deletion.
+
+---
+
+#### Verifying a destructive path without destroying anything
+
+Account deletion cannot be checked by clicking it: the only accounts on this machine are the user's own admin and the reviewer, and deleting either to see what happens is the exact mistake the feature must be trusted not to make.
+
+`scripts/probe-account-deletion.mts` builds a **synthetic pilot** with a drone, a Remote ID, an approved future booking, a co-pilot, a notification, a preference row and an audit event; then calls **the same functions the server action calls** — a probe that re-implemented the deletion would prove only that the probe works. **20 assertions, all passing**, and it cleans up after itself:
+
+```
+ok  blocked while an approved future booking stands
+ok  the refusal names the booking
+ok  a past approved booking does not block
+ok  account / profile / preference / notification / booking / co-pilot / photo gone
+ok  drone row SURVIVES … with no owner
+ok  remote ID SURVIVES
+ok  the pilot's audit event SURVIVES … with its actor cleared
+ok  a user.deleted event was written … and it too has no actor
+ok  the code now resolves as withdrawn
+```
+
+Run it with `NODE_OPTIONS="--conditions=react-server" pnpm exec tsx scripts/probe-account-deletion.mts` — **without that condition every probe in `scripts/` throws**, because `server-only` resolves to the entry that exists to throw. That is not new to this probe; the existing ones have the same requirement and none of them says so.
+
+---
+
+#### The policy said the opposite, yesterday
+
+F27a's retention section stated — correctly at the time — that there was no self-service deletion and that the database refused to delete a pilot holding a booking. The day this feature landed that became the most misleading paragraph in the document.
+
+It is rewritten in both languages: a table of what goes and what stays, both refusals named with their reasons, and the survival rule stated in the same words the settings page uses. `legal.test.ts` now pins it — the policy must contain `/settings/account`, must name both refusals, must say the Remote ID and audit log survive anonymised, and **must not contain the old sentence**. Three new tests, so the pair cannot drift a second time.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| Drones **anonymised**, not deleted | Above. The two spec rows contradict; this satisfies the observable requirement — the code still resolves, as `withdrawn`. |
+| `withdrawn` derived, not a new enum value | `ownerUserId === null` is the fact. An enum value would be a second copy of it that could disagree. |
+| The probe moves a slot into the past rather than cancelling | ESLint rule 11 forbids a status write outside `src/lib/workflow/`, rightly. Testing that a **finished** booking does not block is also the better assertion — that an approved one does is obvious; the `slotStart > now` clause is what somebody could drop unnoticed. |
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm db:generate` → **read the SQL** → `pnpm db:migrate` | 3 statements, applied; `owner_user_id` now `YES` nullable, `SET NULL` |
+| `pnpm test` | **1069 passed, 63 files** |
+| `pnpm exec tsc --noEmit` | clean |
+| `pnpm lint` | clean; `i18n:check` — 1994 keys in sync |
+| `pnpm build` | compiled; `/settings/account` in the route list |
+| **The deletion probe** | **20/20**, against the live database, self-cleaning |
+| `/ar/settings/account` signed in as the only admin | the last-admin refusal renders, the consequence list renders, and **no delete button and no confirmation field exist on the page at all** |
+| `/ar/privacy`, `/en/privacy` | 200; the new retention table renders; the old "no way to delete" sentence is **gone** from both |
+| Database afterwards | 2 users (the real two), **0 probe rows, 0 owner-less drones** |
+| The suite caught a missing audit label | `user.deleted` had no `review.auditActions` entry — two tests red until it did |
+
+#### Not verified
+
+- **The delete button has never been pressed in a browser**, and deliberately so — see above. The action wraps `deleteAccount`, which the probe drives directly; what is unexercised is the confirmation field, the refusal rendering *after* a failed attempt, and the sign-out-and-redirect. **A throwaway account through the real UI is the way to close this**, and it needs a sign-up.
+- **`filesDeleted: 1` is weaker than it looks.** The probe pointed a photo row at a path that does not exist to prove the loop survives a failed delete — the local driver did not throw, so the `try/catch` was never actually exercised. On Vercel Blob it might. The resilience is written, not observed.
+- **375 px** — five sessions now.
+- The password change and the populated session list, still. Both still need one fresh sign-in.
+
+#### Next session should know
+
+- **F29 is the system / ops page**, and `SETTINGS_SECTIONS` is where its **admin-only** entry goes — the first one. `sectionsFor` already filters on `adminOnly` and `sections.test.ts` already asserts non-admins never see such a row; both were written in F28a for this.
+- **F29 must not invent state.** The `job` table is real and F08 mirrors Inngest into it; the QR/`APP_URL` check is real. Anything else — uptime, queue depth, a health score — would be the empty-Billing-tab failure at ops scale.
+- **`NODE_OPTIONS="--conditions=react-server"` is required to run anything in `scripts/`.** Worth putting in a `package.json` script the next time somebody touches that folder.
+- A drone with `owner_user_id IS NULL` is a **withdrawn** registration and nothing else writes that null. Any new query joining drone → user must decide what to do with it; the eleven existing ones all skip the lookup rather than assert an owner.
 
 ---
 

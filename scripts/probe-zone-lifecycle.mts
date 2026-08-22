@@ -254,13 +254,19 @@ async function main() {
     .innerJoin(remoteId, eq(remoteId.droneId, drone.id))
     .limit(1);
 
+// `drone.owner_user_id` is nullable since F28c (null = the owner deleted
+// their account). A probe wants a real pilot, so this asserts rather than
+// silently booking for nobody.
+const pilotUserId = aDrone.ownerUserId;
+if (!pilotUserId) throw new Error("probe: aDrone has no owner");
+
   let bookingId: string | null = null;
   if (aDrone) {
     const slotStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const [row] = await db
       .insert(booking)
       .values({
-        pilotUserId: aDrone.ownerUserId,
+        pilotUserId,
         droneId: aDrone.id,
         remoteIdId: aDrone.remoteIdId,
         zoneId: permittedId,

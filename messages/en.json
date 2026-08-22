@@ -671,7 +671,9 @@
         "declaration_too_long": "That is longer than allowed.",
         "module_serial_claimed": "That serial is already declared on another aircraft. One module broadcasts one identity."
       }
-    }
+    },
+    "statusWithdrawn": "Registration withdrawn",
+    "statusWithdrawnBody": "This aircraft's owner closed their account, so there is no longer an accountable person behind this code. The registration is no longer valid."
   },
   "remoteIdPage": {
     "pageTitle": "Remote ID",
@@ -1262,7 +1264,8 @@
       "zone_hours_changed": "Zone hours changed",
       "zone_published": "Zone published",
       "zone_suspended": "Zone suspended",
-      "zone_updated": "Zone details updated"
+      "zone_updated": "Zone details updated",
+      "user_deleted": "Account closed"
     },
     "errors": {
       "not_found": "This submission could not be found.",
@@ -1498,6 +1501,26 @@
           "body": "A published closure covering a zone you have a booking in."
         }
       }
+    },
+    "account": {
+      "title": "Account",
+      "intro": "Closing your account for good.",
+      "whatHappens": "What happens when you close it",
+      "deletedAccount": "Your account and profile are deleted — name, identity document, date of birth, mobile — along with your sessions and notifications.",
+      "deletedDrones": "Your aircraft photographs and documents are deleted from storage.",
+      "deletedBookings": "Your bookings are deleted.",
+      "retainedRemoteId": "Remote ID records are kept, without an owner: the code on your aircraft's sticker still resolves, and reads “registration withdrawn” rather than disappearing.",
+      "retainedAudit": "The audit log is kept, with your identity cleared from it. That is what keeps the decision trail worth anything to a regulator after you have gone.",
+      "seePolicy": "The full detail is in the retention section of the privacy policy.",
+      "confirmLabel": "Type {email} to confirm",
+      "confirmHint": "We ask for the address not to verify you, but so that you are certain which account you are closing.",
+      "deleteAction": "Close account permanently",
+      "deleting": "Closing…",
+      "errorMismatch": "That address does not match this account's email.",
+      "errorLastAdmin": "The only administrator's account cannot be closed.",
+      "errorApprovedBookings": "You hold an approved upcoming booking. Cancel it first.",
+      "blockedLastAdmin": "This is the only administrator account in the system. Closing it would leave the platform with nobody to run it and no way back in, so it is refused. Appoint another administrator first.",
+      "blockedBookings": "Your account cannot be closed while you hold an approved upcoming booking: an authorised flight with no accountable operator is exactly what this platform exists to prevent. Cancel the bookings below and try again."
     }
   },
   "system": {

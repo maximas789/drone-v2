@@ -219,11 +219,14 @@ describe("redactRemoteId — reviewer and admin", () => {
   });
 });
 
+/** Every case below is a drone that still has an owner, unless it says so. */
+const OWNER = "usr_owner";
+
 describe("registrationStatusOf", () => {
   it("reports suspension above everything the drone row says", () => {
     expect(
       registrationStatusOf(
-        { remoteIdStatus: "suspended", droneStatus: "approved", validUntil: null },
+        { remoteIdStatus: "suspended", droneStatus: "approved", validUntil: null, ownerUserId: OWNER },
         NOW,
       ),
     ).toBe("suspended");
@@ -232,7 +235,7 @@ describe("registrationStatusOf", () => {
   it("reports a revoked drone as revoked", () => {
     expect(
       registrationStatusOf(
-        { remoteIdStatus: "suspended", droneStatus: "revoked", validUntil: null },
+        { remoteIdStatus: "suspended", droneStatus: "revoked", validUntil: null, ownerUserId: OWNER },
         NOW,
       ),
     ).toBe("revoked");
@@ -246,6 +249,7 @@ describe("registrationStatusOf", () => {
           remoteIdStatus: "active",
           droneStatus: "approved",
           validUntil: new Date("2026-08-17T09:59:59Z"),
+          ownerUserId: OWNER,
         },
         NOW,
       ),
@@ -257,17 +261,53 @@ describe("registrationStatusOf", () => {
           remoteIdStatus: "active",
           droneStatus: "approved",
           validUntil: new Date("2026-08-17T10:00:01Z"),
+          ownerUserId: OWNER,
         },
         NOW,
       ),
     ).toBe("active");
   });
 
+  it("reports a drone whose owner deleted their account as withdrawn", () => {
+    expect(
+      registrationStatusOf(
+        {
+          remoteIdStatus: "active",
+          droneStatus: "approved",
+          validUntil: null,
+          ownerUserId: null,
+        },
+        NOW,
+      ),
+    ).toBe("withdrawn");
+  });
+
+  /**
+   * **Revocation outranks withdrawal.** Both mean "not authorised"; `revoked`
+   * additionally means an authority grounded this aircraft, which is the more
+   * actionable answer for the officer standing in front of it. A deleted
+   * account must not be able to overwrite an enforcement decision in what a
+   * scan reports.
+   */
+  it("still reports revoked when the owner has also gone", () => {
+    expect(
+      registrationStatusOf(
+        {
+          remoteIdStatus: "active",
+          droneStatus: "revoked",
+          validUntil: null,
+          ownerUserId: null,
+        },
+        NOW,
+      ),
+    ).toBe("revoked");
+  });
+
   it("reports anything not approved as unregistered", () => {
     for (const droneStatus of ["draft", "pending", "rejected"]) {
       expect(
         registrationStatusOf(
-          { remoteIdStatus: "active", droneStatus, validUntil: null },
+          { remoteIdStatus: "active", droneStatus, validUntil: null, ownerUserId: OWNER },
           NOW,
         ),
       ).toBe("unregistered");

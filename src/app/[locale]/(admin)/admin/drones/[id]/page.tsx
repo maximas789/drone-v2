@@ -15,7 +15,11 @@ import { MaskedId } from "@/components/profile/masked-id";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { requireReviewer } from "@/lib/auth-guards";
-import { getDroneForReview, getPilotHistory } from "@/lib/data/review";
+import {
+  getDroneForReview,
+  getPilotHistory,
+  type PilotHistory,
+} from "@/lib/data/review";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 import { fileUrlFor } from "@/lib/storage";
@@ -63,7 +67,17 @@ export default async function AdminDroneReviewPage({
   const { drone, photos, remoteId, declarations, profile, city, account, trail } =
     detail;
 
-  const history = await getPilotHistory(session, drone.ownerUserId, drone.id);
+  /**
+   * **A withdrawn registration has no pilot** — `owner_user_id` is null once
+   * the owner deletes their account (F28c). There is no history to fetch and
+   * no identity to reveal, so both are skipped rather than queried with a null.
+   * The aircraft, its photos and its trail still render: a reviewer opening an
+   * old decision must see what happened, not a 404.
+   */
+  const ownerUserId = drone.ownerUserId;
+  const history: PilotHistory | null = ownerUserId
+    ? await getPilotHistory(session, ownerUserId, drone.id)
+    : { dronesTotal: 0, dronesApproved: 0, bookingsTotal: 0, noShows: 0, rejections: [] };
   const needsSerial = serialRequiredFor(drone.buildType as BuildType);
   /**
    * **Four eyes.** F22c's rule, and the reason F22a deferred it: every pending
@@ -221,10 +235,9 @@ export default async function AdminDroneReviewPage({
                 ) : (
                   <Badge variant="secondary">{t("identityUnverified")}</Badge>
                 )}
-                <PilotIdentityReveal
-                  userId={drone.ownerUserId}
-                  locale={locale}
-                />
+                {ownerUserId ? (
+                  <PilotIdentityReveal userId={ownerUserId} locale={locale} />
+                ) : null}
               </div>
               {/*
                 Verifying an identity is F22c's control, on the pilots screen.

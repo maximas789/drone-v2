@@ -178,6 +178,18 @@ export const USER_TRAIL_ACTIONS = [
    * row is about what a member of staff *did*.
    */
   "user.audit_exported",
+  /**
+   * F28c. **The row outlives its author**, which is the whole point: the
+   * cascade nulls `actor_user_id` a statement later, so what remains is *an
+   * account was closed, at this time, from this hashed address* with no name
+   * attached. That is what F27's privacy policy promises about audit events
+   * surviving deletion, made true rather than asserted.
+   *
+   * `after` carries counts and nothing else — putting the person's details in
+   * the one table with no delete path would preserve exactly what the deletion
+   * was for.
+   */
+  "user.deleted",
 ] as const;
 
 export type UserTrailAction = (typeof USER_TRAIL_ACTIONS)[number];

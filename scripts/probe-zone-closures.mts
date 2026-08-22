@@ -205,6 +205,12 @@ async function main() {
     .innerJoin(remoteId, eq(remoteId.droneId, drone.id))
     .limit(1);
 
+// `drone.owner_user_id` is nullable since F28c (null = the owner deleted
+// their account). A probe wants a real pilot, so this asserts rather than
+// silently booking for nobody.
+const pilotUserId = aDrone.ownerUserId;
+if (!pilotUserId) throw new Error("probe: aDrone has no owner");
+
   let insideId: string | null = null;
   if (!aDrone) {
     console.log("  --   no drone with a Remote ID; the overlap checks are skipped");
@@ -214,7 +220,7 @@ async function main() {
       .insert(booking)
       .values([
         {
-          pilotUserId: aDrone.ownerUserId,
+          pilotUserId,
           droneId: aDrone.id,
           remoteIdId: aDrone.remoteIdId,
           zoneId,
@@ -224,7 +230,7 @@ async function main() {
           status: "approved",
         },
         {
-          pilotUserId: aDrone.ownerUserId,
+          pilotUserId,
           droneId: aDrone.id,
           remoteIdId: aDrone.remoteIdId,
           zoneId,
@@ -234,7 +240,7 @@ async function main() {
           status: "approved",
         },
         {
-          pilotUserId: aDrone.ownerUserId,
+          pilotUserId,
           droneId: aDrone.id,
           remoteIdId: aDrone.remoteIdId,
           zoneId,

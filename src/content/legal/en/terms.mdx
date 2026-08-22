@@ -1,0 +1,218 @@
+export const meta = {
+  title: "Terms of use",
+  description:
+    "What you agree to when you open an account here, and what the platform owes you — and the clause that matters most: registering with Ajniha is not permission to fly.",
+  sections: [
+    { id: "about-these-terms", title: "About these terms" },
+    { id: "not-a-substitute-for-gaca", title: "This is not a substitute for GACA authorisation" },
+    { id: "eligibility", title: "Who may use it" },
+    { id: "your-account", title: "Your account" },
+    { id: "registering-an-aircraft", title: "Registering an aircraft" },
+    { id: "remote-id-obligations", title: "Your Remote ID obligations" },
+    { id: "booking-a-flight", title: "Booking a flight window" },
+    { id: "cancellation-and-no-shows", title: "Cancellation and no-shows" },
+    { id: "suspension-and-revocation", title: "Suspension and revocation" },
+    { id: "acceptable-use", title: "Acceptable use" },
+    { id: "no-warranty", title: "No warranty" },
+    { id: "limitation-of-liability", title: "Limitation of liability" },
+    { id: "changes-to-these-terms", title: "Changes to these terms" },
+    { id: "governing-law", title: "Governing law" },
+  ],
+};
+
+<ProposalNotice />
+
+<H2 id="about-these-terms">About these terms</H2>
+
+<Callout kind="warning">
+  This is a **first draft** written from what the platform actually does. It is
+  not legal advice and has not been reviewed by a practitioner.
+</Callout>
+
+These terms are an agreement between you and <Org />. By opening an account you
+agree to them and to the [privacy policy](/privacy). If you do not agree, do not
+open an account.
+
+<H2 id="not-a-substitute-for-gaca">This is not a substitute for GACA authorisation</H2>
+
+<Callout kind="warning">
+  **Registering on this platform grants you no legal permission to fly, and
+  replaces no licence or authorisation required by the General Authority of
+  Civil Aviation.**
+
+  Approval here — of a registration or of a booking — must never be read as
+  clearance from an official body. Complying with the applicable regulations
+  remains yours alone, and you must obtain whatever the competent authorities
+  require before you fly.
+</Callout>
+
+This platform, <Org />, is a **proposed initiative and not an official system**
+of the General Authority of Civil Aviation. It is not endorsed by them and not
+affiliated with them. The zones drawn on the map are **authored by us for
+demonstration**, and are not official airspace.
+
+<H2 id="eligibility">Who may use it</H2>
+
+To use the platform you must:
+
+- Be **18 or over**. This is checked from your date of birth when you complete
+  your pilot profile.
+- Hold a **valid Saudi identity document** — a national ID or an Iqama.
+- Enter **accurate** information. Inaccurate information is sufficient grounds
+  to refuse a registration or to revoke one later.
+
+**One profile per person.** This is enforced on a hash of the identity document
+number, so one number cannot hold two profiles.
+
+**Your identity is verified by a human reviewer**, never automatically. There is
+no SMS step, no instant check, and no approval issued by a system.
+
+<H2 id="your-account">Your account</H2>
+
+You are responsible for keeping your password safe and for everything done from
+your account. Tell us immediately if you suspect somebody else has reached it.
+
+Do not create an account in someone else's name, and do not enter another
+person's details — including a **co-pilot** on a booking — without their
+knowledge and agreement.
+
+<H2 id="registering-an-aircraft">Registering an aircraft</H2>
+
+An aircraft starts as a draft and is then submitted for review. After that:
+
+- **The decision is discretionary and made by a human reviewer.** No aircraft
+  registration is ever approved automatically.
+- **A rejection comes with a written reason**, which you read as it was written.
+  You may edit and resubmit, and there is no limit on attempts.
+- **A reviewer cannot decide a submission they made themselves.** Separating the
+  submitter from the approver is enforced in the code, not merely a policy.
+- **Registration lasts 3 years** from issue, to the same calendar day three years
+  on. After that it is expired and must be renewed.
+- **Renewal does not change your Remote ID code.** A sticker already on your
+  airframe keeps resolving after a renewal.
+
+**No serial number is required.** Self-built and FPV aircraft register here with
+a Remote ID in place of one — the gap this platform exists to close.
+
+<H2 id="remote-id-obligations">Your Remote ID obligations</H2>
+
+When a registration is approved, your aircraft is issued a **Remote ID code** and
+a QR sticker. You agree to:
+
+- Keep the sticker **visible and intact** on the aircraft.
+- Never move one aircraft's code to another aircraft.
+- Not fly on an **expired, suspended or revoked** registration.
+- Keep the aircraft's details up to date if they change.
+
+Anyone who scans the code sees the registration status and general details about
+the aircraft **without seeing your identity**. What is and is not shown is set
+out in the [privacy policy](/privacy#what-a-scan-reveals).
+
+<H2 id="booking-a-flight">Booking a flight window</H2>
+
+A booking allocates you a **seat** in a specific zone and time window. You agree
+to:
+
+- Fly within the zone's boundary, its time window, and its permitted ceiling.
+- Follow the zone's rules and any published closure over it.
+- Hold a registration that is **valid at the time of the flight**, not merely at
+  the time of booking.
+
+**Some zones approve bookings automatically and some do not.** Automatic
+approval needs both conditions together: the zone must allow it, and your
+no-show record must be clear — see [the next section](#cancellation-and-no-shows).
+Where there is no automatic approval, the decision is discretionary and made by a
+human reviewer, and the airspace is evaluated again before approval.
+
+**An approved booking may be sent back to the review queue** if a zone boundary
+moves beneath it. That is not a cancellation: your seat is held, and the decision
+goes back to a person.
+
+<H2 id="cancellation-and-no-shows">Cancellation and no-shows</H2>
+
+| Case | Rule |
+| --- | --- |
+| You cancel | Allowed up to **2 hours** before the window starts, and not after |
+| The operator cancels | **At any time**, with a written reason you receive |
+| A published closure over the zone | The booking is cancelled automatically, whether approved or still pending |
+| The aircraft's registration is revoked | All of its future bookings are cancelled |
+
+The two hours are what makes a freed seat worth anything: a cancellation ten
+minutes beforehand is a no-show with better manners.
+
+A **no-show** is recorded if you do not check in and **30 minutes** pass after
+the window ends.
+
+<Callout kind="note">
+  **What a no-show costs, in numbers:** **3 no-shows within 90 days** removes
+  automatic approval, so your bookings go to a human reviewer instead.
+
+  The window is **rolling**: there is no permanent penalty and nothing to apply
+  to have lifted — as soon as the oldest no-show falls outside the 90 days,
+  automatic approval returns on its own.
+</Callout>
+
+<H2 id="suspension-and-revocation">Suspension and revocation</H2>
+
+An aircraft's registration may be revoked if:
+
+- the information given was inaccurate or misleading;
+- you flew outside your approved window, outside the zone's boundary, or against
+  its rules;
+- the Remote ID code was misused or moved to another aircraft;
+- these terms were breached repeatedly.
+
+**Revocation is an admin's power alone**, not a reviewer's, and **never happens
+without a written reason**. It suspends the Remote ID and cancels every future
+booking for that aircraft. Revocation is **reversible**: an admin can reinstate
+the registration, and both acts stay in the log.
+
+Every decision of this kind is written to a log that **cannot be edited or
+deleted**.
+
+<H2 id="acceptable-use">Acceptable use</H2>
+
+You must not:
+
+- enter false information or impersonate anyone;
+- attempt to reach an account or record that is not yours;
+- harvest the platform's data automatically, or try to turn the Remote ID scan
+  page into a browsable registry;
+- work around rate limits or any other safeguard;
+- use the platform for any unlawful purpose.
+
+<H2 id="no-warranty">No warranty</H2>
+
+The platform is provided **as is**, with no warranty of any kind. We do not
+warrant that it will be available without interruption, that it will be free of
+errors, or that its data or zones are accurate, complete or current.
+
+Specifically: **the zones and rules shown here are authored by us for
+demonstration and are not official airspace**, and must not be relied on to
+decide whether flying somewhere is lawful.
+
+<H2 id="limitation-of-liability">Limitation of liability</H2>
+
+To the extent permitted by law, we accept no liability for indirect,
+consequential or incidental damages, nor for lost data or lost profits, arising
+from your use of the platform or from being unable to use it.
+
+**Every flight you make is your own responsibility**, as is complying with the
+applicable regulations — whether or not a booking here was approved.
+
+<H2 id="changes-to-these-terms">Changes to these terms</H2>
+
+These terms may change. The **effective date** appears at the top of the page and
+changes with any substantive revision. Continuing to use the platform after that
+means you accept the revised terms.
+
+You may stop using the platform at any time. What remains of your data
+afterwards is set out under
+[how long we keep it](/privacy#how-long-we-keep-it).
+
+<H2 id="governing-law">Governing law</H2>
+
+These terms are governed by <GoverningLaw />, and any dispute arising from them
+falls to the courts of <Jurisdiction />.
+
+For questions: <ContactEmail />

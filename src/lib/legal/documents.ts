@@ -23,11 +23,15 @@
  */
 
 /**
- * **Privacy only, for now.** F27b adds `"terms"` here together with the file it
- * names — a slug listed before its document exists is a 404 in a `<select>`,
- * and the loader would fail at build time trying to import it.
+ * Order is the order they appear in the footer.
+ *
+ * A slug is added **in the same commit as the file it names** — F27a shipped
+ * `["privacy"]` alone for that reason, and F27b added `"terms"` with its two
+ * `.mdx` documents. A slug listed ahead of its file is a build-time import
+ * failure, and `legal.test.ts` asserts the slugs and the files are the same set
+ * in both locales.
  */
-export const LEGAL_SLUGS = ["privacy"] as const;
+export const LEGAL_SLUGS = ["privacy", "terms"] as const;
 
 export type LegalSlug = (typeof LEGAL_SLUGS)[number];
 
@@ -61,6 +65,22 @@ export const LEGAL_SECTIONS = {
     "cross-border-transfer",
     "security",
     "changes-and-contact",
+  ],
+  terms: [
+    "about-these-terms",
+    "not-a-substitute-for-gaca",
+    "eligibility",
+    "your-account",
+    "registering-an-aircraft",
+    "remote-id-obligations",
+    "booking-a-flight",
+    "cancellation-and-no-shows",
+    "suspension-and-revocation",
+    "acceptable-use",
+    "no-warranty",
+    "limitation-of-liability",
+    "changes-to-these-terms",
+    "governing-law",
   ],
 } as const satisfies Record<LegalSlug, readonly string[]>;
 

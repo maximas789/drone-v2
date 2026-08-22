@@ -1,5 +1,6 @@
 {
   "common": {
+    "footerNavLabel": "Site links",
     "appName": "Ajniha",
     "tagline": "Drone registration and flight-zone booking",
     "proposalNotice": "This is a proposal prototype, not an official system adopted by the General Authority of Civil Aviation.",
@@ -1477,7 +1478,8 @@
     "terms": "Terms of use",
     "privacy": "Privacy policy",
     "tocLabel": "On this page",
-    "effectiveDate": "Effective {date}"
+    "effectiveDate": "Effective {date}",
+    "acceptance": "By creating an account you agree to the <terms>Terms of use</terms> and the <privacy>Privacy policy</privacy>."
   },
   "airspace": {
     "decisionAllowed": "Allowed",

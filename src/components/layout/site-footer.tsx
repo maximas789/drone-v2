@@ -9,13 +9,15 @@ import { Link } from "@/i18n/navigation";
  * been built. A footer link to a 404 is worse than a footer without one, and
  * "add it now, wire it later" is how a dead link ships.
  *
- * **F26 adds the first one**, because `/docs` now exists and is public. F27
- * adds Privacy and Terms the same way — when they resolve, and not before.
+ * **F26 added the first one**, because `/docs` existed and was public. **F27b
+ * adds Privacy and Terms** on the same rule — both routes resolve in both
+ * locales, so the links go in now and not before.
  */
 export async function SiteFooter() {
   const t = await getTranslations("landing");
   const tCommon = await getTranslations("common");
   const tDocs = await getTranslations("docs");
+  const tLegal = await getTranslations("legal");
 
   /**
    * A fixed year, not `new Date()`. A year that changes at midnight on 1
@@ -27,17 +29,28 @@ export async function SiteFooter() {
     <footer className="mt-16 border-t">
       <div className="text-muted-foreground mx-auto flex w-full max-w-6xl flex-col gap-2 p-4 text-sm">
         {/**
-         * A `<nav>` with one link is still a nav: F27 adds Privacy and Terms
-         * beside it, and a list that starts as a bare anchor gets rebuilt as a
-         * list the moment it has a second member.
+         * Three members now, so the `<ul>` becomes a real row: `flex-wrap` and
+         * `gap-x-4`, never a `·` separator typed between the items. A
+         * hand-typed separator is read aloud by a screen reader and lands on
+         * the wrong side of the line under RTL, where `gap` is direction-aware
+         * for free.
          */}
-        <nav>
-          <ul>
-            <li>
-              <Link href="/docs" className="hover:text-foreground underline underline-offset-4">
-                {tDocs("title")}
-              </Link>
-            </li>
+        <nav aria-label={tCommon("footerNavLabel")}>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1">
+            {[
+              { href: "/docs", label: tDocs("title") },
+              { href: "/privacy", label: tLegal("privacy") },
+              { href: "/terms", label: tLegal("terms") },
+            ].map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="hover:text-foreground underline underline-offset-4"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
         <p>{t("footerLine")}</p>

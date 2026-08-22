@@ -14,7 +14,11 @@ import {
   isLegalSlug,
   legalSectionHref,
 } from "./documents";
+import { NO_SHOW_GRACE_MINUTES } from "@/lib/inngest/rules";
 import { LOCALES } from "@/lib/locale";
+import { MIN_AGE_YEARS } from "@/lib/validation/profile";
+import { PILOT_CANCEL_LEAD_MS, REGISTRATION_YEARS } from "@/lib/workflow/rules";
+import { TRANSITIONS } from "@/lib/workflow/transitions";
 
 /**
  * **This file is why the legal pages are allowed to have a table of contents.**
@@ -78,6 +82,7 @@ describe("the legal documents' manifest", () => {
 
   it("narrows slugs, and rejects one it does not know", () => {
     expect(isLegalSlug("privacy")).toBe(true);
+    expect(isLegalSlug("terms")).toBe(true);
     expect(isLegalSlug("cookie-policy")).toBe(false);
     expect(legalSectionHref("privacy", "cookies")).toBe("/privacy#cookies");
   });
@@ -214,6 +219,125 @@ describe("the privacy policy's substance", () => {
   it("states the retention period the code enforces", () => {
     expect(sourceOf("en", "privacy")).toContain("**3 years**");
     expect(sourceOf("ar", "privacy")).toContain("**3 سنوات**");
+  });
+});
+
+describe("the terms' operational clauses", () => {
+  /**
+   * **The clauses F27 singles out, each against the constant that enforces it.**
+   *
+   * A terms page is the easiest document in the repository to write from
+   * memory, and the most expensive to get wrong: "cancel up to an hour before"
+   * is a sentence nobody would question and the code refuses at two. So every
+   * number in the prose is asserted against the module that owns it.
+   *
+   * `MIN_AGE_YEARS`, `REGISTRATION_YEARS`, `PILOT_CANCEL_LEAD_MS` and
+   * `NO_SHOW_GRACE_MINUTES` come from pure modules and are imported. The two
+   * no-show numbers live in `src/lib/data/pilot.ts`, which carries
+   * `server-only` and opens a database connection, so they are **read out of
+   * its source** rather than dragged into this suite — the same call the `.mdx`
+   * files get above, for the same reason.
+   */
+  function constantIn(file: string, name: string): number {
+    const source = readFileSync(file, "utf8");
+    const match = new RegExp(`${name}\\s*=\\s*(\\d+)`).exec(source);
+    if (!match) throw new Error(`${name} not found in ${file}`);
+    return Number(match[1]);
+  }
+
+  const numbers = {
+    minAge: MIN_AGE_YEARS,
+    years: REGISTRATION_YEARS,
+    cancelHours: PILOT_CANCEL_LEAD_MS / (60 * 60 * 1000),
+    graceMinutes: NO_SHOW_GRACE_MINUTES,
+    noShowLimit: constantIn("src/lib/data/pilot.ts", "NO_SHOW_LIMIT"),
+    noShowDays: constantIn("src/lib/data/pilot.ts", "NO_SHOW_WINDOW_DAYS"),
+  };
+
+  it("has the constants this suite believes it has", () => {
+    expect(numbers).toEqual({
+      minAge: 18,
+      years: 3,
+      cancelHours: 2,
+      graceMinutes: 30,
+      noShowLimit: 3,
+      noShowDays: 90,
+    });
+  });
+
+  it("prints every one of them, in both languages", () => {
+    const expected = {
+      en: [
+        `**${numbers.minAge} or over**`,
+        `lasts ${numbers.years} years`,
+        `**${numbers.cancelHours} hours** before`,
+        `**${numbers.graceMinutes} minutes**`,
+        `**${numbers.noShowLimit} no-shows within ${numbers.noShowDays} days**`,
+      ],
+      ar: [
+        `**${numbers.minAge} سنة**`,
+        `**مدة التسجيل ${numbers.years} سنوات**`,
+        `**${numbers.graceMinutes} دقيقة**`,
+        `**${numbers.noShowLimit} حالات عدم حضور خلال ${numbers.noShowDays} يوماً**`,
+        /**
+         * **The cancellation window is the one number Arabic does not spell
+         * with a digit.** Two of something is the dual — `ساعتين`, one word,
+         * no numeral — and writing `2 ساعات` to make it greppable would be
+         * broken Arabic on the page that has to be trusted most.
+         *
+         * So the assertion is on the dual form, and it is guarded by the
+         * `cancelHours: 2` line in the test above: change
+         * `PILOT_CANCEL_LEAD_MS` and that test fails first, pointing here. The
+         * phrase below then has to be rewritten by someone who knows that
+         * three hours is `3 ساعات` and the dual is gone.
+         */
+        ...(numbers.cancelHours === 2 ? ["**ساعتين** قبل بداية النافذة"] : []),
+      ],
+    };
+
+    for (const [locale, phrases] of Object.entries(expected)) {
+      const source = sourceOf(locale, "terms");
+      for (const phrase of phrases) {
+        expect(source, `${locale}/terms is missing "${phrase}"`).toContain(
+          phrase,
+        );
+      }
+    }
+  });
+
+  /**
+   * The single most important sentence in the app, and the one an edit is most
+   * likely to soften. Both halves are required: that this grants no permission
+   * to fly, and that Ajniha is a proposal rather than an official GACA system.
+   */
+  it("says it is not a substitute for GACA authorisation, prominently", () => {
+    expect(LEGAL_SECTIONS.terms as readonly string[]).toContain(
+      "not-a-substitute-for-gaca",
+    );
+    // Second of fourteen sections — above the fold, not buried.
+    expect(LEGAL_SECTIONS.terms[1]).toBe("not-a-substitute-for-gaca");
+
+    expect(sourceOf("en", "terms")).toContain(
+      "grants you no legal permission to fly",
+    );
+    expect(sourceOf("en", "terms")).toContain(
+      "**proposed initiative and not an official system**",
+    );
+    expect(sourceOf("ar", "terms")).toContain("لا يمنحك أي إذن نظامي بالطيران");
+    expect(sourceOf("ar", "terms")).toContain(
+      "**مبادرة مقترحة، لا نظاماً رسمياً**",
+    );
+  });
+
+  /**
+   * Revocation is `actors: ["admin"]` in `TRANSITIONS`, deliberately not
+   * `reviewer` — the terms must not describe a power a reviewer does not have.
+   */
+  it("attributes revocation to an admin, not a reviewer", () => {
+    expect(TRANSITIONS["drone.revoked"].actors).toEqual(["admin"]);
+    expect(TRANSITIONS["drone.revoked"].reasonMinLength).toBeGreaterThan(0);
+    expect(sourceOf("en", "terms")).toContain("**Revocation is an admin's power alone**");
+    expect(sourceOf("ar", "terms")).toContain("**السحب صلاحية مسؤول النظام وحده**");
   });
 });
 

@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–37). F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–38). F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,128 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 38 — Wave 8 · F27b Terms, the footer links and the acceptance line (**F27 complete**)
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F27 is complete — every acceptance criterion verified.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/content/legal/{ar,en}/terms.mdx` | The terms, 14 sections, Arabic authored first |
+| `src/app/[locale]/(public)/terms/page.tsx` | `/ar/terms`, `/en/terms` |
+| `src/components/legal/legal-page.tsx` | The shared body + `legalMetadata`; both routes are now ~20-line wrappers |
+| `src/components/legal/acceptance-line.tsx` | "By creating an account you agree to…", `t.rich` with two links |
+| `src/lib/legal/documents.ts` | *(extended)* `"terms"` in `LEGAL_SLUGS` and its 14 section ids |
+| `src/lib/legal/legal.test.ts` | *(extended)* 17 tests — the operational clauses now checked against the constants |
+| `src/components/layout/site-footer.tsx` | *(extended)* Docs · Privacy · Terms |
+| `src/app/[locale]/(public)/(auth)/sign-up/page.tsx` | *(extended)* the acceptance line under the button |
+| `messages/{ar,en}.json` | `legal.acceptance`, `common.footerNavLabel` |
+
+---
+
+#### The terms are checked against the code, not written from memory
+
+A terms page is the easiest document in this repository to write plausibly and get wrong: *"cancel up to an hour before"* is a sentence nobody would question and the code refuses at two hours. So every operational number was read out of the module that enforces it, and `legal.test.ts` now asserts the prose against the constant:
+
+| Clause | Constant | Where |
+|---|---|---|
+| 18 or over | `MIN_AGE_YEARS = 18` | `src/lib/validation/profile.ts` |
+| Registration lasts 3 years | `REGISTRATION_YEARS = 3` | `src/lib/workflow/rules.ts` |
+| Pilot may cancel up to 2 hours before | `PILOT_CANCEL_LEAD_MS` | `src/lib/workflow/rules.ts` |
+| No-show after 30 minutes' grace | `NO_SHOW_GRACE_MINUTES = 30` | `src/lib/inngest/rules.ts` |
+| 3 no-shows in 90 days ends auto-approve | `NO_SHOW_LIMIT`, `NO_SHOW_WINDOW_DAYS` | `src/lib/data/pilot.ts` |
+| **Revocation is an admin's power, not a reviewer's** | `TRANSITIONS["drone.revoked"].actors === ["admin"]` | `src/lib/workflow/transitions.ts` |
+
+The first four constants come from pure modules and are imported. The two no-show numbers live behind `server-only` and a database connection, so they are **read out of the source as text** — the same call `docs.test.ts` made about `.mdx`, for the same reason.
+
+**The cancellation window is the one number Arabic does not write as a digit.** Two of something is the dual — `ساعتين`, one word, no numeral — and writing `2 ساعات` to make it greppable would be broken Arabic on the page that most needs to be trusted. The test asserts the dual form, gated on `cancelHours === 2`, so changing `PILOT_CANCEL_LEAD_MS` fails the constants test first and points at the sentence a translator has to rewrite.
+
+Three clauses came out of reading the workflow table rather than from the spec: **a reviewer cannot decide their own submission** (four-eyes, enforced in code), **an approved booking is sent back to `pending` rather than cancelled when a boundary moves under it** (`booking.flagged_for_review` — the seat is held), and **revocation is reversible** (`drone.reinstated`, admin, and both acts stay in the log).
+
+---
+
+#### The acceptance line
+
+A sentence under the button, not a checkbox — and specifically not a pre-ticked one. **Verified: no `type="checkbox"` and no `checked` attribute anywhere on `/ar/sign-up` or `/en/sign-up`.**
+
+`t.rich`, so the two links sit **inside** the sentence. Arabic and English put the noun phrases in different places, and a sentence assembled by concatenating a prefix, a link and a suffix can only be right in one of them — the same reasoning that produced `DOC_ANCHORS` in F26. Rendered Arabic:
+
+```html
+<p …>بإنشاء حساب فأنت توافق على <a href="/ar/terms">شروط الاستخدام</a> و<a href="/ar/privacy">سياسة الخصوصية</a>.</p>
+```
+
+It lives in the **page**, not in `SignUpForm`, so it stays a Server Component — `SignUpForm` is `"use client"` and pulling two links into that bundle would buy nothing.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| `LegalPage` extracted; the two routes are wrappers | F27a's privacy page was ~60 lines and terms would have been the same 60 with one noun changed. The second copy is where the effective-date line silently stops matching the first. |
+| `legal` namespace gained `acceptance`; `common` gained `footerNavLabel` | The footer `<ul>` has three members now and needed an `aria-label`. |
+| Footer is a `flex-wrap` list, no `·` separators | A typed separator is read aloud by a screen reader and lands on the wrong side under RTL. `gap-x-4` is direction-aware for free. |
+
+---
+
+#### The `NEXT_LOCALE` trap has a second half
+
+F27a turned off the cookie next-intl was writing but never reading. **Browsers that visited before the fix still carry the old `NEXT_LOCALE`** — a cookie has no way to un-set itself from the server once the code that wrote it is gone. It expires on its own; nothing reads it either way. But anyone re-running the devtools check on a browser that has used this app will still see it, and it is **not** evidence the fix failed.
+
+#### And a third: localhost cookies ignore the port
+
+Checking the signed-in load in the user's own Chrome, `document.cookie` on `localhost:3001` returned:
+
+```
+rl_anonymous_id, rl_user_id, rl_trait, rl_session,
+ph_phc_…_posthog, NEXT_LOCALE
+```
+
+**RudderStack and PostHog — on the page whose privacy policy states there is no analytics anywhere.** They are not this app's. Verified three ways: nothing matching `rudder|posthog|segment|analytics` in `package.json`, nothing in the served HTML of a signed-in page, and nothing in the whole of `.next/static`. **Cookies are scoped by host and ignore the port**, so any other app that has ever run on `localhost` shares its jar with this one.
+
+This is a booby trap for exactly the check F27's criteria ask for: open devtools on `localhost:3001`, see PostHog, conclude the app ships trackers. **It does not.** On a real deployment with its own hostname the jar is this app's alone.
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1044 passed, 60 files** (17 in `legal.test.ts`) |
+| `pnpm exec tsc --noEmit` | clean |
+| `pnpm lint` | clean; `i18n:check` — 1935 keys in sync |
+| `pnpm build` | compiled; `/[locale]/terms` in the route list |
+| `/ar/privacy`, `/en/privacy`, `/ar/terms`, `/en/terms`, `/ar/sign-up`, `/en/sign-up` signed out | **200**, all six |
+| Footer links | `/{ar,en}/{docs,privacy,terms}` — all six resolve |
+| Acceptance line | links render inside the sentence; **no checkbox, no `checked`, either locale** |
+| `Set-Cookie` on `/ar/terms` signed out | **none** |
+| **Signed-in cookie check** — 5 page loads (`/ar/dashboard`, `/ar/privacy`, `/ar/terms`, `/ar/drones`, `/en/dashboard`) with `credentials: "include"` | **jar unchanged, zero new cookies** |
+| Better Auth's session cookie | **`HttpOnly`** — absent from `document.cookie` while demonstrably signed in |
+| Analytics / advertising / tracking anywhere in the app | **none** in `package.json`, served HTML, or `.next/static` |
+| TOC vs headings, `/ar/terms` live DOM | 14 anchors, 14 `<h2 id>`, **0 broken** |
+| `/en/terms`, `/ar/terms` heading ids | 14 each |
+| `dir="ltr"` in rendered `/ar/terms` | the mailto only. **No Arabic inside one** |
+| **375 px** — reading column squeezed to 343 px (375 minus gutters), both pages | **nothing overflows**; all four masking-table columns reflow inside 343 px, and no element that cannot scroll is wider than its box |
+
+#### Not verified
+
+- **The `md` breakpoint swap itself** — the TOC's `<details>`-below / sticky-column-above. `resize_window` reports success and does not apply: `window.innerWidth` stayed 1440 across two attempts, in two separate tab groups, and `document.visibilityState` was `"hidden"` both times. The 375 px row above tests **content overflow**, which is the failure that actually breaks an RTL page; it does **not** re-evaluate media queries. Worth one look on a real phone-width window.
+- **No screenshots**, again — `Page.captureScreenshot` cannot run against a hidden tab. Everything above was measured with `getBoundingClientRect` and `document.cookie`.
+
+#### Next session should know
+
+- **F27 is closed. Next is F28 — account settings**, then F29, F30, F31, strictly in that order.
+- **Nothing may be added to a settings page that the app does not do.** No billing, no SMS, no notification channel that does not exist. `notification_preference` is a real table — check what it actually holds before offering a control for it.
+- The legal machinery generalises: a third document is `LEGAL_SLUGS` + `LEGAL_SECTIONS` + two `.mdx` files + a 20-line route. **Add the slug and the file in the same commit** — `legal.test.ts` asserts the slugs and the files are the same set in both locales.
+- `EFFECTIVE_DATE` in `src/lib/legal/fields.ts` is **2026-08-22** and is set by hand. Any substantive edit to either document should move it; a typo fix should not.
+- Killing the dev server: `TaskStop` alone left the listener running twice this session, and **a stale server serves the previous build and will cheerfully "confirm" a change you have not deployed.** `Get-NetTCPConnection -LocalPort 3001` then `Stop-Process -Force` is what actually clears it.
 
 ---
 

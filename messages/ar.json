@@ -1,5 +1,6 @@
 {
   "common": {
+    "footerNavLabel": "روابط الموقع",
     "appName": "أجنحة",
     "tagline": "تسجيل الطائرات بدون طيار وحجز مناطق الطيران",
     "proposalNotice": "هذا نموذج مقترح، وليس نظاماً رسمياً معتمداً من الهيئة العامة للطيران المدني.",
@@ -1474,10 +1475,11 @@
     "headingAnchor": "رابط إلى: {heading}"
   },
   "legal": {
-    "terms": "الشروط والأحكام",
+    "terms": "شروط الاستخدام",
     "privacy": "سياسة الخصوصية",
     "tocLabel": "محتويات الصفحة",
-    "effectiveDate": "تاريخ النفاذ {date}"
+    "effectiveDate": "تاريخ النفاذ {date}",
+    "acceptance": "بإنشاء حساب فأنت توافق على <terms>شروط الاستخدام</terms> و<privacy>سياسة الخصوصية</privacy>."
   },
   "airspace": {
     "decisionAllowed": "مسموح",

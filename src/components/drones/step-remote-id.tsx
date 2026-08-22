@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 /**
  * Step 3: how this aircraft is identified in the air.
@@ -19,6 +20,13 @@ import { useTranslations } from "next-intl";
  * moves to F19's card, where a `remote_id` row exists by definition, and this
  * pane says plainly that it can be done after approval. A radio group with one
  * permanently selected option would be a choice that is not a choice.
+ *
+ * **F26b adds the link to `docs/remote-id`.** This pane is the one moment in
+ * the product where somebody is told their aircraft gets an identifier instead
+ * of a serial number, which is exactly when they are most likely to want to
+ * know whether that is a real thing — and the documentation page that answers
+ * it quotes the regulations. It opens in the same tab: the wizard saves from
+ * the specifications step onwards, so leaving this one loses nothing.
  */
 export function StepRemoteId() {
   const t = useTranslations("drones");
@@ -32,6 +40,15 @@ export function StepRemoteId() {
 
       <p className="text-muted-foreground border-s-2 ps-3 text-xs">
         {t("remoteIdDeclareLater")}
+      </p>
+
+      <p className="text-sm">
+        <Link
+          href="/docs/remote-id"
+          className="text-primary underline underline-offset-4"
+        >
+          {t("remoteIdLearnMore")}
+        </Link>
       </p>
     </div>
   );

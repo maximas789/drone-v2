@@ -41,11 +41,19 @@ import { headingSlug, textOf } from "@/lib/docs/slugs";
 function Heading({
   level,
   children,
+  id: explicitId,
   ...props
 }: { level: 2 | 3 } & ComponentPropsWithoutRef<"h2">) {
   const t = useTranslations("docs");
   const heading = textOf(children);
-  const id = headingSlug(heading);
+  /**
+   * An explicit id overrides the derived one — see `DOC_ANCHORS`. A `##` in
+   * markdown cannot carry a prop, so a section the **app** links into is
+   * written as `<H2 id="…">` instead: the derived slug is a function of the
+   * heading's text and therefore differs between `ar` and `en`, and a component
+   * in the app has one `href` to give.
+   */
+  const id = explicitId ?? headingSlug(heading);
   const Tag = level === 2 ? "h2" : "h3";
   const size = level === 2 ? "text-2xl font-semibold" : "text-lg font-medium";
 
@@ -119,6 +127,8 @@ const components: MDXComponents = {
   a: Anchor,
   h2: (props) => <Heading level={2} {...props} />,
   h3: (props) => <Heading level={3} {...props} />,
+  /** `<H2 id="…">` — a heading with a stable, language-independent anchor. */
+  H2: (props: ComponentPropsWithoutRef<"h2">) => <Heading level={2} {...props} />,
   p: (props) => <p className="text-muted-foreground leading-7" {...props} />,
   ul: (props) => (
     <ul

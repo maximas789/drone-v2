@@ -61,6 +61,39 @@ export function isDocMeta(value: unknown): value is DocMeta {
 }
 
 /**
+ * The sections the **app itself** links into, by an id that does not change
+ * with the language.
+ *
+ * **This exists because a fragment derived from a heading's text is
+ * locale-dependent, and a deep link from the app is not.** `headingSlug` gives
+ * `اسباب-الرفض-الشايعة` on the Arabic page and `common-rejection-reasons` on the
+ * English one — correct for both, and useless to a component that has to
+ * produce one `href`. Putting the two fragments in the message catalogue would
+ * work and would rot silently: the Arabic heading gets reworded, the catalogue
+ * does not, and the link lands at the top of the page with nothing failing.
+ *
+ * So the two pages the app links into carry an **explicit `id`** written into
+ * the content file (`<H2 id="…">`, from `src/mdx-components.tsx`), the same one
+ * in both languages, and `docs.test.ts` asserts it is present in every locale's
+ * copy. A renamed heading keeps its anchor; a deleted one fails the suite.
+ */
+export const DOC_ANCHORS = {
+  /** `docs/registering-a-drone` — what a rejection notice sends a pilot to. */
+  rejectionReasons: {
+    slug: "registering-a-drone",
+    id: "common-rejection-reasons",
+  },
+} as const;
+
+export type DocAnchor = keyof typeof DOC_ANCHORS;
+
+/** `/docs/<slug>#<id>` — locale-prefixed later by `Link`. */
+export function docAnchorHref(anchor: DocAnchor): string {
+  const { slug, id } = DOC_ANCHORS[anchor];
+  return `/docs/${slug}#${id}`;
+}
+
+/**
  * A heading's fragment identifier, derived from its own text.
  *
  * **Arabic characters survive.** A fragment is percent-encoded on the way into

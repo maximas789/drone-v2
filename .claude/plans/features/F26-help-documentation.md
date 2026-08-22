@@ -7,6 +7,7 @@ sidebar, the callouts, the "last updated" line, the footer link, and **all six p
 written in Arabic and English against the running app**. **F26b** — the real
 screenshots and the `Screenshot` component, the contextual deep links from the drone
 wizard and the rejection notice, and the browser link crawl of the app's own surfaces.
+**Session 36 did the links and the crawl; the screenshots are still outstanding.**
 Twelve files of prose plus a screenshot session is more than one sitting; the prose is
 the part that has to be true, so it went first.
 
@@ -105,7 +106,7 @@ Ticked in **F26a** (Session 35) unless marked. `⬜ F26b` is deferred, not faile
 **Truth**
 - [x] Every page describes only features that **exist and work** — each page walked against the running app.
 - [x] No page mentions payments, an AI assistant, SMS/OTP verification, or agent access. The only occurrences of "text message" are the two sentences that **deny** it.
-- [ ] Screenshots are of the **actual UI**, captured after the features were built — no mockups. ⬜ **F26b**
+- [ ] Screenshots are of the **actual UI**, captured after the features were built — no mockups. ⬜ **F26b, and the only criterion still open.** Chrome's `Page.captureScreenshot` timed out on three attempts across two fresh tabs (Session 36). Two framing decisions already stand: **no admin screen** (real pilot data, public forever) and **no scan page** (the signed-in browser is the owner, so the capture would show more than the "what a stranger sees" caption claims).
 - [x] The zones page states the airspace is illustrative, not official GACA data — in a `warning` callout, above the first heading.
 - [x] Nothing implies GACA endorsement or adoption.
 - [x] `remote-id` cites its regulatory sources with working links. All seven re-fetched on 2026-08-22: the three GACA PDFs still `application/pdf`, the four LII pages `text/html`.
@@ -124,6 +125,6 @@ Ticked in **F26a** (Session 35) unless marked. `⬜ F26b` is deferred, not faile
 - [x] "Last updated" reflects real git history — `git log -1 --format=%cI` on the file, with the file's mtime as the fallback for a page written but not yet committed. Exercised on the real path once F26a was committed (`6430ee8`).
 - [x] Every page is reachable **signed out** — every check above ran over `curl`, which carries no session.
 - [x] The Docs link appears in the footer and resolves.
-- [ ] The drone wizard's Remote ID step links to `docs/remote-id`; a rejection notice links to the common-reasons section. ⬜ **F26b**
+- [x] The drone wizard's Remote ID step links to `docs/remote-id` — **seen on screen**, resumed from the existing draft, which reopens at step 3; clicking it lands on `/ar/docs/remote-id`. The rejection notice links to the common-reasons section through `docAnchorHref`, whose target id is asserted present in both locales — but **no rejected aircraft exists to render that notice**, and creating one needs a second reviewer (four eyes). Named, not claimed.
 - [x] No broken internal links (crawl `/docs` and check every href) — 23 distinct internal hrefs across all 14 pages, every one 200.
 - [x] `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` pass.

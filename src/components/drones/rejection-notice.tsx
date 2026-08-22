@@ -1,4 +1,6 @@
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { docAnchorHref } from "@/lib/docs/slugs";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 
@@ -22,6 +24,13 @@ import type { Locale } from "@/lib/locale";
  * **A rejection is never a dead end.** The notice states the reason and the
  * caller puts the two actions that answer it — correct the details, resubmit —
  * directly beneath.
+ *
+ * **F26b adds the link to the documentation's common-reasons section**, below
+ * the reviewer's own words and never in place of them: the reason is one
+ * person's sentence about this aircraft, and the page is the general case. The
+ * `href` comes from `docAnchorHref` rather than being written here, because the
+ * fragment a heading derives from its own text differs between `ar` and `en` —
+ * that section carries an explicit, language-independent id for this link.
  */
 export function RejectionNotice({
   reason,
@@ -102,6 +111,15 @@ export function RejectionNotice({
       ) : null}
 
       <p className="text-sm">{t("rejectedNext")}</p>
+
+      <p className="text-sm">
+        <Link
+          href={docAnchorHref("rejectionReasons")}
+          className="text-primary underline underline-offset-4"
+        >
+          {t("rejectedCommonReasons")}
+        </Link>
+      </p>
 
       {children}
     </section>

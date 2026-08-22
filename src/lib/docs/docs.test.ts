@@ -1,6 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DOC_SLUGS, headingSlug, isDocMeta, isDocSlug, textOf } from "./slugs";
+import {
+  DOC_ANCHORS,
+  DOC_SLUGS,
+  docAnchorHref,
+  headingSlug,
+  isDocMeta,
+  isDocSlug,
+  textOf,
+} from "./slugs";
 import { LOCALES } from "@/lib/locale";
 
 /**
@@ -105,6 +113,45 @@ describe("the documentation manifest", () => {
         }
       }
     }
+  });
+});
+
+/**
+ * The link the **app** makes into the documentation, which is the one that
+ * cannot be checked by reading a page: a rejection notice renders only for a
+ * rejected aircraft, and the anchor it points at lives in a different file in a
+ * different language.
+ */
+describe("the anchors the app links into", () => {
+  it("names a real page", () => {
+    for (const anchor of Object.values(DOC_ANCHORS)) {
+      expect(isDocSlug(anchor.slug)).toBe(true);
+    }
+  });
+
+  it("is written as an explicit id in every locale's copy of that page", () => {
+    for (const locale of LOCALES) {
+      for (const anchor of Object.values(DOC_ANCHORS)) {
+        expect(sourceOf(locale, anchor.slug)).toContain(`id="${anchor.id}"`);
+      }
+    }
+  });
+
+  /**
+   * The reason `DOC_ANCHORS` exists at all. If these two ever became equal the
+   * explicit id would look redundant and somebody would delete it — and the
+   * link would then be right in one language and wrong in the other.
+   */
+  it("is needed because the derived slug is not language-independent", () => {
+    expect(headingSlug("أسباب الرفض الشائعة")).not.toBe(
+      headingSlug("Common rejection reasons"),
+    );
+  });
+
+  it("builds an unprefixed href the locale-aware Link can prefix", () => {
+    expect(docAnchorHref("rejectionReasons")).toBe(
+      "/docs/registering-a-drone#common-rejection-reasons",
+    );
   });
 });
 

@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Session 35).** F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–36).** F26b's deep links are done and crawled; **only the screenshots remain**, blocked on Chrome's capture pipeline rather than on any code. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -358,6 +358,134 @@ Newest at the top.
 
 ---
 
+### Session 36 — Wave 8 · F26b The contextual deep links (**partial — the screenshots are not done**)
+
+**Date:** 2026-08-22
+**Status:** ⚠️ partial. Two of F26b's three parts are done; **the screenshots are
+blocked on the machine, not on the code.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/docs/slugs.ts` | `DOC_ANCHORS` and `docAnchorHref` — the sections the app links into, by an id that does not change with the language. |
+| `src/mdx-components.tsx` | `<H2 id="…">`, a heading with an explicit anchor. |
+| `src/content/docs/{ar,en}/registering-a-drone.mdx` | That heading now carries `id="common-rejection-reasons"` in both languages. |
+| `src/components/drones/step-remote-id.tsx` | Links to `docs/remote-id`. |
+| `src/components/drones/rejection-notice.tsx` | Links to the common-reasons section. |
+
+**1023 tests** (+4), 1937 catalogue keys, `ar`/`en` in sync. No schema change.
+
+---
+
+#### The thing that was wrong in Session 35's entry
+
+That entry told the next session to link a rejection notice at
+`/docs/registering-a-drone#أسباب-الرفض-الشائعة`. **That href was wrong twice over**, and
+writing the link is what found it:
+
+1. **The fragment is not what the heading says.** `headingSlug` folds combining marks,
+   which folds the hamza, so the real derived anchor was `اسباب-الرفض-الشايعة` — with a
+   bare alef and `ئ` reduced to `ي`. The fold is correct and deliberate (Session 35 pinned
+   it with a test); an anchor copied from the heading's own spelling is not.
+2. **And it could never have been one href anyway.** The fragment is derived from the
+   heading's *text*, so the same section is `اسباب-الرفض-الشايعة` on `/ar` and
+   `common-rejection-reasons` on `/en`. A component in the app produces one `href`. A
+   hardcoded Arabic fragment would have silently landed English readers at the top of the
+   page — no error, no failing check, and nobody would notice because the page still
+   loads.
+
+**The fix is an explicit id in the content file**, the same string in both languages,
+written as `<H2 id="common-rejection-reasons">` because a markdown `##` cannot carry a
+prop. `DOC_ANCHORS` is the one place the app names it, and `docs.test.ts` asserts the id
+is present in *every* locale's copy of that page — so a reworded heading keeps the link
+and a deleted section fails the suite.
+
+Putting the two fragments in the message catalogue was the obvious alternative and is
+worse: it would work on the day it was written and rot in silence the first time somebody
+reworded the Arabic heading.
+
+There is a test whose whole job is to stop this being undone: it asserts the derived
+Arabic and English slugs are **not** equal, so the explicit id cannot start looking
+redundant.
+
+---
+
+#### Verified
+
+- **The wizard link, end to end, on screen.** Resumed the existing draft
+  (`/ar/drones/new?draft=…`), which reopens at **step 3 of 5, الهوية عن بُعد**; the link
+  renders with the locale prefix, and clicking it lands on `/ar/docs/remote-id` with
+  `<h1>` = `الهوية عن بُعد`. **No data was created or changed** — an existing draft was
+  read, not written, precisely so the check cost nothing.
+- **The explicit anchor renders in both locales**: `id="common-rejection-reasons"` and its
+  copy-link `href="#common-rejection-reasons"`, identical on `/ar` and `/en`.
+- **The app-side crawl**: 22 public pages (landing, the three concept pages, and all 14
+  docs routes, both locales), 26 distinct internal hrefs, **every one 200**, and the
+  footer's Docs link present on all 22.
+- `pnpm typecheck`, `pnpm lint`, `pnpm i18n:check` (1937), `pnpm test` (**1023**),
+  `pnpm build` — all pass. Both docs routes still build **dynamic**.
+
+---
+
+#### Not done, and why — both blocked on the machine
+
+**1. The screenshots.** Not started. Chrome's capture pipeline went unreliable partway
+through: `Page.captureScreenshot` timed out after 30 s on **three** attempts across
+**two** freshly created tabs, while the window resized itself unprompted between calls
+(`innerWidth` read 1440, then 784, then 569, with `resize_window` reporting success each
+time) and every tab reported `document.visibilityState === "hidden"`. **`javascript_tool`
+kept working perfectly throughout** — which is what made the link verification above
+possible, and is worth remembering: when capture dies, the DOM is still readable, and
+reading `getBoundingClientRect` is a better check than a screenshot anyway (thread 67,
+and the SVG `text-anchor` bug).
+
+Two decisions made while surveying for screenshots, which stand whenever capture works
+again:
+
+- **No admin screenshot on `for-authorities`.** Every review screen shows a real pilot's
+  name, city and history, and these pages are public forever. The page describes those
+  screens in words instead.
+- **No scan-page screenshot on `remote-id`.** The signed-in browser is the aircraft's
+  **owner**, so a capture would show the owner branch — i.e. a picture claiming to be
+  "what a stranger sees" that shows more than a stranger sees. Capturing it honestly needs
+  a signed-out session, which would mean signing the user out. The page's viewer table is
+  more precise than the picture would have been.
+- **The demo aircraft are named `PROBE18B ملغاة`, `PROBE18B مرفوضة`, …** — probe fixtures.
+  Any screenshot of the aircraft list or a booking's drone step puts that in the public
+  documentation. Presentable demo data is a prerequisite for those shots, not an
+  afterthought.
+
+**2. The rejection notice on screen. Blocked by four eyes, and it is thread 64's blocker
+wearing a different hat.** No aircraft is currently in `rejected` — `PROBE18B مرفوضة` is
+named for a state it is not in (it reads `pending`; it was resubmitted). Putting one back
+into `rejected` means a reviewer deciding it, and **every aircraft belongs to the admin**,
+so the workflow refuses the decision as a self-submission. It needs somebody signed in as
+`alshar55@hotmail.com`. The link itself is a `Link` with an `href` from `docAnchorHref`,
+which is unit-tested, and the target anchor is confirmed to render — but **nobody has seen
+that notice on a screen**, and this entry says so rather than implying otherwise.
+
+---
+
+**State of the machine at the end of the session:** 3001 is serving **`next dev`**
+(switched back from the production build for the edit cycle). Inngest is **not running**.
+Docker Postgres is up. **No demo data was created, changed or deleted this session.**
+
+**Next session should know:**
+
+- **F26b's remaining part is the screenshots alone.** The deep links are done. Retry
+  capture in a fresh Chrome window; if `Page.captureScreenshot` still times out, the whole
+  of F26b's picture half needs the user's help, and the pages are complete and honest
+  without it — screenshots are the one acceptance criterion still open.
+- **Sort the demo aircraft names before capturing anything.** `PROBE18B *` in public
+  documentation is worse than no picture.
+- **Two checks now wait on the same thing**: thread 64's reviewer 404, and seeing the
+  rejection notice. One sign-in as the reviewer closes both.
+
+---
+
 ### Session 35 — Wave 8 · F26a Help documentation (`/docs`, six pages, ar + en)
 
 **Date:** 2026-08-22
@@ -526,8 +654,11 @@ exercised, not just implemented.
 
 - **F26b is the rest of F26**: real screenshots of the Arabic UI, a `Screenshot`
   component, `public/docs/screenshots/`, the drone wizard's Remote ID step linking to
-  `docs/remote-id`, and a rejection notice linking to
-  `/docs/registering-a-drone#أسباب-الرفض-الشائعة` (that anchor exists and resolves today).
+  `docs/remote-id`, and a rejection notice linking to the common-reasons section.
+  **Corrected in Session 36:** the fragment named here was wrong — `headingSlug` folds the
+  hamza, and the derived anchor is language-dependent in any case. That section now
+  carries an explicit `id="common-rejection-reasons"` in both locales, reached through
+  `docAnchorHref`.
 - **F30 wants `listDocs`.** The sitemap and `llms.txt` need one list of public pages and
   `src/lib/docs/load.ts` already is it — `meta.description` was written to serve as the
   `llms.txt` line as well as the index card's.

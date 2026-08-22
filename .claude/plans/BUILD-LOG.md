@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–41). F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–42). F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -356,6 +356,126 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 42 — Wave 8 · F29a The system page: health, configuration and row counts
+
+**Date:** 2026-08-22
+**Status:** ⚠️ done with deviations. **F29b is background jobs; F29c the email and activity logs.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/app/[locale]/(app)/settings/system/page.tsx` | `/settings/system` — admin only |
+| `src/lib/ops/health.ts` | The nine checks |
+| `src/lib/ops/origin.ts` | `sameOrigin` — pure |
+| `src/lib/ops/counts.ts` | Row counts, projected over the enums |
+| `src/lib/ops/health.test.ts` | 7 tests, incl. the no-secrets-in-source assertions |
+| `src/lib/actions/ops.ts` | `regenerateAllQrAction` |
+| `src/components/ops/{health-grid,data-counts,regenerate-qr}.tsx` | |
+| `src/lib/settings/sections.ts` | *(extended)* the **first admin-only section** |
+
+---
+
+#### The first admin-only section, and it could not arrive wrong
+
+`sectionsFor` has filtered on `adminOnly` since F28a, and `sections.test.ts` has asserted since then that a pilot and a reviewer never see such a row — both written *before there was one to hide*. So adding System was one line plus its page, and the test that guards it already existed.
+
+Hiding the link is the courtesy; **`notFound()` is the check**. Not a redirect and not a "forbidden" page: a reviewer told *"you are not allowed here"* has learned an admin page exists at that URL.
+
+---
+
+#### Nothing on this page reports a status it inferred
+
+Every check answers from something real — a query, a file on disk, a socket, an array in the code:
+
+| Check | Answers from |
+|---|---|
+| Database | `select 1`, and how long it took |
+| Migrations | `drizzle/meta/_journal.json` against `drizzle.__drizzle_migrations` |
+| `APP_URL` / `BETTER_AUTH_URL` | the **request's own origin**, passed in from the page |
+| `ID_HASH_PEPPER` | `Boolean(process.env…)` — nothing else |
+| Resend / Blob | `emailConfigured`, `blobConfigured` |
+| Inngest | `functions.length`, plus a socket to the dev server |
+| Seed | `count(zone)` |
+
+**Migrations are matched on the journal's `when` against `created_at`**, which Drizzle writes from exactly that value — verified against the live table, seven and seven, in order. The other column is a content hash, and matching on it would mean re-implementing Drizzle's hashing here and being wrong the day it changes.
+
+**A journal that cannot be read reports `degraded`, not `ok`.** A deployed function has no `drizzle/` directory, and a green tick there would be the most misleading thing on the page.
+
+The Inngest dev host is read from the installed SDK — `helpers/consts.js`, `http://localhost:8288/` — rather than remembered.
+
+**Never a bare red dot.** Every degraded row carries the consequence in the operator's own terms, and the state is a *word* as well as a tint: a red dot and a grey dot are the same dot to a colourblind reader.
+
+---
+
+#### The `APP_URL` check, tested by actually breaking it
+
+This is the check that earns the page: every sticker embeds `APP_URL` at render time, and nothing else in the app would ever say it was wrong.
+
+So it was tested by setting `APP_URL=https://ajniha.example.com`, restarting, and reading the row. **`.env` was backed up first and restored byte-identical afterwards** (`diff` clean):
+
+```
+APP_URL · معطّل (down, destructive)
+  القيمة        https://ajniha.example.com
+  أصل الطلب     http://localhost:3001
+  رموز الاستجابة السريعة تُرسم الآن بهذا العنوان… صحّح القيمة ثم أعد رسم الرموز
+```
+
+It names the value **and** the origin, which is what makes it actionable rather than alarming.
+
+**The repair calls `storeQrForRemoteId`, not the Inngest job.** The job is triggered by `drone.approved`; firing that once per aircraft to redraw an image would send every pilot a second "your registration was approved" notification and email. The job's own render step calls this same function — going straight to it is the shared primitive, not a shortcut around one.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| Inngest reports **function count + dev-server reachability**, not "functions registered" with Inngest | The count is a fact from the array the route serves. Whether *Inngest* has them registered is a question only Inngest can answer, and inventing a green tick for it would be the guess this page must not make. Unreachable is reported with the fix: `npx inngest-cli dev`. |
+| `sameOrigin` split into `src/lib/ops/origin.ts` | `health.ts` carries `server-only`, so a test importing from it fails on load. Same split as `workflow/rules.ts` and `inngest/rules.ts`: the arithmetic behind the page's most consequential warning should be unit-testable without standing up a server. |
+| Grouped counts projected over the **enum**, not read from the rows | `group by status` returns only statuses that have rows, so a fresh database would show four drone statuses instead of six and the missing two would look like a rendering bug rather than a zero. |
+| No jobs / email / activity panels, not even empty ones | F29b and F29c. An empty panel headed "Background jobs" is exactly the lie this page exists to expose. |
+
+---
+
+#### Verified
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1076 passed, 64 files** (7 new) |
+| `pnpm exec tsc --noEmit` · `pnpm lint` | clean; `i18n:check` — 2071 keys in sync |
+| `pnpm build` | compiled; `/settings/system` in the route list |
+| Signed **out** | 307 → sign-in, `?next=` preserved |
+| **As a reviewer** — role flipped in `psql` and restored | `/ar/settings/system` → **404**, and `/ar/settings` no longer mentions the route. Restored: 200 and the link is back |
+| Nine checks render | 5 healthy, 3 degraded (Resend, Blob, Inngest — the true state of this machine), seed healthy |
+| **No secret-shaped run anywhere in the page text** | five patterns — long hex, long base64, `re_…`, blob token, `postgres://` — **0 matches each** |
+| `ID_HASH_PEPPER` | the **name** appears as a row title; no value, no prefix |
+| `APP_URL` deliberately broken | **down**, destructive, names value and origin, with the consequence. `.env` restored byte-identical |
+| Counts vs `psql` | pilots 1, Remote IDs 5, audit events 75; drones sum 7, bookings 4, zones 13 — **every figure matches**, and statuses with no rows show `0` rather than vanishing |
+| Arabic numerals | **Latin digits throughout** — no `٠-٩` anywhere on the page |
+| **Re-render all QR codes** | ran: *"أُعيد رسم 3، وفشل 0"*. Three files rewritten **under the same names** (in-place, so existing stickers keep resolving); expired and revoked aircraft correctly skipped; one `system.qr_regenerated` audit row with `{rendered: 3, failed: 0}` |
+| The suite caught a missing audit label | `system.qr_regenerated` had no `review.auditActions` entry — two tests red until it did |
+| Account state afterwards | admin + reviewer, exactly as before |
+
+#### Not verified
+
+- **A pilot getting 404.** A reviewer was tested by role-flip; a pilot takes the same `isAdmin` branch, so this is the same code path — but it was not driven.
+- **Every check in its healthy state.** Resend, Blob and Inngest are degraded on this machine and were verified degraded, which is the honest state and the one the user chose to see. Their `ok` branches are one line each and unexercised.
+- **Stopping Postgres to see the database check fail**, and **an actually-pending migration.** Both would mean breaking the environment mid-session; the error paths are written and untested. Worth doing once in F29b, when the server is being restarted anyway.
+- **375 px** — six sessions.
+
+#### Next session should know
+
+- **F29b is background jobs.** The `job` table is real and complete — `run_id`, `function_id`, `status`, `attempt`, `started_at`, `finished_at`, `duration_ms`, `error`, `output`, `trigger_event`, **`rerun_of_run_id`**. That last column is what makes "re-run creates a *new* run and shows its new id" a schema fact rather than a UI claim.
+- **Cancel must read "cancelling", never "cancelled"** — Inngest cancels at the next step boundary, and `job_status` already has a `cancelling` value with a comment saying exactly this.
+- **Scheduled functions need cron, `Asia/Riyadh`, last run and next due.** The crons are on the function definitions in `src/lib/inngest/functions/`; the timezone is the app's fixed +180.
+- Running the jobs panel against real data needs `npx inngest-cli dev` — nothing has ever run otherwise (thread 69).
+- `NODE_OPTIONS="--conditions=react-server"` is still required for anything in `scripts/`.
 
 ---
 

@@ -28,15 +28,16 @@ export type SettingsSectionSlug =
   | "language"
   | "security"
   | "notifications"
-  | "account";
+  | "account"
+  | "system";
 
 export type SettingsSection = {
   slug: SettingsSectionSlug;
   /** Locale-prefixed later by `Link`. */
   href: string;
   /**
-   * Hidden from anyone who is not an admin. Nothing here is admin-only yet —
-   * **F29's System section is the first**, and it arrives with its page.
+   * Hidden from anyone who is not an admin. **System** is the only one so far
+   * — F29a — and it arrived with its page, as this list requires.
    */
   adminOnly: boolean;
 };
@@ -48,6 +49,16 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { slug: "notifications", href: "/settings/notifications", adminOnly: false },
   // Last, deliberately: it is the one that ends things.
   { slug: "account", href: "/settings/account", adminOnly: false },
+  /**
+   * **The first admin-only section**, added by F29a. `sectionsFor` has filtered
+   * on this flag since F28a and `sections.test.ts` has asserted that a pilot
+   * and a reviewer never see such a row — both were written before there was
+   * one to hide, so that the day it arrived it could not arrive wrong.
+   *
+   * Hiding the link is a courtesy. The page itself calls `notFound()` for
+   * anybody who is not an admin.
+   */
+  { slug: "system", href: "/settings/system", adminOnly: true },
 ];
 
 /**

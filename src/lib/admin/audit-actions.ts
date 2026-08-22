@@ -190,6 +190,12 @@ export const USER_TRAIL_ACTIONS = [
    * was for.
    */
   "user.deleted",
+  /**
+   * F29a. The `APP_URL` repair, filed against the administrator who ran it —
+   * like `user.audit_exported`, the row is about what a member of staff did,
+   * and it touched every aircraft rather than any one of them.
+   */
+  "system.qr_regenerated",
 ] as const;
 
 export type UserTrailAction = (typeof USER_TRAIL_ACTIONS)[number];

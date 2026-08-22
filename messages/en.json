@@ -1265,7 +1265,8 @@
       "zone_published": "Zone published",
       "zone_suspended": "Zone suspended",
       "zone_updated": "Zone details updated",
-      "user_deleted": "Account closed"
+      "user_deleted": "Account closed",
+      "system_qr_regenerated": "QR codes re-rendered"
     },
     "errors": {
       "not_found": "This submission could not be found.",
@@ -1521,6 +1522,10 @@
       "errorApprovedBookings": "You hold an approved upcoming booking. Cancel it first.",
       "blockedLastAdmin": "This is the only administrator account in the system. Closing it would leave the platform with nobody to run it and no way back in, so it is refused. Appoint another administrator first.",
       "blockedBookings": "Your account cannot be closed while you hold an approved upcoming booking: an authorised flight with no accountable operator is exactly what this platform exists to prevent. Cancel the bookings below and try again."
+    },
+    "system": {
+      "title": "System",
+      "intro": "Service health, row counts, and what runs out of sight."
     }
   },
   "system": {
@@ -2288,5 +2293,117 @@
     "tableCaption": "Audit events, newest first",
     "title": "Audit log",
     "trailTitle": "This zone's trail"
+  },
+  "ops": {
+    "healthTitle": "Health and configuration",
+    "healthIntro": "What the platform depends on, whether it is configured, and what changes if it is not. Secrets show as set or not set — never a value, never part of one.",
+    "countsTitle": "Row counts",
+    "countsIntro": "A quick sanity check after a deploy or a seed.",
+    "state": {
+      "ok": "Healthy",
+      "degraded": "Degraded",
+      "down": "Down"
+    },
+    "detail": {
+      "latencyMs": "Latency (ms)",
+      "error": "Error",
+      "applied": "Applied",
+      "pending": "Pending",
+      "functions": "Functions",
+      "value": "Value",
+      "origin": "Request origin",
+      "zones": "Zones"
+    },
+    "check": {
+      "database": {
+        "title": "Database",
+        "what": "Everything in the platform goes through it."
+      },
+      "migrations": {
+        "title": "Database migrations",
+        "what": "Whether every migration in the repository has been applied."
+      },
+      "appUrl": {
+        "title": "APP_URL",
+        "what": "The address printed inside every QR code at the moment it is drawn."
+      },
+      "authUrl": {
+        "title": "BETTER_AUTH_URL",
+        "what": "Must match the request origin, or every sign-in is refused."
+      },
+      "pepper": {
+        "title": "ID_HASH_PEPPER",
+        "what": "The secret the identity-document hash is built on."
+      },
+      "email": {
+        "title": "Resend",
+        "what": "Delivering decision notices."
+      },
+      "blob": {
+        "title": "Vercel Blob",
+        "what": "Storing uploaded photographs and documents."
+      },
+      "inngest": {
+        "title": "Inngest",
+        "what": "Running the scheduled background jobs."
+      },
+      "seed": {
+        "title": "Airspace data",
+        "what": "The initial Riyadh zones."
+      }
+    },
+    "consequence": {
+      "databaseDown": "The platform cannot serve any page in this state.",
+      "migrationsPending": "A migration in the repository has not been applied to the database. Run pnpm db:migrate.",
+      "migrationsUnknown": "The migration journal could not be read from disk — expected on a host the drizzle folder is not uploaded to. The state is unknown, not healthy.",
+      "appUrlMissing": "Not set: QR codes will be drawn with an empty address, and every sticker printed now is dead.",
+      "appUrlMismatch": "QR codes are being generated pointing at this value. If it is wrong, every sticker printed since it last changed is dead — correct the value, then re-render the codes with the button below.",
+      "authUrlMissing": "Not set: every sign-in request will be refused.",
+      "authUrlMismatch": "Does not match the request origin: sign-ins will be refused with INVALID_ORIGIN and sessions may not persist.",
+      "pepperMissing": "Not set: the identity-document hash cannot be computed, so no new pilot profile can be saved.",
+      "emailUnconfigured": "No Resend key: emails print to the terminal only and reach nobody. The platform works otherwise.",
+      "blobUnconfigured": "No storage token: files are written to ./uploads locally, and will not persist on a host without a durable disk.",
+      "inngestUnreachable": "No Inngest server is answering: scheduled jobs will not run until you start npx inngest-cli dev.",
+      "seedEmpty": "No zones: run pnpm db:seed.",
+      "seedUnknown": "Zones could not be counted — see the database check above."
+    },
+    "qr": {
+      "title": "Re-render QR codes",
+      "intro": "Redraws every approved aircraft's code against the current APP_URL. The pathname is deterministic and overwritten in place, so a sticker already on an airframe keeps working.",
+      "action": "Re-render all codes",
+      "confirm": "Every approved aircraft's code will be redrawn. Continue?",
+      "confirmAction": "Yes, re-render",
+      "running": "Rendering…",
+      "done": "Re-rendered {rendered}, failed {failed}."
+    },
+    "counts": {
+      "pilots": "Pilot profiles",
+      "remoteIds": "Remote IDs",
+      "auditEvents": "Audit events",
+      "drones": "Drones by status",
+      "bookings": "Bookings by status",
+      "zones": "Zones by kind"
+    },
+    "droneStatus": {
+      "draft": "Draft",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "revoked": "Revoked"
+    },
+    "bookingStatus": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "no_show": "No-show"
+    },
+    "zoneKind": {
+      "permitted": "Permitted",
+      "restricted": "Restricted",
+      "no_fly": "No-fly"
+    }
   }
 }

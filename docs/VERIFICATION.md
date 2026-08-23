@@ -222,6 +222,40 @@ all and writes that literal marker deliberately, on the same action name so an
 admin auditing reveals has one query. The actor on the row is what separates the
 two.
 
+### Step 7 — the QR actually on the sticker · `pnpm verify:qr` · **14/14**
+
+CLAUDE.md names this trap by itself: *"QR codes embed `APP_URL` at render time.
+If it still says `localhost` in production, every printed sticker is dead."* A
+stored PNG is opaque — looking at it tells you it is a QR code and nothing about
+where it points.
+
+Decoding would need a decoder this project does not have, and **adding a
+dependency to check a dependency is not a verification**. So each stored PNG was
+compared against a fresh render of its payload URL through the app's own
+`renderQrPng`. `qrcode` is deterministic for a given string, size, error
+correction and margin, so a byte-identical file is proof the stored one encodes
+that exact URL.
+
+- All **3 stored QRs are byte-identical** to a fresh render of
+  `{APP_URL}/ar/rid/{code}` — 4029, 4057 and 3950 bytes.
+- Each is a real PNG by magic number and **512×512** read out of the IHDR chunk,
+  which is what makes a 20 mm sticker readable.
+- **The negative control passes**: a deliberately wrong code renders a
+  *different* PNG. Without it, a renderer that ignored its argument would have
+  passed every assertion above.
+
+**Only 3 of the 5 Remote IDs have a QR file, and that is a seeding artefact, not
+a defect.** The three are exactly the `approved` ones. The `expired` and
+`revoked` rows were inserted directly by `probe-drone-states.mts`, which never
+ran the render job. A missing QR degrades to a "pending" panel with a
+Regenerate button (`src/components/remote-id/qr-display.tsx`), announced as
+`role="status"` rather than an alert — so the demo shows a control, not a broken
+image.
+
+**Every sticker rendered so far points at `http://localhost:3001`.** Correct for
+this machine and fatal in production. Re-render after `APP_URL` is a real
+domain; F29a's system page carries the same check for the operator.
+
 ### Found, not yet fixed — demo polish
 
 **All five registered aircraft are named `PROBE18B …`** in the database

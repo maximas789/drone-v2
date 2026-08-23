@@ -20,6 +20,7 @@
     "vendor:fonts": "node scripts/vendor-fonts.mts",
     "verify:fresh-db": "tsx scripts/verify/fresh-db.mts",
     "verify:routes": "tsx scripts/verify/routes.mts",
+    "verify:scan-page": "tsx scripts/verify/scan-page.mts",
     "verify:two-accounts": "node --conditions=react-server --import tsx scripts/verify/two-accounts.mts",
     "verify:no-keys": "node --conditions=react-server --import tsx scripts/verify/no-keys.mts"
   },

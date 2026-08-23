@@ -160,6 +160,80 @@ notification** (88 → 88, 10 → 10).
 
 ---
 
+## F31b — the walkthrough
+
+**Blocked on the Chrome extension**, which is not connected. Steps 1–8 and
+10–14 need a browser and a signed-in session, and the 375 px pass needs the
+same-origin iframe technique (thread 44). What follows is the part of F31b that
+a browser would have done *worse*.
+
+### Step 9 — the signed-out scan page, read as source · `pnpm verify:scan-page` · **46/46**
+
+The criterion says *"verified by reading the HTML source, not just the visible
+page"*. A value can sit in the markup, in an RSC flight payload, in a `<meta>`
+tag or in a JSON-LD block while being invisible on screen — `display:none` is
+not redaction, and a screenshot cannot tell the two apart.
+
+All **5 real Remote IDs** (statuses `approved`, `expired`, `revoked`) were
+fetched signed out across **3 surfaces each** — `/ar/rid/{code}`,
+`/en/rid/{code}` and the `/api/rid/{code}` JSON twin — and every response body
+searched whole for **12 forbidden strings**: the owner's Arabic and English
+name, the national ID number, its last four digits, the mobile in four
+spellings including Arabic-Indic digits, both account email addresses and their
+local parts.
+
+- **Zero leaks**, across ~136 kB of Arabic HTML and ~148 kB of English per page.
+- Each page still renders its own code, so this is not a pass earned by
+  rendering nothing.
+- The drone's nickname does **not** appear on the anonymous page either.
+
+**Two false positives worth recording, because they will recur.**
+
+1. `0501234567` and `2345` were reported as leaks on every HTML page. They are
+   not. The seeded pilot's mobile is `+966501234567`, and `messages/{ar,en}.json`
+   uses `0501234567` as the worked example under `mobileHint` and
+   `mobile_format` — twice in each catalogue, and the catalogue ships inside the
+   page. The script now excludes any forbidden value that also appears in the
+   catalogue and **reports the exclusion by name** rather than dropping it
+   silently. The residue is a real finding: **the demo data reuses the
+   documentation's example number, so that one field cannot be checked this
+   way.**
+2. A `429` on the last request. That is `rid.resolve`'s limiter — **30 requests
+   a minute per IP** (F09) — and the script makes 15, so a second run inside the
+   same minute trips it. The fetch now waits the window out, and the limiter got
+   an assertion of its own: hammering `/api/rid/` **does** produce a 429.
+
+### Step 10 — the reveal audit trail
+
+The *ordering* claim is structural rather than observed, and reads cleanly:
+`revealIdentityAction` opens a transaction, writes
+`remote_id.identity_revealed`, marks the scan, and **returns the identity only
+after the commit** — any failure logs loudly and returns `reveal_not_logged`
+with no data. Driving it live still needs a reviewer session.
+
+What was checked against the database: **3 reveal events, every one carrying an
+actor, a role, a reason and an IP hash**; 1 scan marked `revealed_identity`,
+matching the single `remote_id` reveal.
+
+One row has a 5-character reason, `"owner"`, below the 10-character floor the
+reviewer path enforces. **Not a defect** — it is F28a's self-reveal, where the
+owner reveals their *own* number; `revealOwnIdentityAction` takes no argument at
+all and writes that literal marker deliberately, on the same action name so an
+admin auditing reveals has one query. The actor on the row is what separates the
+two.
+
+### Found, not yet fixed — demo polish
+
+**All five registered aircraft are named `PROBE18B …`** in the database
+(`PROBE18B معتمدة`, `PROBE18B منتهية`, `PROBE18B ملغاة`, …). They are seeded
+demo content from F18b. The names are correctly **not** shown to an anonymous
+scanner, so this is not a privacy finding — but every signed-in screen a
+reviewer or pilot is shown during a demo prints developer jargon where an
+aircraft nickname belongs. F31c's "looks like theirs" critic should be expected
+to raise it; it is cheap to fix and it is not fixed yet.
+
+---
+
 ## Named as un-runnable
 
 Stated, never assumed.

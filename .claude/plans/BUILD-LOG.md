@@ -34,7 +34,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
 | 8 — Close-out | F26–F30 | ✅ **Complete, with deviations (Sessions 35–45). F30 finished in Session 45 (a/b/c) — Wave 8 is done.** **F30c**: the preview card. `next/font/google` cannot feed satori — it writes content-hashed **WOFF2** and satori reads WOFF — so `pnpm vendor:fonts` commits four faces with the OFL licence and a staleness test that was **proved to fail** before it was kept. **satori spaces Arabic unevenly and two obvious fixes did nothing** (one produced a byte-identical PNG); words are laid out as flex items with an explicit gap instead, which survives because Arabic does not join across a space. The card drew **"Ajniha Ajniha"** in English — found by looking at the PNG, invisible to every check. The map on it is the **real seeded geometry**, in literal hex because `ZONE_FILL` holds CSS variables (thread 65, third costume). `Organization` names Ajniha and **never GACA — zero occurrences, checked**; `FAQPage` was considered and **rejected** because the headings are topics, not questions. Earlier: **F30a and F30b landed (Session 45).** **F30b**: all 26 public pages carry their own title, description, canonical and three `hreflang` links — canonical string-compared against the URL fetched, `x-default` on Arabic, **0 duplicate titles in either locale** after the fetch found two collisions no test could reach. `noindex` is set **once per route group**, not once per page. **Thirty-nine signed-in pages had all shared one tab title**; each now names a catalogue key validated against both catalogues before any file was edited, and a source scan keeps it that way. **Only F30c — the preview card and the structured data — remains of F30.** Earlier: **F30a (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
-| 9 — Prove it | F31 | ⬜ Not started — **and it is the entire remainder of the build.** |
+| 9 — Prove it | F31 | 🟨 **In progress (Session 46). F31a — the mechanical gate — is done and every one of the eleven checks passed**: typecheck, no schema drift, migrations onto a *fresh* database (7 → 25 tables, 16 enums), build (63 routes, nine prerendered and all session-free), lint, **1114 tests**, 2127 i18n keys, a production serve on 3001, **126/126 route assertions**, **25/25 ownership assertions in both directions**, and **12/12 with `RESEND_API_KEY` and `BLOB_READ_WRITE_TOKEN` deleted before any import** — including a real serial-less approval that minted `AJN-308N-1W5B` with a three-year window. Evidence in `docs/VERIFICATION.md`, re-runnable as `pnpm verify:{fresh-db,routes,two-accounts,no-keys}`. **F31b (the 14-step walkthrough by hand in Arabic, plus 375 px) and F31c (four critics, two rounds) remain**, and thread 64 — a reviewer signing in — is now the only thing between F31 and a complete pass. |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
 
@@ -376,6 +376,87 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 46a — Wave 9 · F31a The mechanical gate
+
+**Date:** 2026-08-23
+**Status:** ✅ done. **Every one of the eleven gate checks ran and passed.** F31b (the walkthrough by hand, in Arabic, plus 375 px) and F31c (the four critics) remain.
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `scripts/verify/fresh-db.mts` | Creates a throwaway database, runs the migration folder into it, counts what landed, drops it. The `app` database is never touched. |
+| `scripts/verify/routes.mts` | 126 HTTP assertions against a **production serve**: every public page in both locales, every protected route redirecting, every `/admin` route 404ing past a fabricated cookie, `/api/files` refusing a real photograph's own pathname signed out, and `/api/zones/geojson` refusing a missing bbox with a code rather than an exception. Sample ids come from the live database, so it survives a reseed. |
+| `scripts/verify/two-accounts.mts` | 25 ownership assertions at the data layer, **in both directions**, plus six staff-only readers asked with a pilot session. |
+| `scripts/verify/no-keys.mts` | Deletes `RESEND_API_KEY` and `BLOB_READ_WRITE_TOKEN` **before any import**, then drives a real serial-less approval end to end. |
+| `docs/VERIFICATION.md` | The evidence file. Written for F31c's critics, who read it rather than the running app — four agents cannot share a port. |
+| `package.json` | Four `verify:*` scripts, so the gate is re-runnable rather than a thing that happened once. |
+
+---
+
+#### The gate — all eleven, with numbers
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `pnpm typecheck` | ✅ zero errors |
+| 2 | `pnpm db:generate` | ✅ **"No schema changes, nothing to migrate"** — 7 files before, 7 after |
+| 3 | `pnpm db:migrate` | ✅ applied; the two messages are `severity: NOTICE` |
+| 3b | Fresh database | ✅ **7 migrations → 25 tables, 16 enums** onto an empty database |
+| 4 | `pnpm build` | ✅ 22.7 s, 85 static pages, **63 route entries**; only nine prerendered and every one session-free |
+| 5 | `pnpm lint` | ✅ zero errors — and it caught an unused import in a script written for this very gate |
+| 6 | `pnpm test` | ✅ **67 files, 1114 tests, 0 failures** |
+| 7 | `pnpm i18n:check` | ✅ **2127 keys**, ar/en identical |
+| 8 | `PORT=3001 pnpm start` | ✅ `Ready in 731ms`. Every HTTP check below ran against **this**, never `next dev` |
+| 9 | `pnpm verify:routes` | ✅ **126/126** |
+| 10 | `pnpm verify:two-accounts` | ✅ **25/25** |
+| 11 | `pnpm verify:no-keys` | ✅ **12/12**, including a real approval |
+
+`scripts/probe-booking.mts` was re-run for the concurrency row of the domain table: capacity 1 with two simultaneous claims → **exactly one booking**, the loser refused `slot_full` with three alternatives; capacity 3 with five → **seats 0, 1, 2**, no gaps; a failed booking writes **no audit event and no notification** (88 → 88, 10 → 10).
+
+---
+
+#### Deviated from spec
+
+- **`scripts/verify/*.mts`, not `*.sh`.** The spec names `routes.sh`, `two-accounts.sh`, `no-keys.sh`. Every other script in this repo is `.mts`, the user's shell is PowerShell, and two of the three need the app's own modules (`src/lib/site/pages.ts` for the route list, `src/lib/data/*` for the ownership readers) — a curl script would have re-typed the route list by hand, which is the drift F30a existed to remove. `fresh-db.mts` is a fourth script the spec does not name; the acceptance criterion "applies cleanly against a **fresh** database" has no other way to be true.
+- **The `verify:*` scripts invoke `node --conditions=react-server --import tsx`,** not `NODE_OPTIONS=… pnpm exec tsx` as the existing probes' headers instruct. An inline env prefix is not valid in a `package.json` script on Windows. Same conditions, same loader, one form that runs everywhere.
+
+---
+
+#### Found, and worth knowing
+
+- **`sendEmail` cannot run under `tsx` at all.** It renders a react-email template through next-intl, and `use-intl`'s production build is ESM inside a package with no `"type": "module"` — so `tsx` takes the CJS loader and `createContext` comes back undefined. Not an app bug and not fixable from here; the render path runs under Next and under Vitest. The no-keys probe asserts the claim that actually matters instead: across the whole `email_log`, **0 rows `failed` and 82 `skipped`**. A missing key has never once been recorded as an outage.
+- **`/ar/settings/system` with a fabricated cookie is 307 to sign-in, not 404** — it sits under `(app)`, whose layout runs `requireUser` before the admin-only filter, so an invalid cookie is simply "signed out" there. Correct behaviour, and it means the criterion *"a reviewer 404s on `/settings/system`"* is **not** covered by any script. It needs a reviewer session (thread 64).
+- `/api/zones/geojson` with no `bbox` is a **400 with `invalid_bbox`**, by design. Two drafts of the sweep called it a failure before the route was read.
+- `deleteFile` removes the file and leaves the directory — right for the app, litter for a probe. `no-keys.mts` clears its own folder.
+- **`uploads/` and `.env` are both git-ignored**, confirmed with `git check-ignore`.
+
+---
+
+#### Integrity
+
+- The `user` table holds **exactly two rows**: the user's own `admin` (2026-08-16, the first account ever created) and the `reviewer` (2026-08-21). **No probe account has ever occupied the first slot.**
+- After every probe: **0** rows matching `probe-%` in `user`, `drone` or `email_log`; **0 orphaned `audit_event` rows**; 77 audit events, all resolving to live entities.
+
+---
+
+#### Not verified — and what each needs
+
+- **The four-eyes rule in a browser**, and a **reviewer** 404ing on `/admin/zones`, `/admin/audit`, `/admin/reveals` and `/settings/system` while reaching `/admin/analytics`. Both need the user to sign in as `alshar55@hotmail.com`; the assistant may not enter a password. **Thread 64, still open, and it is now the only thing standing between F31 and a complete pass.**
+- The six items F31 already names as un-runnable (real email delivery, Blob, the OG card as a third party sees it, a production QR, a printed 20 mm scan, Inngest production sync) — all recorded in `docs/VERIFICATION.md` with what each would need.
+- **Thread 77 — the 120 m altitude claim — is untouched and is a product decision, not a bug.** It is written up at the foot of `docs/VERIFICATION.md` so F31c's "looks like theirs" critic meets it as a known open question rather than reporting it as a fresh finding.
+
+---
+
+#### Next session should know
+
+- **F31b is the walkthrough**: all 14 steps by hand, in Arabic, on the production serve at 3001, plus the 375 px pass — which works **only** through a same-origin iframe (thread 44; `resize_window` reports success and leaves the viewport at 1440).
+- **F31c is the four critics, dispatched in a single message** so they run at once, reading `docs/VERIFICATION.md` and F31b's capture rather than the app. Two rounds, then stop.
+- The production server on 3001 was left running. Kill it by PID before the next `pnpm start`, and read `Ready in …` before trusting a result — `next start` on a held port fails silently and leaves the *old* process answering.
 
 ---
 

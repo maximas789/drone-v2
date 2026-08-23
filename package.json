@@ -17,7 +17,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/lib/seed/index.ts",
-    "vendor:fonts": "node scripts/vendor-fonts.mts"
+    "vendor:fonts": "node scripts/vendor-fonts.mts",
+    "verify:fresh-db": "tsx scripts/verify/fresh-db.mts",
+    "verify:routes": "tsx scripts/verify/routes.mts",
+    "verify:two-accounts": "node --conditions=react-server --import tsx scripts/verify/two-accounts.mts",
+    "verify:no-keys": "node --conditions=react-server --import tsx scripts/verify/no-keys.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

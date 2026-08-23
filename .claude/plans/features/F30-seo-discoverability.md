@@ -93,17 +93,25 @@ State honestly at hand-off that `llms.txt` is a **proposed convention no major A
 
 ### The preview card
 
-`src/app/opengraph-image.tsx` — dynamically generated, and **Arabic-first**: the wordmark أجنحة with "Ajniha", the one-line description in Arabic, and a visual cue of the Riyadh zone map. Arabic text in an OG image needs the font embedded explicitly; the default renderer will otherwise emit boxes.
+`src/app/[locale]/(public)/opengraph-image.tsx` — **not `src/app/opengraph-image.tsx`**. Under `[locale]` so `/ar` and `/en` get different cards rather than one bilingual compromise, and under `(public)` so it attaches to the public pages and not to the signed-in app.
 
-Per-page variants for `/remote-id` and the docs index, since those are the links most likely to be shared into a conversation about the concept.
+Arabic-first: the wordmark أجنحة with "Ajniha" beside it, the one-line description, and **the real seeded Riyadh geometry** — `RIYADH_ZONES` read from the seed module, not the database, so an unreachable database at build cannot ship a blank card.
 
-Twitter card metadata alongside.
+**The font is the whole problem (F30c).** `ImageResponse` is satori: no browser, no cascade, no font stack. `next/font/google` cannot supply the bytes — it writes content-hashed **WOFF2** into `.next/static/media`, and satori reads TTF/OTF/WOFF only. So `pnpm vendor:fonts` copies four faces (Arabic + Latin, 400 + 600) out of `@fontsource/ibm-plex-sans-arabic` into `assets/fonts/`, committed, with the SIL OFL licence beside them and a test asserting the bytes still match the installed package.
+
+**satori spaces Arabic unevenly**, and pre-breaking the lines did not fix it. Words are laid out as flex items with an explicit `gap` instead — Arabic does not join across a space, so shaping survives. See the session entry.
+
+One variant, on `/remote-id`, sharing `OgCard`. **The docs index does not get one**: it would differ from the root card only in a headline that already reads "الدليل", and a second file drawing the same wordmark is how two cards drift.
+
+Twitter card metadata alongside, in the layout — the image itself is attached by file convention, never named twice.
 
 ### Structured data, narrowly
 
 `WebSite` and `Organization` on the landing page only. **`Organization` names Ajniha as a proposed initiative, never GACA** — claiming affiliation in structured data is the machine-readable version of the fabricated-endorsement problem, and it's worse because it's the version aggregators consume.
 
-`FAQPage` on `/docs/remote-id` if the content genuinely is questions and answers; omitted otherwise.
+**`FAQPage` was considered and rejected.** `/docs/remote-id`'s eight headings are topics — *"What Remote ID means"*, *"What Saudi regulation requires, and from when"* — not questions anybody asked. Reshaping prose into questions to earn a rich result is the same fabrication with extra steps.
+
+Also deliberately absent, each for a stated reason in `structured-data.ts`: `logo`, `sameAs`, `address`, `legalName`, `contactPoint` (a real person's address, published in the legal pages but not fed to scrapers), and every one of `AggregateRating` / `Review` / `Offer`.
 
 ## Files
 

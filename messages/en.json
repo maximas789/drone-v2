@@ -1656,6 +1656,7 @@
     "scanTitle": "Check an aircraft",
     "llmsIntro": "Ajniha is a proposal put to the General Authority of Civil Aviation, not an official or adopted system. The pages below are the whole public surface, in Arabic first and then English.",
     "llmsSection": "Pages in English",
+    "ogNotice": "A proposal put to the General Authority of Civil Aviation, not an official system. The zones shown are authored for demonstration, not official airspace.",
     "pages": {
       "home": {
         "title": "Ajniha — drone registration by Remote ID",

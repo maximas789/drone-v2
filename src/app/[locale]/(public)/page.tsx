@@ -8,9 +8,14 @@ import { RemoteIdExplainer } from "@/components/landing/remote-id-explainer";
 import { Steps } from "@/components/landing/steps";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { getTranslations } from "next-intl/server";
 import { getSession } from "@/lib/auth-guards";
 import { toLocale } from "@/lib/locale";
 import { publicPageMetadata } from "@/lib/site/metadata";
+import {
+  siteStructuredData,
+  structuredDataJson,
+} from "@/lib/site/structured-data";
 
 /**
  * The front door.
@@ -37,8 +42,26 @@ export default async function LandingPage() {
   const session = await getSession();
   const signedIn = Boolean(session);
 
+  /**
+   * `WebSite` + `Organization`, here and on no other page. **`Organization`
+   * names Ajniha and never GACA** — see `structured-data.ts` for why that is
+   * the most consequential line in this file.
+   */
+  const tMeta = await getTranslations("meta");
+  const structuredData = structuredDataJson(
+    siteStructuredData(locale, {
+      siteName: tMeta("siteName"),
+      description: tMeta("pages.home.description"),
+    }),
+  );
+
   return (
     <div className="flex min-h-svh flex-col">
+      <script
+        type="application/ld+json"
+        // Escaped in `structuredDataJson`; nothing here is user-supplied.
+        dangerouslySetInnerHTML={{ __html: structuredData }}
+      />
       <SiteHeader signedIn={signedIn} />
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 sm:px-6">

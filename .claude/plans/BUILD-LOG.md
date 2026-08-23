@@ -33,8 +33,8 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–45). F30a and F30b landed (Session 45).** **F30b**: all 26 public pages carry their own title, description, canonical and three `hreflang` links — canonical string-compared against the URL fetched, `x-default` on Arabic, **0 duplicate titles in either locale** after the fetch found two collisions no test could reach. `noindex` is set **once per route group**, not once per page. **Thirty-nine signed-in pages had all shared one tab title**; each now names a catalogue key validated against both catalogues before any file was edited, and a source scan keeps it that way. **Only F30c — the preview card and the structured data — remains of F30.** Earlier: **F30a (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
-| 9 — Prove it | F31 | ⬜ Not started |
+| 8 — Close-out | F26–F30 | ✅ **Complete, with deviations (Sessions 35–45). F30 finished in Session 45 (a/b/c) — Wave 8 is done.** **F30c**: the preview card. `next/font/google` cannot feed satori — it writes content-hashed **WOFF2** and satori reads WOFF — so `pnpm vendor:fonts` commits four faces with the OFL licence and a staleness test that was **proved to fail** before it was kept. **satori spaces Arabic unevenly and two obvious fixes did nothing** (one produced a byte-identical PNG); words are laid out as flex items with an explicit gap instead, which survives because Arabic does not join across a space. The card drew **"Ajniha Ajniha"** in English — found by looking at the PNG, invisible to every check. The map on it is the **real seeded geometry**, in literal hex because `ZONE_FILL` holds CSS variables (thread 65, third costume). `Organization` names Ajniha and **never GACA — zero occurrences, checked**; `FAQPage` was considered and **rejected** because the headings are topics, not questions. Earlier: **F30a and F30b landed (Session 45).** **F30b**: all 26 public pages carry their own title, description, canonical and three `hreflang` links — canonical string-compared against the URL fetched, `x-default` on Arabic, **0 duplicate titles in either locale** after the fetch found two collisions no test could reach. `noindex` is set **once per route group**, not once per page. **Thirty-nine signed-in pages had all shared one tab title**; each now names a catalogue key validated against both catalogues before any file was edited, and a source scan keeps it that way. **Only F30c — the preview card and the structured data — remains of F30.** Earlier: **F30a (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 9 — Prove it | F31 | ⬜ Not started — **and it is the entire remainder of the build.** |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
 
@@ -365,7 +365,7 @@ Named, never assumed. Add as discovered.
 - **Any real Resend send at all** — needs an account and a key. `status: 'sent'` and `providerMessageId` are the only two `email_log` states never observed. The failure path *was* exercised, with an invalid key.
 - Resend delivery webhooks (`delivered` / `bounced` / `complained`) — need a public URL and a signing secret. Not built.
 - Vercel Blob uploads — needs a deployed store; the local driver is exercised instead.
-- OG preview card as a third party sees it — needs a public domain.
+- OG preview card as a third party sees it — needs a public domain. **The card itself renders** (F30c: Arabic correctly shaped, 1200×630 PNG, both locales, plus a `/remote-id` variant); what is unseen is how WhatsApp, iMessage or Slack crop and letterbox it.
 - QR codes encoding a production URL — needs `APP_URL` on a real domain.
 - Printed-QR scanning at 20 mm — needs a printer and a phone.
 - Inngest production sync — needs a first deploy.
@@ -376,6 +376,198 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 45c — Wave 8 · F30c The preview card, the vendored fonts and the structured data (**F30 complete**)
+
+**Date:** 2026-08-23
+**Status:** ⚠️ done with deviations. **F30 is complete. Only F31 — the verification gate — remains of the entire build.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `scripts/vendor-fonts.mts` · `pnpm vendor:fonts` | Copies four faces + the OFL licence into `assets/fonts/` |
+| `assets/fonts/` | 4 × WOFF (Arabic + Latin, 400 + 600), committed, ~127 KB |
+| `src/lib/site/og.ts` | The hex palette, `ogFonts()`, `riyadhZonePaths()` |
+| `src/lib/site/og-card.tsx` | `OgCard` — the layout, shared by both routes |
+| `src/app/[locale]/(public)/opengraph-image.tsx` | The root card |
+| `src/app/[locale]/(public)/remote-id/opengraph-image.tsx` | The `/remote-id` variant |
+| `src/lib/site/structured-data.ts` | `WebSite` + `Organization`, and what is deliberately absent |
+| `src/app/[locale]/layout.tsx` | *(extended)* `openGraph` + `twitter` |
+| `src/app/[locale]/(public)/page.tsx` | *(extended)* the JSON-LD script |
+| `src/lib/site/fonts.test.ts` | 9 tests — staleness, format, licence |
+
+---
+
+#### The font is the whole feature
+
+`ImageResponse` is **satori**: no browser, no cascade, no font stack, no
+stylesheet. It draws only the fonts handed to it as bytes, and a glyph it has no
+font for becomes an empty box. The card's headline is Arabic, so getting this
+wrong does not degrade the card — it produces a rectangle of tofu on the one
+image every shared link displays.
+
+**`next/font/google` cannot supply them**, on two independent grounds: it writes
+the faces into `.next/static/media` under content-hashed names that nothing can
+map back to a face, and it stores **WOFF2**, which satori does not read.
+
+So `pnpm vendor:fonts` copies four files out of
+`@fontsource/ibm-plex-sans-arabic` — the Arabic subset and the Latin one, at 400
+and 600, because satori resolves a glyph across every font it is given and
+Fontsource ships one file per subset. They are **committed**, so a fresh clone
+that runs `next build` still has them, and `fonts.test.ts` fails when they drift
+from the installed package. That guard was **proved to fail** by appending five
+bytes to one file before it was kept.
+
+**WOFF, not WOFF2** — Fontsource ships both side by side under names differing
+by one character, and picking the wrong one fails at *render* time with no type
+error and no build failure. A test reads the four-byte `wOFF` signature.
+
+The licence travels with them: IBM Plex is SIL OFL 1.1, which permits
+redistribution and requires it. A third test asserts the file is there.
+
+**Not in `public/`** — nothing in a browser ever requests these bytes. That is
+what makes them different from the map's worker assets, which live in
+`public/vendor/` precisely because they must be reachable over HTTP.
+
+#### satori spaces Arabic unevenly, and two obvious fixes did nothing
+
+The first card rendered with gaps two and three times a normal space, mid
+sentence. The English card, drawn by the same code, was clean — so it is the RTL
+path specifically. Tried and rejected, each verified by looking at the PNG:
+
+1. **Pre-breaking the lines** so there is no slack to distribute — unchanged.
+2. **Removing `display: flex` from the line boxes** — **byte-identical PNG**.
+
+What worked: **the spaces are not satori's to draw.** Each word is a flex item
+and the space between them is an explicit `gap`, uniform by construction, with
+`row-reverse` putting the first word rightmost. **Shaping survives because
+Arabic letters do not join across a space** — a word is an independent shaping
+run, so laying words out separately changes where they sit, not how they are
+drawn. Confirmed by reading the rendered Arabic in three cards.
+
+The cost: line breaks are counted in words rather than measured, so `perLine`
+differs per locale. Safe only because both strings come from the message
+catalogue.
+
+#### The card said "Ajniha Ajniha"
+
+`common.appName` is already "Ajniha" in English, and the card rendered the Latin
+form beside it unconditionally. The Arabic card was right — `أجنحة Ajniha` — and
+the English one printed the word twice. **Found by looking at the PNG.** Nothing
+else would ever have said so: it type-checked, it built, it was a valid image of
+the correct dimensions.
+
+#### The map is the real geometry
+
+`RIYADH_ZONES` from the seed module, projected through the same pure
+`projectionFor` / `pathFor` the landing page and `/zones` use, with
+`fillRule="evenodd"` so KKIA's ring is a hole rather than a disc.
+
+**Read from the seed, not the database**, deliberately: the card is generated at
+build time and making the one image every shared link displays depend on a live
+query is how a deploy with a briefly unreachable database ships a blank card.
+The seed module is what the database is filled *from*, so the picture cannot
+disagree with the rows.
+
+**`ZONE_FILL` could not be used** — it holds `var(--zone-permitted)`, and satori
+parses neither the custom property nor `oklch()`. This is open thread 65 in a
+third costume. The palette is therefore literal hex in `og.ts`, each value
+carrying the token it came from, converted with the OKLab→sRGB transform and
+**checked against known values** (`oklch(1 0 0)` → `#ffffff`, `oklch(0.628
+0.2577 29.23)` → `#ff0000`) rather than trusted.
+
+#### Structured data, and the four words that matter
+
+`Organization` names **أجنحة / Ajniha** and never GACA. Fabricated credibility in
+visible copy is at least legible to the reader; in structured data it is
+consumed by aggregators and assistants that repeat it as fact without showing
+anyone the sentence they got it from — and here it would be a machine-readable
+claim about a **safety regulator**.
+
+`FAQPage` was **considered and rejected**: `/docs/remote-id`'s eight headings are
+topics, not questions. Reshaping prose into questions to earn a rich result is
+the same fabrication with extra steps.
+
+Absent, each with its reason written down: `logo` and `image` (no logo exists),
+`sameAs` (no profiles — pointing it at nothing is worse than silence), `address`
+/ `legalName` / `foundingDate` (a proposal is not a company), `contactPoint` (a
+real person's address; published on the legal pages because a data-subject
+request must reach somebody, but feeding it to scrapers is a different act), and
+every one of `AggregateRating` / `Review` / `Offer`.
+
+`<` is escaped in the JSON, because a `</script>` inside a string would end the
+element early — nothing here is user-supplied *today*, which is exactly the
+condition that changes without anyone revisiting the escaping.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| `src/app/[locale]/(public)/opengraph-image.tsx`, not `src/app/opengraph-image.tsx` | There is no `src/app/layout.tsx`; the locale is a root param. Under `[locale]` each language gets its own card; under `(public)` it attaches to public pages and not the signed-in app. |
+| **No docs-index variant** | It would differ from the root card only in a headline that already reads "الدليل". A second file drawing the same wordmark is how two cards drift. `/remote-id` got one because it is the link actually shared in a conversation about the concept. |
+| `@fontsource/ibm-plex-sans-arabic` added as a **devDependency** | It is a source to copy from, not a runtime import. Vendoring means production never needs the package. |
+| No `FAQPage` | The content is not Q&A. See above. |
+| The OG image is **not named** in `openGraph.images` | `opengraph-image.tsx` supplies `og:image`, its type and its dimensions by file convention. A hand-written URL beside it would be a second source of truth for one tag, and the stale one would be the hand-written one. |
+
+---
+
+#### Verified — against a production serve on :3001, signed out
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1114 passed, 67 files** (9 new) |
+| `pnpm exec tsc --noEmit` · `pnpm lint` · `i18n:check` | clean; 2127 keys in sync |
+| `pnpm build` | compiled; both `opengraph-image` routes registered |
+| `/ar` and `/en` cards | **200, `image/png`, ~67–70 KB each** |
+| **Arabic on the card** | **correctly shaped, joined and in reading order** — read off the rendered PNG, three times across three attempts. Not boxes, not reversed |
+| The wordmark | `أجنحة Ajniha` on the Arabic card, `Ajniha` once on the English one |
+| The map on the card | all 12 seeded zones, KKIA's ring drawn as a hole |
+| `/remote-id` variant | its own route, its own headline, **200, 65 KB** |
+| `/zones` | inherits the root card, as intended |
+| Twitter card | `summary_large_image`, with title and description |
+| `og:image:width/height/type/alt` | present, 1200 × 630, `image/png` |
+| JSON-LD | **parses**, `WebSite` + `Organization`, `inLanguage` correct per locale |
+| **GACA in structured data** | **zero occurrences**, checked for `gaca`, `general authority`, `هيئة`, `الطيران المدني` |
+| Banned types | no `AggregateRating`, `Review`, `Offer`, `logo`, `sameAs`, `address`, `contactPoint` |
+| `FAQPage` | **0 occurrences** on `/docs/remote-id`, `/docs`, `/remote-id` |
+| Font guard | **proved to fail** — five bytes appended to one face, test named the file and the fix |
+| Font format | all four carry the `wOFF` signature, not `wOF2` |
+
+#### Not verified
+
+- **No link-preview validator has seen the card.** There is no public domain, so
+  every URL is `localhost:3001`. The image renders and its tags are correct; how
+  WhatsApp, iMessage or Slack crop and letterbox it is unseen. **Known
+  un-runnable** until a domain exists.
+- **The card has never been rendered on a machine without `.git` or without
+  `node_modules`.** Both would matter on a first deploy — the fonts are
+  committed precisely so the second does not, but that has not been proved by
+  deleting them.
+- **satori's Arabic spacing is improved, not solved.** It is even now because we
+  place the words; a longer string, a different weight, or a font change could
+  reopen it, and only looking at the PNG would say so.
+- **375 px** — nine sessions.
+
+#### Next session should know
+
+- **F30 is complete. F31 is the entire remainder of the build.**
+- F31's gate must run against **`next start`, never `next dev`** — a dev 404
+  embeds a stack trace naming the guard and a production one does not (thread
+  16).
+- **375 px works only through a same-origin iframe** — `resize_window` reports
+  success and leaves the viewport at 1440. Thread 44 has the technique.
+- Two blockers only the user can clear: **a second reviewer signing in** for the
+  four-eyes rule over HTTP (thread 64), and the **120 m altitude claim** the app
+  states as fact and no fetched GACA document supports (thread 77).
+- The **`pnpm vendor:fonts` / `pnpm vendor:map`** pair both have staleness tests.
+  Re-run each after bumping its dependency.
 
 ---
 

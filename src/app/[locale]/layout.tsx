@@ -5,8 +5,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locale as localeParam } from "next/root-params";
 import { routing } from "@/i18n/routing";
-import { direction, type Locale } from "@/lib/locale";
-import { APP_URL } from "@/lib/url";
+import { direction, toLocale, type Locale } from "@/lib/locale";
+import { absoluteUrl, APP_URL } from "@/lib/url";
 import "../globals.css";
 
 /**
@@ -60,6 +60,7 @@ export function generateStaticParams() {
  * itself — says `title: { absolute: … }`; that is F30b's job, page by page.
  */
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = toLocale(await localeParam());
   const t = await getTranslations("meta");
   return {
     metadataBase: new URL(APP_URL),
@@ -68,6 +69,29 @@ export async function generateMetadata(): Promise<Metadata> {
       template: t("titlePattern"),
     },
     description: t("pages.home.description"),
+    /**
+     * **The image is attached by file convention, not named here.**
+     * `opengraph-image.tsx` under `(public)` supplies `og:image`, its type and
+     * its dimensions; listing a URL as well would be a second source of truth
+     * for the same tag, and the one that went stale would be the hand-written
+     * one. What these blocks add is everything the *file* cannot know: the
+     * title, the description, the locale and the card type.
+     */
+    openGraph: {
+      type: "website",
+      siteName: t("siteName"),
+      title: t("pages.home.title"),
+      description: t("pages.home.description"),
+      url: absoluteUrl(`/${locale}`),
+      // Underscored, per the Open Graph spec — `ar-SA` is not a valid value
+      // here even though it is a perfectly good BCP 47 tag.
+      locale: locale === "ar" ? "ar_SA" : "en_US",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("pages.home.title"),
+      description: t("pages.home.description"),
+    },
   };
 }
 

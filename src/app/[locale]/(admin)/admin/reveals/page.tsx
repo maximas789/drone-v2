@@ -14,6 +14,8 @@ import {
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 import { isRole } from "@/lib/session";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/reveals` — who has been unmasking whom, and why.
@@ -219,4 +221,14 @@ export default async function AdminRevealsPage({
       </div>
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/reveals">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "lookup.revealsTitle");
 }

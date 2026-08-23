@@ -8,6 +8,8 @@ import { requirePilotProfile } from "@/lib/auth-guards";
 import { getRemoteIdForDrone, listMyDrones } from "@/lib/data/drone";
 import { SAUDI_BOUNDS } from "@/lib/geo/bbox";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/bookings/new` — the booking wizard.
@@ -145,4 +147,14 @@ async function bookableDrones(
   // Bookable first: the list is a control, and its first row should be one the
   // pilot can actually choose.
   return out.sort((a, b) => Number(a.blockedReason !== null) - Number(b.blockedReason !== null));
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/bookings/new">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "booking.newTitle");
 }

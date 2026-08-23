@@ -9,6 +9,8 @@ import { requireUser } from "@/lib/auth-guards";
 import { getMyDroneDetail } from "@/lib/data/drone";
 import { toLocale } from "@/lib/locale";
 import { isDroneEditable } from "@/lib/validation/drone";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/drones/[id]` — one aircraft, and what its status means.
@@ -100,4 +102,14 @@ export default async function DroneDetailPage({
       </section>
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/drones/[id]">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "drones.title");
 }

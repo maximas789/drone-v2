@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth-guards";
 import { toLocale } from "@/lib/locale";
 import { roleOf } from "@/lib/session";
 import { sectionsFor } from "@/lib/settings/sections";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/settings` — the index.
@@ -42,4 +44,14 @@ export default async function SettingsIndexPage() {
       ))}
     </ul>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/settings">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "settings.title");
 }

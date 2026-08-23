@@ -14,6 +14,8 @@ import { listActiveZones } from "@/lib/data/zone";
 import { SlotTime } from "@/components/booking/slot-time";
 import { formatAltitude } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/bookings/[id]` — one flight, and everything an inspector or a reviewer
@@ -270,4 +272,14 @@ function timelineFor(row: {
       current: row.status === "completed",
     },
   ];
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/bookings/[id]">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "bookings.title");
 }

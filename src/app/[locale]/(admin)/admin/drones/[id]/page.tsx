@@ -25,6 +25,8 @@ import { toLocale } from "@/lib/locale";
 import { fileUrlFor } from "@/lib/storage";
 import { serialRequiredFor, type BuildType } from "@/lib/validation/drone";
 import { isOwnSubmission } from "@/lib/workflow";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/drones/[id]` — one submission, and the decision.
@@ -342,4 +344,14 @@ function Row({
       </dd>
     </div>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/drones/[id]">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "review.tabDrones");
 }

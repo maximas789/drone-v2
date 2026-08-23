@@ -8,6 +8,8 @@ import {
   listMyNotifications,
 } from "@/lib/data/notification";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * The full notification list.
@@ -61,4 +63,14 @@ export default async function NotificationsPage() {
       />
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/notifications">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "notifications.title");
 }

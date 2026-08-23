@@ -7,6 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { Metadata } from "next";
+import { toLocale } from "@/lib/locale";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 export default async function ResetPasswordPage({
   searchParams,
@@ -27,4 +30,14 @@ export default async function ResetPasswordPage({
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/reset-password">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "auth.resetPassword");
 }

@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth-guards";
 import { getMyPreferences } from "@/lib/data/notification";
 import { SWITCHABLE_CATEGORIES } from "@/lib/settings/notification-categories";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/settings/notifications` — the categories that are genuinely optional.
@@ -64,4 +66,14 @@ export default async function NotificationSettingsPage() {
       <NotificationToggles preferences={preferences} />
     </section>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/settings/notifications">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "settings.notifications.title");
 }

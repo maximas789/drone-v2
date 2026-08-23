@@ -22,6 +22,8 @@ import { zonesToGeoJson } from "@/lib/maps/layer-styles";
 import type { ZoneDraft } from "@/lib/validation/zone";
 import type { Weekday } from "@/lib/validation/zone-hours";
 import { publishReadiness } from "@/lib/validation/zone-publish";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/zones/[id]` — one zone: its boundary, its rules, its week, and the
@@ -199,4 +201,14 @@ export default async function EditZonePage({
       <EntityTimeline events={trail} entityId={zone.id} locale={locale} />
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/zones/[id]">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "zoneAdmin.title");
 }

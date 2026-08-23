@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–45). F30a landed (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–45). F30a and F30b landed (Session 45).** **F30b**: all 26 public pages carry their own title, description, canonical and three `hreflang` links — canonical string-compared against the URL fetched, `x-default` on Arabic, **0 duplicate titles in either locale** after the fetch found two collisions no test could reach. `noindex` is set **once per route group**, not once per page. **Thirty-nine signed-in pages had all shared one tab title**; each now names a catalogue key validated against both catalogues before any file was edited, and a source scan keeps it that way. **Only F30c — the preview card and the structured data — remains of F30.** Earlier: **F30a (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -376,6 +376,150 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 45b — Wave 8 · F30b Per-page titles, canonicals and `hreflang`
+
+**Date:** 2026-08-23
+**Status:** ⚠️ done with deviations. **F30c — the preview card and the structured data — is what remains of F30.**
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/site/metadata.ts` | `publicPageMetadata`, `alternatesFor`, `privatePageTitle`, `PRIVATE_ROBOTS` |
+| `src/lib/site/resolve.ts` | *(extended)* `resolvePage(path, locale)` — one page, same resolver as the sitemap |
+| 8 public route files | `generateMetadata` calling `publicPageMetadata` with their own path |
+| 39 private route files | `generateMetadata` calling `privatePageTitle` with a catalogue key |
+| 3 route-group layouts | `export const metadata = { robots: PRIVATE_ROBOTS }` |
+| `src/components/legal/legal-page.tsx` | `legalMetadata` routes through `publicPageMetadata` |
+| `src/lib/site/site.test.ts` | *(extended)* the private-title source scan |
+
+---
+
+#### Every public page passes only its own path
+
+`publicPageMetadata("/zones", locale)` — and title, description, canonical and
+the `hreflang` set are decided in one place. **A canonical is a machine-readable
+claim about which URL is the real one**, so getting it wrong on one page tells a
+search engine to drop that page in favour of another; fourteen hand-written
+`alternates` blocks would be fourteen chances to write `/ar/zones` into the
+English page's head.
+
+The copy comes from the **same resolver the sitemap and `llms.txt` use**, so a
+page's description in a search result is the same sentence `llms.txt` hands an
+assistant. `legalMetadata` was rewritten to go through it too — it had been
+loading the `.mdx` a second time to read two fields.
+
+An unknown path **throws at build**. A public page that is titled but missing
+from `PUBLIC_PAGES` would be titled and unfindable, which is the failure this
+feature exists to end.
+
+#### `noindex` is set once per route group, not once per page
+
+`(app)`, `(admin)` and `(public)/(auth)` each export `robots: PRIVATE_ROBOTS`
+from their layout; metadata merges field by field, so a page setting only its
+own `title` keeps it. **Thirty-nine pages each repeating a `robots` block is
+thirty-nine places for one to go missing**, and the one that went missing would
+be indexed with every check green.
+
+`/[locale]/dev/emails` already carried its own — left alone.
+
+#### Thirty-nine tabs that all said the same thing
+
+Every signed-in page inherited `title.default`, so a reviewer with the queue, a
+drone and the audit browser open saw the same twenty-nine Arabic characters
+three times. Nothing was *broken*. It was unusable, and no check anywhere would
+ever have said so.
+
+Each page now names a **dotted catalogue path** — the same string it already
+renders as its own heading, so the tab and the `<h1>` cannot drift. The mapping
+was validated against **both** catalogues before a single file was edited, and
+the same pass refused to run unless every private `page.tsx` was covered: 39
+routes found, 39 mapped.
+
+**A detail page takes its section's title, not the record's.** `/drones/[id]` is
+titled "طائراتي", not the drone's nickname — resolving the nickname would mean
+running the ownership-checked query a second time inside `generateMetadata` on
+every detail page in the app. The `<h1>` shows the nickname; the tab shows where
+you are.
+
+#### Two collisions the fetch found and no test could
+
+- **`دليل أجنحة · أجنحة`** — the docs index stuttered, because its title already
+  contained the app name the template appends. Renamed to `الدليل` /
+  `Documentation`.
+- **`/remote-id` and `/docs/remote-id` had the same tab title.** The concept page
+  is now `الهوية عن بُعد: القاعدة ومصادرها` / `Remote ID: the rule and its
+  sources`, which is also what it is — the page with the citations. The docs
+  page keeps its `.mdx` title, which is its `<h1>` and its sidebar label too.
+
+Neither is reachable by a unit test: half the titles live in `.mdx` modules that
+only a bundler can load. **Uniqueness is verified by fetching all 26 pages**, and
+that is a manual pass with nothing automated behind it — thread 11 again.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| `generateMetadata` sits at the **end** of each public route file | The scripted insert put it between the page's doc comment and its component, orphaning the comment. Moved to match the convention `privacy/page.tsx` already set. |
+| Private pages get a title but **no description** | A description is what a search result shows, and these pages are `noindex`. Writing 39 descriptions nothing will ever display is the empty-Billing-tab failure in metadata form. |
+| The private-title guard is a **source scan**, not a table | A table in the test would be a second copy of the mapping, and a page could be added without appearing in it. The files are the mapping. Three other tests in this suite already scan `src/`. |
+
+---
+
+#### Verified — against a production serve on :3001, signed out
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1105 passed, 66 files** |
+| `pnpm exec tsc --noEmit` · `pnpm lint` · `i18n:check` | clean; 2126 keys in sync |
+| `pnpm build` | compiled, 85 static pages |
+| All 26 public pages | **26/26 have their own title, description, canonical and 3 `hreflang` links** |
+| Canonical | **26/26 equal the URL fetched** — checked by string comparison, not by eye |
+| `x-default` | **26/26 point at the Arabic URL** for that page |
+| Title uniqueness | **0 duplicates in `ar`, 0 in `en`** — after fixing the two above |
+| Public pages | carry **no** `robots` meta, so they stay indexable |
+| The 5 auth pages | own title **and** `noindex, nofollow` |
+| 10 private routes sampled | **307 to sign-in** signed out; the sign-in page they land on is itself `noindex` |
+| Sitemap / `llms.txt` | still 26 entries and 26 links, still **0** `/rid` occurrences, and both show the corrected titles |
+| The private-title guard | **proved to fail**: one key was corrupted, the test named the file and both locales, then it was restored |
+
+#### Not verified
+
+- **No signed-in tab has been read in a browser.** Every private route 307s to
+  sign-in and the assistant may not sign in, so the 39 titles are proved to
+  *resolve* — by the pre-flight check, by the build, and by the standing source
+  scan — but not to *render*. Whether `review.tabBookings` is the right choice
+  for `/admin/bookings/[id]` is a judgement nobody has looked at on screen.
+- **Title uniqueness has no test**, only the 26-page fetch. Half the titles come
+  from `.mdx` modules a unit test cannot load.
+- **`hreflang` is served as `hrefLang`.** Next emits the attribute camel-cased.
+  HTML attribute names are ASCII case-insensitive so crawlers read it correctly,
+  and this cost ten minutes to a case-sensitive `grep` that reported zero
+  alternates on a page that had three. Worth knowing before anyone "fixes" it.
+- **375 px** — nine sessions.
+
+#### Next session should know
+
+- **F30c is all that is left of F30**: `src/app/opengraph-image.tsx`, a
+  `/remote-id` variant, Twitter card metadata, and `WebSite` + `Organization`
+  JSON-LD on the landing page.
+- `ImageResponse` renders in a **satori** runtime that knows no Tailwind and no
+  CSS variables — read the values out of `globals.css` and write them literally.
+  **Arabic needs the font buffer passed explicitly** or it renders boxes.
+- **`Organization` must not name, imply or claim affiliation with GACA.**
+  `ORGANISATION_NAME` in `src/lib/legal/fields.ts` is the project's own name and
+  there is deliberately no legal entity behind it.
+- `FAQPage` goes on `/docs/remote-id` **only if** that page genuinely is
+  questions and answers. Read it before deciding; omit it otherwise.
+- Adding `openGraph`/`twitter` to the layout is enough — Next attaches a
+  generated `opengraph-image` to both by file convention.
 
 ---
 

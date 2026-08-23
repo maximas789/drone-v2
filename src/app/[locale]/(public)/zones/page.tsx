@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { locale as localeParam } from "next/root-params";
 import { getTranslations } from "next-intl/server";
 import { ZoneList } from "@/components/airspace/zone-list";
@@ -18,6 +19,7 @@ import { listMyDrones } from "@/lib/data/drone";
 import { listActiveZones, listHoursForZones } from "@/lib/data/zone";
 import { SAUDI_BOUNDS } from "@/lib/geo/bbox";
 import { toLocale, type Locale } from "@/lib/locale";
+import { publicPageMetadata } from "@/lib/site/metadata";
 import type { Session } from "@/lib/session";
 
 /**
@@ -48,7 +50,7 @@ import type { Session } from "@/lib/session";
  * step in words rather than offering a button to a route that 404s. Same call
  * F16a's footer made about Docs and Privacy.
  *
- * Nothing in `<head>` is set here. F30 owns the title.
+ * `<head>` comes from `PUBLIC_PAGES` — see `generateMetadata` below.
  */
 
 /** A month, matching `/api/zones/geojson` — the booking horizon. */
@@ -192,4 +194,15 @@ async function pilotAircraft(
   }
 
   return { drones, aircraft };
+}
+
+/**
+ * Title, description, canonical and `hreflang` from `PUBLIC_PAGES` — the same
+ * list the sitemap and `llms.txt` read, so a search result and the file an
+ * assistant reads carry one sentence rather than two that drift.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/zones">): Promise<Metadata> {
+  return publicPageMetadata("/zones", toLocale((await params).locale));
 }

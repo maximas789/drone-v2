@@ -6,6 +6,8 @@ import { requireUser } from "@/lib/auth-guards";
 import { getMyProfile, listCities } from "@/lib/data/pilot";
 import { toLocale } from "@/lib/locale";
 import { isInternalPath } from "@/lib/url";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/profile/complete` — **the page open thread 13 was about.**
@@ -91,4 +93,14 @@ export default async function CompleteProfilePage({
       />
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/profile/complete">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "profile.completeTitle");
 }

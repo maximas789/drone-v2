@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth-guards";
 import { deletionBlock } from "@/lib/data/account-deletion";
 import { formatDate } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/settings/account` — closing the account.
@@ -74,4 +76,14 @@ export default async function AccountSettingsPage() {
       )}
     </section>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/settings/account">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "settings.account.title");
 }

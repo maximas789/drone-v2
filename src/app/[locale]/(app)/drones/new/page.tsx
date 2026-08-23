@@ -5,6 +5,8 @@ import { requirePilotProfile } from "@/lib/auth-guards";
 import { getDroneById, getDronePhotos } from "@/lib/data/drone";
 import { toLocale } from "@/lib/locale";
 import type { BuildType } from "@/lib/validation/drone";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/drones/new` — registering an aircraft.
@@ -74,4 +76,14 @@ export default async function NewDronePage({
       />
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/drones/new">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "drones.newTitle");
 }

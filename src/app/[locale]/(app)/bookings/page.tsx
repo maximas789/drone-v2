@@ -13,6 +13,8 @@ import {
   listZoneAndRemoteIdForBookings,
 } from "@/lib/data/booking";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/bookings` — every flight this pilot has asked for.
@@ -144,4 +146,14 @@ export default async function BookingsPage({
       )}
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/bookings">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "bookings.title");
 }

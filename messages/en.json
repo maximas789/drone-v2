@@ -1666,7 +1666,7 @@
         "description": "The whole path as a pilot meets it: creating an account, registering an aircraft, human review, booking a flight window, and what a stranger sees when they scan the aircraft."
       },
       "remoteId": {
-        "title": "Remote ID",
+        "title": "Remote ID: the rule and its sources",
         "description": "A digital licence plate for drones: what it is, the American and Saudi models the rule rests on, and why it is a workable substitute for a serial number."
       },
       "zones": {
@@ -1674,7 +1674,7 @@
         "description": "Riyadh is closed by default. The full list of permitted, restricted and no-fly zones with their hours and ceilings, on an interactive map. Authored demonstration zones, not official airspace."
       },
       "docs": {
-        "title": "Ajniha documentation",
+        "title": "Documentation",
         "description": "Six pages on what this system actually does: registering an aircraft with no serial number, booking a flight window, and what a reviewer sees."
       }
     }

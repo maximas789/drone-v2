@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { locale as localeParam } from "next/root-params";
 import { getTranslations } from "next-intl/server";
 import { PublicPage } from "@/components/layout/public-page";
@@ -6,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { getSession } from "@/lib/auth-guards";
 import { listDocs } from "@/lib/docs";
 import { toLocale } from "@/lib/locale";
+import { publicPageMetadata } from "@/lib/site/metadata";
 
 /**
  * `/[locale]/docs` — the six pages, in `order`.
@@ -19,7 +21,7 @@ import { toLocale } from "@/lib/locale";
  * `docs.searchPlaceholder` was in the catalogue from F02 and is deleted rather
  * than honoured.
  *
- * Nothing in `<head>` is set here. F30 owns the title.
+ * `<head>` comes from `PUBLIC_PAGES` — see `generateMetadata` below.
  */
 export default async function DocsIndexPage() {
   const locale = toLocale(await localeParam());
@@ -71,4 +73,15 @@ export default async function DocsIndexPage() {
       </section>
     </PublicPage>
   );
+}
+
+/**
+ * Title, description, canonical and `hreflang` from `PUBLIC_PAGES` — the same
+ * list the sitemap and `llms.txt` read, so a search result and the file an
+ * assistant reads carry one sentence rather than two that drift.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/docs">): Promise<Metadata> {
+  return publicPageMetadata("/docs", toLocale((await params).locale));
 }

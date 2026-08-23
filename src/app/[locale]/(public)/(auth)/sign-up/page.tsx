@@ -9,6 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import type { Metadata } from "next";
+import { toLocale } from "@/lib/locale";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 export default async function SignUpPage() {
   const t = await getTranslations("auth");
@@ -39,4 +42,14 @@ export default async function SignUpPage() {
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/sign-up">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "auth.signUpTitle");
 }

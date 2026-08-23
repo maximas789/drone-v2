@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LastUpdated } from "@/components/docs/last-updated";
 import { DocsShell } from "@/components/docs/shell";
@@ -7,6 +8,7 @@ import { listDocs, loadDoc } from "@/lib/docs";
 import { isDocSlug } from "@/lib/docs/slugs";
 import { docLastUpdated } from "@/lib/docs/updated";
 import { toLocale } from "@/lib/locale";
+import { publicPageMetadata } from "@/lib/site/metadata";
 
 /**
  * `/[locale]/docs/[slug]` — one documentation page.
@@ -61,4 +63,22 @@ export default async function DocPage({
       </article>
     </DocsShell>
   );
+}
+
+/**
+ * The title and description are the `.mdx` file's own `meta` — the same strings
+ * the `<h1>`, the sidebar and the index card render, resolved through
+ * `PUBLIC_PAGES` so the sitemap and `llms.txt` cannot disagree with the tab.
+ *
+ * **An unknown slug returns `{}`** and lets the page's own `notFound()` do the
+ * work. Metadata that invents a title for a record that does not exist is how a
+ * 404 ends up indexed — and here it would also throw, because the path is not
+ * in `PUBLIC_PAGES`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/docs/[slug]">): Promise<Metadata> {
+  const { locale, slug } = await params;
+  if (!isDocSlug(slug)) return {};
+  return publicPageMetadata(`/docs/${slug}`, toLocale(locale));
 }

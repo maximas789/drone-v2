@@ -4,6 +4,8 @@ import { LanguageForm } from "@/components/settings/language-form";
 import { requireUser } from "@/lib/auth-guards";
 import { getMyPreferredLocale } from "@/lib/data/user";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/settings/language` — the language emails follow.
@@ -40,4 +42,14 @@ export default async function LanguageSettingsPage() {
       <p className="text-muted-foreground text-sm">{t("language.headerNote")}</p>
     </section>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/settings/language">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "settings.language.title");
 }

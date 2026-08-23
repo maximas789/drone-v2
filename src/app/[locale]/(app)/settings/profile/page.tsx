@@ -8,6 +8,8 @@ import { requirePilotProfile } from "@/lib/auth-guards";
 import { getMyProfileWithCity, listCities } from "@/lib/data/pilot";
 import { formatDate } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/settings/profile` — the pilot's own view of their identity, and the edit path.
@@ -145,4 +147,14 @@ export default async function ProfileSettingsPage() {
       />
     </section>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/settings/profile">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "settings.profile.title");
 }

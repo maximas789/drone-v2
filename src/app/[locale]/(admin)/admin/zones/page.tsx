@@ -12,6 +12,8 @@ import { countPendingReviews } from "@/lib/data/review";
 import { listZonesForAdmin } from "@/lib/data/zone-admin";
 import { formatDate, formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/zones` — the airspace itself, drafts included.
@@ -172,4 +174,14 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return <td className="p-3 text-start">{children}</td>;
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/zones">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "zoneAdmin.title");
 }

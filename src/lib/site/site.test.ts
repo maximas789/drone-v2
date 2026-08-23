@@ -281,3 +281,87 @@ describe("the metadata catalogue", () => {
     expect(catalogue.meta.titlePattern).not.toContain("{");
   });
 });
+
+/**
+ * **Every `privatePageTitle` key, checked against both catalogues.**
+ *
+ * The thirty-nine pages behind a sign-in name their title as a dotted string —
+ * `privatePageTitle(locale, "review.tabBookings")` — which no type can check.
+ * Rename that key in the catalogue and the reviewer's browser tab silently
+ * reads `review.tabBookings`, because next-intl renders a missing key as its
+ * own path. That already happened once this feature, in `llms.txt`.
+ *
+ * **A source scan, not a table**, deliberately: a table here would be a second
+ * copy of the mapping, and a page could be added without appearing in it. The
+ * files are the mapping. Three other tests in this suite scan `src/` the same
+ * way, which is why the suite's timeout is 20 s.
+ *
+ * It cannot check that the key is the *right* one — only that it resolves.
+ * Whether `/drones/[id]` should say "My aircraft" is a judgement, and the
+ * signed-in tabs have never been read in a browser: every private route 307s to
+ * sign-in, and the assistant may not sign in.
+ */
+describe("private page titles", () => {
+  it("every key a page asks for exists in both catalogues", async () => {
+    const { readdir, readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+
+    async function walk(dir: string): Promise<string[]> {
+      const entries = await readdir(dir, { withFileTypes: true });
+      const out: string[] = [];
+      for (const entry of entries) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) out.push(...(await walk(full)));
+        else if (entry.name === "page.tsx") out.push(full);
+      }
+      return out;
+    }
+
+    const catalogues = Object.fromEntries(
+      await Promise.all(
+        ["ar", "en"].map(async (locale) => [
+          locale,
+          (
+            await import(`../../../messages/${locale}.json`, {
+              with: { type: "json" },
+            })
+          ).default as Record<string, unknown>,
+        ]),
+      ),
+    ) as Record<string, Record<string, unknown>>;
+
+    const resolve = (cat: Record<string, unknown>, dotted: string) =>
+      dotted
+        .split(".")
+        .reduce<unknown>(
+          (node, part) =>
+            typeof node === "object" && node !== null
+              ? (node as Record<string, unknown>)[part]
+              : undefined,
+          cat,
+        );
+
+    const pages = await walk(join("src", "app"));
+    const found: { file: string; key: string }[] = [];
+    for (const file of pages) {
+      const source = await readFile(file, "utf8");
+      for (const match of source.matchAll(
+        /privatePageTitle\([^,]+,\s*"([^"]+)"\s*\)/g,
+      )) {
+        found.push({ file, key: match[1] });
+      }
+    }
+
+    // If this drops to zero the test has stopped testing anything.
+    expect(found.length).toBeGreaterThanOrEqual(39);
+
+    for (const { file, key } of found) {
+      for (const locale of ["ar", "en"]) {
+        expect(
+          typeof resolve(catalogues[locale], key),
+          `${file} asks for ${key}, missing from ${locale}.json`,
+        ).toBe("string");
+      }
+    }
+  });
+});

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { locale as localeParam } from "next/root-params";
 import { SignOutButton } from "@/components/auth/sign-out-button";
@@ -5,6 +6,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Link } from "@/i18n/navigation";
+import { PRIVATE_ROBOTS } from "@/lib/site/metadata";
 import { requireUser } from "@/lib/auth-guards";
 import { toLocale } from "@/lib/locale";
 
@@ -21,6 +23,23 @@ import { toLocale } from "@/lib/locale";
  * switcher and sign-out moved up here from the dashboard for the same reason —
  * they belong to the shell, not to one page.
  */
+/**
+ * **Never indexed**, set once for the whole route group rather than once per
+ * page: metadata merges field by field, so a page underneath that sets only its
+ * own `title` still inherits this. Fifteen pages each repeating a `robots` block is
+ * fifteen places for one to go missing, and the one that went missing would be
+ * indexed with nothing failing.
+ *
+ * `robots.txt` disallows these paths as well. Neither control is sufficient
+ * alone — a disallowed page is never fetched, so its `noindex` is never read,
+ * and a URL a search engine already knows can sit in an index behind a
+ * `Disallow` indefinitely.
+ *
+ * **This is not the security boundary.** The guard below is. This stops the app
+ * appearing in a search result; it stops nobody from typing the URL.
+ */
+export const metadata: Metadata = { robots: PRIVATE_ROBOTS };
+
 export default async function AppLayout({ children }: LayoutProps<"/[locale]">) {
   const locale = toLocale(await localeParam());
   const session = await requireUser(locale);

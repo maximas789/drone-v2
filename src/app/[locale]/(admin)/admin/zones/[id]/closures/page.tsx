@@ -16,6 +16,8 @@ import {
 } from "@/lib/data/zone-admin";
 import { toLocale } from "@/lib/locale";
 import { overlappingClosures } from "@/lib/validation/zone-closure";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/zones/[id]/closures` — **the NOTAM analogue.**
@@ -138,4 +140,14 @@ export default async function ZoneClosuresPage({
       )}
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/zones/[id]/closures">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "zoneAdmin.closuresTitle");
 }

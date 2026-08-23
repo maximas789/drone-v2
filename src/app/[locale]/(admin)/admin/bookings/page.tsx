@@ -18,6 +18,8 @@ import { countPendingReviews, listBookingQueue } from "@/lib/data/review";
 import { listActiveZones } from "@/lib/data/zone";
 import { formatHours, formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/bookings` — the flight queue, and the second half of F22's queue.
@@ -127,4 +129,14 @@ export default async function AdminBookingsPage({
       </ButtonLink>
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/bookings">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "review.tabBookings");
 }

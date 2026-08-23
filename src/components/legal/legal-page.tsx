@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth-guards";
 import { formatDate } from "@/lib/format";
 import { EFFECTIVE_DATE, loadLegal, type LegalSlug } from "@/lib/legal";
 import { toLocale } from "@/lib/locale";
+import { publicPageMetadata } from "@/lib/site/metadata";
 
 /**
  * The body of every legal page, and the metadata that goes with it.
@@ -70,13 +71,18 @@ export async function LegalPage({
 /**
  * Title and description come from the document's own `meta`, so the browser
  * tab, the search result and the `<h1>` are one string rather than three that
- * drift. No `robots` override: these pages are meant to be found, and F30 owns
- * what else is.
+ * drift. No `robots` override: these pages are meant to be found.
+ *
+ * **F30b routes it through `publicPageMetadata`** rather than returning the two
+ * fields directly. That adds the canonical and the `hreflang` set — and, more
+ * to the point, makes the legal pages read their copy through the same resolver
+ * as the sitemap and `llms.txt` instead of loading the `.mdx` a second time
+ * here. `PUBLIC_PAGES` already routes a legal slug to `loadLegal`, so the
+ * strings are identical by construction rather than by coincidence.
  */
 export async function legalMetadata(
   slug: LegalSlug,
   rawLocale: string,
 ): Promise<Metadata> {
-  const doc = await loadLegal(toLocale(rawLocale), slug);
-  return { title: doc.meta.title, description: doc.meta.description };
+  return publicPageMetadata(`/${slug}`, toLocale(rawLocale));
 }

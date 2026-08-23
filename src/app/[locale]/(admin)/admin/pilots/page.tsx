@@ -10,6 +10,8 @@ import { requireReviewer } from "@/lib/auth-guards";
 import { countPendingReviews, searchPilots } from "@/lib/data/review";
 import { formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/pilots` — the directory behind the queues.
@@ -70,4 +72,14 @@ export default async function AdminPilotsPage() {
       </ButtonLink>
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/pilots">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "review.pilotsTitle");
 }

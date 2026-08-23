@@ -18,6 +18,8 @@ import { getPilotForReview } from "@/lib/data/review";
 import { formatDate } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 import { isOwnSubmission } from "@/lib/workflow";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/pilots/[id]` — the person, and the one decision that is about them
@@ -242,4 +244,14 @@ function Row({
       </dd>
     </div>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/pilots/[id]">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "review.pilotsTitle");
 }

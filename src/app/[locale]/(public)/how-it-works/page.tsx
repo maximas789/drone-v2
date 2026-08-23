@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { PublicPage, Section } from "@/components/layout/public-page";
 import { ButtonLink } from "@/components/ui/button-link";
 import { getSession } from "@/lib/auth-guards";
+import { toLocale } from "@/lib/locale";
+import { publicPageMetadata } from "@/lib/site/metadata";
 
 /**
  * The whole flow, end to end, for a pilot.
@@ -16,7 +19,7 @@ import { getSession } from "@/lib/auth-guards";
  * checkable. Nothing on this page claims an automated identity check, an SMS,
  * or a regulator's involvement.
  *
- * Nothing in `<head>` is set here. F30 owns the title.
+ * `<head>` comes from `PUBLIC_PAGES` — see `generateMetadata` below.
  */
 
 /**
@@ -107,4 +110,15 @@ export default async function HowItWorksPage() {
       </section>
     </PublicPage>
   );
+}
+
+/**
+ * Title, description, canonical and `hreflang` from `PUBLIC_PAGES` — the same
+ * list the sitemap and `llms.txt` read, so a search result and the file an
+ * assistant reads carry one sentence rather than two that drift.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/how-it-works">): Promise<Metadata> {
+  return publicPageMetadata("/how-it-works", toLocale((await params).locale));
 }

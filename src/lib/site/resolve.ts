@@ -85,6 +85,27 @@ async function dateFor(
   }
 }
 
+/**
+ * One page, by its unprefixed path. `publicPageMetadata` uses it so a page's
+ * `<title>` and its `llms.txt` line come out of the same resolver.
+ *
+ * Throws on an unknown path rather than returning `null`: every caller is a
+ * route that knows its own path at author time, so a miss is a typo to fix at
+ * build, never a runtime state to render around.
+ */
+export async function resolvePage(
+  path: string,
+  locale: Locale,
+): Promise<ResolvedPage> {
+  const page = PUBLIC_PAGES.find((candidate) => candidate.path === path);
+  if (!page) throw new Error(`no public page at ${path}`);
+  const [copy, lastModified] = await Promise.all([
+    copyFor(page, locale),
+    dateFor(page, locale),
+  ]);
+  return { path: page.path, ...copy, lastModified };
+}
+
 export async function listPublicPages(
   locale: Locale,
 ): Promise<ResolvedPage[]> {

@@ -17,6 +17,8 @@ import { listEmailLog, listEmailTemplates, isEmailStatus } from "@/lib/ops/email
 import { listJobRuns, listScheduledFunctions } from "@/lib/ops/jobs";
 import { listAuditEvents } from "@/lib/data/audit";
 import { isAdmin } from "@/lib/session";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/settings/system` — everything the app does out of sight, made visible.
@@ -134,4 +136,14 @@ export default async function SystemSettingsPage({
       </section>
     </div>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/settings/system">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "settings.system.title");
 }

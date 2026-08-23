@@ -11,6 +11,8 @@ import { countPendingReviews } from "@/lib/data/review";
 import { formatNumber } from "@/lib/format";
 import { toLocale } from "@/lib/locale";
 import { isAdmin } from "@/lib/session";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/admin/lookup` — the compliance spot-check.
@@ -83,4 +85,14 @@ export default async function AdminLookupPage() {
       </div>
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/admin/lookup">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "lookup.title");
 }

@@ -11,6 +11,8 @@ import { toLocale } from "@/lib/locale";
 import { registrationStatusOf } from "@/lib/remote-id/redact";
 import { fileUrlFor } from "@/lib/storage";
 import "@/app/print.css";
+import type { Metadata } from "next";
+import { privatePageTitle } from "@/lib/site/metadata";
 
 /**
  * `/drones/[id]/remote-id/print` — the wallet card and the sticker sheet.
@@ -196,4 +198,14 @@ export default async function RemoteIdPrintPage({
       </section>
     </main>
   );
+}
+
+/**
+ * Its own tab title, from the same string this page renders as its heading.
+ * `robots` comes from the route group's layout — see `PRIVATE_ROBOTS`.
+ */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/drones/[id]/remote-id/print">): Promise<Metadata> {
+  return privatePageTitle(toLocale((await params).locale), "remoteId.card.printTitle");
 }

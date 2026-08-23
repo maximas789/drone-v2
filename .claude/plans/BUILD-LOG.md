@@ -33,7 +33,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 5 — Domain core | F10–F15 | ⚠️ **Complete, with deviations (Sessions 10–13).** |
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
-| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–44). F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
+| 8 — Close-out | F26–F30 | 🟨 **In progress (Sessions 35–45). F30a landed (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
 | 9 — Prove it | F31 | ⬜ Not started |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
@@ -76,6 +76,26 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with devi
 | @mdx-js/loader · @mdx-js/react | 3.1.1 | registry · installed | F26. |
 | remark-gfm | 4.0.1 | registry · installed | F26, and **not optional**: MDX parses CommonMark, which has no tables. Without it a `\| a \| b \|` block renders as literal pipes with every check green. |
 | @types/mdx | 2.0.14 | registry · installed (dev) | F26. Declares the `*.mdx` module shape. Its `default` is typed; a named `meta` export is not, so `isDocMeta` narrows it. |
+
+### AI crawler user-agent tokens — from F30a research
+
+**F30's feature file said these came from Wave 0. They did not** — F01 researched package versions only, and this table had no crawler row until now. Read from each operator's own documentation on **2026-08-23**; `src/lib/site/crawlers.ts` carries the same list with the source URL beside each group.
+
+**A stale token is not an error.** It is a `User-agent:` line naming a bot that does not exist — a rule that matches nothing, silently, for ever. The date above is part of the data; re-check it rather than trusting it.
+
+| Kind | Tokens | Source |
+|---|---|---|
+| Training / model development | `GPTBot`, `ClaudeBot`, `Google-Extended`, `Applebot-Extended`, `meta-externalagent`, `CCBot` | developers.openai.com/api/docs/bots · support.claude.com/en/articles/8896518 · developers.google.com/search/docs/crawling-indexing/google-common-crawlers · support.apple.com/en-us/119829 · developers.facebook.com/docs/sharing/webmasters/web-crawlers · commoncrawl.org/ccbot |
+| Search / citation | `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`, `Applebot` | as above, plus docs.perplexity.ai/guides/bots |
+| User-initiated fetch | `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `meta-externalfetcher` | as above |
+
+**Two of them are not crawlers.** `Google-Extended` and `Applebot-Extended` fetch nothing; each decides what the operator's *real* crawler (Googlebot, Applebot) may do with pages it already holds. Disallowing one withholds a permission, it does not refuse a request — and Apple and Google both state that disallowing them does not remove a page from search.
+
+**One does not fit the split.** Meta documents `meta-externalagent` as serving both "training foundation AI models" *and* "improving products by indexing content directly" — one token, two purposes, no way to separate them in `robots.txt`. Filed under training, which is the stricter reading.
+
+**Deliberately not named**, so nobody adds them later thinking they were missed: `OAI-AdsBot` (Ajniha buys no ads), `GoogleOther` (no stated AI purpose — the `*` group covers it), and `facebookexternalhit`, which is the **link-preview fetcher that renders the card when an Ajniha link is pasted into WhatsApp**. Blocking that one would break F30c's preview on the exact surface this pitch is shared in.
+
+---
 
 ### Deprecations & API changes found
 
@@ -163,7 +183,7 @@ Things left unresolved that a later session must pick up. **Delete a row when it
 | 71 | **A cancellation reason reaches an English-reading pilot in Arabic.** `booking.cancellationReason` is a single column and holds the **authored** language, which is right for the record — but `/en/bookings/[id]` renders it raw under *"Why this was cancelled"*, so a closure whose English reason was written, stored and emailed still shows Arabic on the pilot's own page. The notification params carry **both** languages and are the material for a fix; the same gap applies to an authority cancellation, which has only ever had one authored reason. **F28 or F21 owns it**, and it needs a decision about whether the row grows a second column or the page reads the notification. | F23c | F31 |
 | 72 | **`{count}` messages hard-code an Arabic plural.** Arabic has six plural categories; a message written as `{count} حجوزات` prints `1 حجوزات` for one. `impactCount` and `closureCancelCount` were fixed in F23c with the pattern that works under thread 22 — a numeric `n` selects the branch and is never printed, a **formatted** `count` string is what appears — but **`zoneAdmin.previewCount` and every other `{count}` message in the catalogues are unaudited**. `i18n:check` cannot see this: it compares placeholders between catalogues, and a message wrong in both is wrong consistently. | F23c | F25, F31 |
 | 74 | **Every chart on `/admin/analytics` has only ever been drawn from single-digit data.** Five registrations, four bookings, thirty scans, two review decisions. Label thinning, the eight-zone bar cap, the six-step sequential ramp and the 44 px bar cap are exercised by unit test and by reasoning; **none has been seen on a full screen**. A seed of a few hundred rows would be the cheapest way to find out what this page looks like when it is doing its job — and F31 is the place that matters, because the pitch screen looking thin is a presentation failure rather than a bug. | F25a | F31 |
-| 5 | The `[locale]` segment is a catch-all for unknown paths, so `/anything.txt` reaches the layout. `hasLocale` + `notFound()` handles it, but F30 must still confirm `robots.txt` and `sitemap.xml` resolve as real routes rather than being swallowed. | F02 | F30 |
+| 78 | **A deleted message key is not an error — it is text, and `i18n:check` cannot see it.** `llms.txt` shipped the literal string `meta.description` into the file that describes this app to an assistant, because F30a deleted that key and the route still read it. next-intl throws `MISSING_MESSAGE` **to server stderr** and renders the key path into the response; `typecheck`, `lint`, `i18n:check` and 1100 tests were green, and nobody reads production stderr. `i18n:check` is structurally blind to it: it compares the two catalogues *with each other*, and a key deleted from **both** leaves them perfectly in sync. Found by fetching the file. `site.test.ts` now names every `meta.*` key the spine reads and was proved to fail when one is removed — but that guard covers F30's keys only, and every other namespace has the same hole. | F30a | F30b, F31 |
 | 75 | **A role change that changes nothing still writes an audit event.** Re-submitting the role form on `/admin` with the value already selected appends a `user.role_changed` row whose `before` and `after` are identical — `{"role": "reviewer"}` → `{"role": "reviewer"}`. Found in Session 34 while verifying the promotion: two clicks, two rows, one real change. It is F05's action, not F25b's, and it is not wrong so much as **noisy in exactly the wrong place** — the audit browser now renders every row, so an event that reports no change reads to a regulator as a decision somebody made. The fix is a no-op guard in the role action, not in the browser: the log must not be filtered at render, because then it stops being the log. | F25b | F26–F30 wherever the role action is touched; F31's demo |
 
 ---
@@ -356,6 +376,176 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 45 — Wave 8 · F30a The discoverability spine: one page list, the sitemap, robots and `llms.txt`
+
+**Date:** 2026-08-23
+**Status:** ⚠️ done with deviations. **F30 split a/b/c, agreed with the user up front.** F30b is the per-page titles; F30c is the preview card and the structured data.
+
+---
+
+#### What exists
+
+| File | What |
+|---|---|
+| `src/lib/site/pages.ts` | **Pure.** `PUBLIC_PAGES` — 13 pages, derived from `DOC_SLUGS` and `LEGAL_SLUGS`; `PRIVATE_SEGMENTS`; `disallowedPaths()`; `localePath()` |
+| `src/lib/site/crawlers.ts` | **Pure.** Fourteen AI-crawler tokens in three groups, each with the URL it was read from |
+| `src/lib/site/last-modified.ts` | `server-only`. Git committer date, mtime fallback — F26's implementation, lifted |
+| `src/lib/site/resolve.ts` | `server-only`. `listPublicPages(locale)` — title, description, `lastModified` |
+| `src/lib/site/site.test.ts` | 22 tests |
+| `src/app/sitemap.ts` | 26 entries, both locales, `x-default` → `ar` |
+| `src/app/robots.ts` | *(rewritten)* four groups, one generated disallow list |
+| `src/app/llms.txt/route.ts` | Arabic section then English, 26 links |
+| `src/app/[locale]/layout.tsx` | *(extended)* `metadataBase`, `title.template`, `title.default` |
+| `src/lib/url.ts` | *(extended)* the loud `APP_URL` warning |
+| `src/lib/docs/updated.ts` | *(rewritten)* delegates; keeps `docLastUpdated`, adds `docSourcePath` |
+| `messages/{ar,en}.json` | `meta` rewritten — `pages.*`, `titlePattern`, `llms*` |
+
+---
+
+#### Two live `robots.txt` bugs, both of which had matched nothing since F11
+
+**`Disallow: /dashboard` and `Disallow: /admin` were doing nothing at all.**
+Routing is `localePrefix: "always"`, so there is no `/dashboard` — the route is
+`/ar/dashboard`. A `Disallow:` is a **prefix match**, and `/ar/dashboard` does
+not start with `/dashboard`. Only `/*/rid/` had been written with the wildcard,
+and only `/*/rid/` worked. Four waves of admin and pilot surfaces have been
+crawlable to anything that reads the file.
+
+**A trailing slash is the same trap wearing a different hat.**
+`Disallow: /ar/settings/` covers `/ar/settings/profile` and leaves
+`/ar/settings` — a real page — crawlable. Every rule is now emitted without one.
+
+`disallowedPaths()` generates both forms for every segment: `/*/<seg>` and, from
+`LOCALES`, `/ar/<seg>` and `/en/<seg>`. The wildcard is RFC 9309 and every major
+crawler honours it; the explicit pair means the segment whose exposure would be
+a **browsable national drone registry** does not rest on that.
+
+Nine segments are private now, not two: `rid`, `dashboard`, `drones`,
+`bookings`, `notifications`, `settings`, `profile`, `admin`, and `dev` — the
+last because `/{locale}/dev/emails` renders every transactional template.
+
+#### The most dangerous thing in the file is that a robot obeys exactly one group
+
+RFC 9309: a crawler picks the **most specific** `User-agent` group that matches
+it and ignores every other group, `*` included. So a named group with a shorter
+`Disallow` list does not *add* a restriction — it **removes** the ones in `*`.
+Naming `GPTBot` in order to state a policy about it, and forgetting one line,
+would hand `GPTBot` the scan endpoint the anonymous group is refused.
+
+Every group is therefore built from the same `disallowedPaths()` and differs in
+nothing but its `User-agent` line. `site.test.ts` asserts the four lists are
+equal, and separately that `/*/rid`, `/ar/rid` and `/en/rid` are in every one of
+them.
+
+#### The crawler tokens the spec said Wave 0 had researched
+
+**Wave 0 had not.** F01 researched package versions; there is no crawler row in
+this file and never was one. Fourteen tokens were fetched from each operator's
+own documentation on 2026-08-23 and recorded with their sources — see the new
+section beside the pinned versions.
+
+Two of them are **not crawlers**: `Google-Extended` and `Applebot-Extended`
+fetch nothing and govern what the operator's real crawler may do with pages it
+already holds. One does not fit the three-way split at all: Meta documents
+`meta-externalagent` as serving training *and* direct indexing. Both are written
+into `crawlers.ts` rather than smoothed over, because a reader who assumes
+otherwise concludes the file blocks a fetch that still happens.
+
+`facebookexternalhit` is deliberately **not** named — it is the link-preview
+fetcher that renders the card when an Ajniha link is pasted into WhatsApp, which
+is the surface this pitch is actually shared in. A test asserts it stays
+unnamed.
+
+#### `lastModified` is a real date or no date
+
+The four concept pages date from the committer date of their own `page.tsx`; the
+six documentation pages from their `.mdx`, per locale, because the two languages
+are edited independently; the two legal pages from `EFFECTIVE_DATE`, which F27
+set by hand on the argument that a policy's date is a claim about the *policy*
+and a typo fix in the Arabic must not announce a new privacy policy to everyone.
+
+Six distinct dates across 26 entries, spanning 18–22 August. `new Date()` would
+have produced one, and a sitemap where everything changed today tells a crawler
+exactly as much as omitting the field. A page whose date cannot be established
+gets **no** `<lastmod>` rather than a fabricated one.
+
+F26's `docLastUpdated` implementation moved to `src/lib/site/last-modified.ts`
+so the sitemap and the docs page cannot disagree about when a page changed.
+
+#### A missing message key is text, not an error
+
+`llms.txt` served the literal string **`meta.description`** as the one-line
+description of this app. F30a had deleted that key and the route still read it;
+next-intl throws `MISSING_MESSAGE` to server stderr and renders the key path
+into the response body. `typecheck`, `lint`, `i18n:check` and 1100 tests were
+green.
+
+**`i18n:check` is structurally blind to it** — it compares the two catalogues
+with each other, and a key deleted from *both* leaves them perfectly in sync.
+Found by fetching the file, which is thread 11 for the sixth time. `site.test.ts`
+now names every `meta.*` key the spine reads; the guard was **proved to fail**
+by adding a key that does not exist and watching both locales go red. Open
+thread 78: the same hole exists in every other namespace.
+
+`meta.keywords` was deleted outright in the same pass. Nothing read it, and a
+`<meta name="keywords">` list is the keyword-stuffing the honesty rule bans.
+
+---
+
+#### Deviated from spec
+
+| What | Why |
+|---|---|
+| `src/lib/site/` (four files), not `src/lib/public-pages.ts` | The list must be readable by a unit test *and* resolvable against `.mdx`, the catalogue and the filesystem. That is the split `slugs.ts` / `updated.ts` already made in F26, for the same reason. |
+| Metadata went in `src/app/[locale]/layout.tsx` | **There is no `src/app/layout.tsx`.** The locale is a root param — that is how `next/root-params` reaches `i18n/request.ts`. |
+| `Disallow: /*/rid`, not the criterion's literal `/*/rid/` | The trailing slash weakens it. `/*/rid` is strictly broader and covers everything the slashed form would. |
+| The crawler tokens were researched in this session | Wave 0 never researched them. Recorded with sources and a date rather than claimed. |
+| The footer still keeps its own three links | `/docs`, `/privacy`, `/terms` is a navigational choice, not the public surface. Feeding it 13 links would be a worse footer. |
+| `APP_URL` unset **warns**, it does not fail the build | The criterion allows either. `pnpm build` runs migrations and compiles the app; a developer with no `.env` should get a working local build and a sentence, not a failure in a step unrelated to the URL. The health check on `/settings/system` already reports it `down`, and F29 verified that by breaking it. |
+
+---
+
+#### Verified — against a production serve on :3001, signed out
+
+| Check | Result |
+|---|---|
+| `pnpm test` | **1104 passed, 66 files** (22 new) |
+| `pnpm exec tsc --noEmit` · `pnpm lint` | clean; `i18n:check` — 2126 keys in sync |
+| `pnpm build` | compiled; `/robots.txt` and `/sitemap.xml` prerendered static, `/llms.txt` dynamic |
+| `/robots.txt`, `/sitemap.xml`, `/llms.txt` | **200 each**, `text/plain`, `application/xml`, `text/plain; charset=utf-8` — **closes open thread 5**, they are real routes and the `[locale]` catch-all does not swallow them |
+| Sitemap | **well-formed XML**, parsed with a real parser — 26 `<url>`, 13 pages × 2 locales |
+| Alternates | **26/26 entries carry exactly 3** — `x-default`, `ar`, `en` |
+| Every sitemap URL | **26/26 fetched cold, all 200** signed out |
+| `rid` in the sitemap | **0 occurrences.** So are `dashboard`, `settings`, `admin`, `drones`, `bookings`, `notifications`, `sign-in`, `profile`, `dev` |
+| `rid` in `llms.txt` | **0 occurrences**, same list checked |
+| `<lastmod>` | six distinct dates, 18–22 August. Legal pages = `EFFECTIVE_DATE` to the second |
+| `/ar/rid/AJN-7Q4M-31KD` | `<meta name="robots" content="noindex, nofollow"/>` — and on an **invalid** code too, so the directive does not depend on resolution succeeding |
+| `robots.txt` groups | four; **all four disallow lists identical**, 28 lines each; `Sitemap:` and `Host:` from `APP_URL` |
+| Title template | `/ar/privacy` → `سياسة الخصوصية · أجنحة`; `/en/terms` → `Terms of use · Ajniha`; the scan page → `التحقق من طائرة · أجنحة` |
+| No default title | **No page anywhere reads "Create Next App"** |
+| `APP_URL` unset | the warning fires — proved by importing `@/lib/url` under `tsx`, which does not load `.env` |
+| The `meta.*` guard | proved to fail: a key that does not exist reddens both locales |
+
+#### Not verified
+
+- **Six public pages still share the landing page's title** — `/zones`, `/docs`, `/how-it-works`, `/remote-id` and the six docs pages fall back to `title.default`. That is **F30b's whole job**, not a defect here, but until it runs the criterion "every public page has a unique title" is unmet.
+- **Canonical URLs and `hreflang` in page `<head>`.** They are in the sitemap; the `<link rel="canonical">` and `alternates` per page are F30b.
+- **No link-preview validator has seen any of this** — there is no public domain, so every URL in the sitemap and `llms.txt` says `localhost:3001`. Known un-runnable.
+- **The git-date fallback outside a checkout.** `last-modified.ts` returns `null` when both `git log` and `stat` fail, and this build has only ever run inside its own checkout. In practice the sitemap is prerendered at build time, where the checkout exists.
+- **375 px** — nine sessions.
+
+#### Next session should know
+
+- **F30b is the per-page titles.** `meta.pages.<key>.title` / `.description` already exist for `/`, `/how-it-works`, `/remote-id`, `/zones` and `/docs`; docs and legal pages take theirs from their own `.mdx` `meta`. `listPublicPages(locale)` returns exactly what a `generateMetadata` needs.
+- **The landing page needs `title: { absolute: … }`**, or it renders as `أجنحة — … · أجنحة`.
+- **Auth pages need `robots: { index: false, follow: false }`** — `/sign-in`, `/sign-up`, `/forgot-password`, `/reset-password`, `/verify-email`. Two of them are SSG, so the directive is baked at build time; that is fine for a constant.
+- **Do not write a `<link rel="canonical">` by hand.** `metadataBase` is set, so `alternates.canonical` takes a relative path and Next makes it absolute.
+- **F30c is the preview card**: `opengraph-image.tsx` renders in a satori runtime that knows no Tailwind and no CSS variables, and **Arabic needs the font buffer passed explicitly** or it emits boxes. Read the values out of `globals.css` literally.
+- **`Organization` must not name, imply or claim affiliation with GACA.** `ORGANISATION_NAME` in `src/lib/legal/fields.ts` is the project's own name and there is deliberately no legal entity behind it.
+- After F30, only **F31** remains.
 
 ---
 

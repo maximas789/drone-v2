@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { locale as localeParam } from "next/root-params";
 import { routing } from "@/i18n/routing";
 import { direction, type Locale } from "@/lib/locale";
+import { APP_URL } from "@/lib/url";
 import "../globals.css";
 
 /**
@@ -36,11 +37,37 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+/**
+ * The metadata every page inherits. **F30 owns this** — F16 deliberately left
+ * it alone so there would be one owner rather than a landing page and an SEO
+ * feature both editing the same object.
+ *
+ * `metadataBase` is what turns a relative canonical or Open Graph path into an
+ * absolute URL. Without it Next warns at build and silently falls back to
+ * localhost; with it, `APP_URL` is the single value that decides what every
+ * shared link says. `src/lib/url.ts` warns loudly when that value is unset,
+ * because from this feature onwards an unset one is published rather than just
+ * printed.
+ *
+ * `title.template` takes a literal **`%s`**, substituted by the framework — not
+ * an ICU placeholder, and not something next-intl ever sees. It lives in the
+ * catalogue anyway so the separator can differ by language: an Arabic tab
+ * reading `%s · أجنحة` and an English one reading `%s · Ajniha` are two
+ * decisions, not one string with a variable in it.
+ *
+ * `title.default` is the landing page's own title, used wherever a page sets
+ * none. A page that wants its title *without* the suffix — the landing page
+ * itself — says `title: { absolute: … }`; that is F30b's job, page by page.
+ */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
   return {
-    title: t("defaultTitle"),
-    description: t("description"),
+    metadataBase: new URL(APP_URL),
+    title: {
+      default: t("pages.home.title"),
+      template: t("titlePattern"),
+    },
+    description: t("pages.home.description"),
   };
 }
 

@@ -1651,11 +1651,33 @@
     "reportDescriptionRequired": "Write a description of at least ten characters."
   },
   "meta": {
-    "defaultTitle": "Ajniha — drone registration",
-    "titleTemplate": "{page} · Ajniha",
-    "description": "A proposed platform for registering self-built drones using Remote ID, and booking flight slots in designated zones.",
-    "keywords": "drones, remote id, registration, airspace",
-    "scanTitle": "Check an aircraft"
+    "siteName": "Ajniha",
+    "titlePattern": "%s · Ajniha",
+    "scanTitle": "Check an aircraft",
+    "llmsIntro": "Ajniha is a proposal put to the General Authority of Civil Aviation, not an official or adopted system. The pages below are the whole public surface, in Arabic first and then English.",
+    "llmsSection": "Pages in English",
+    "pages": {
+      "home": {
+        "title": "Ajniha — drone registration by Remote ID",
+        "description": "A proposed platform for registering self-built and FPV aircraft that have no manufacturer serial number, using Remote ID, and for booking flight windows in published zones across Riyadh."
+      },
+      "howItWorks": {
+        "title": "How it works",
+        "description": "The whole path as a pilot meets it: creating an account, registering an aircraft, human review, booking a flight window, and what a stranger sees when they scan the aircraft."
+      },
+      "remoteId": {
+        "title": "Remote ID",
+        "description": "A digital licence plate for drones: what it is, the American and Saudi models the rule rests on, and why it is a workable substitute for a serial number."
+      },
+      "zones": {
+        "title": "Flight zones in Riyadh",
+        "description": "Riyadh is closed by default. The full list of permitted, restricted and no-fly zones with their hours and ceilings, on an interactive map. Authored demonstration zones, not official airspace."
+      },
+      "docs": {
+        "title": "Ajniha documentation",
+        "description": "Six pages on what this system actually does: registering an aircraft with no serial number, booking a flight window, and what a reviewer sees."
+      }
+    }
   },
   "roles": {
     "pilot": "Pilot",

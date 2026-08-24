@@ -80,6 +80,30 @@ const localeFormattingSelectors = [
     selector: "NewExpression[callee.object.name='Intl']",
     message: LOCALE_FORMAT_MESSAGE,
   },
+  /**
+   * The two input types the *browser* renders from its own locale, not ours.
+   *
+   * `type="date"` was already banned in prose — it prints `ةنس/رهش/موي` and
+   * Arabic-Indic digits, and `dir`, `lang` and inline `style.direction` are all
+   * overridden because the UA rule carries `!important`. `type="number"` is the
+   * same trap wearing a plainer coat: it drew `١٢٠` on the Arabic booking form
+   * while the ceiling hint one line below drew `120`.
+   *
+   * Both keep an ASCII `value`, so `innerText`, every test and `i18n:check`
+   * read them as correct. Only a screenshot ever catches it — which is why the
+   * ban belongs in the linter and not in a comment. Three components already
+   * carried the warning in prose and two others shipped the bug anyway.
+   */
+  {
+    selector: 'JSXAttribute[name.name="type"][value.value="number"]',
+    message:
+      'No <input type="number"> — Chrome renders its display value in the browser\'s locale, printing Arabic-Indic digits on the Arabic pages while `value` stays ASCII. Use inputMode="numeric" with dir="ltr" (see src/components/drones/step-specs.tsx).',
+  },
+  {
+    selector: 'JSXAttribute[name.name="type"][value.value="date"]',
+    message:
+      'No <input type="date"> — use DateSelect (src/components/form/date-select.tsx). Chrome renders the control from the browser\'s locale and the UA rule carries !important.',
+  },
 ];
 
 /**

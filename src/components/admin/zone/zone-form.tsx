@@ -626,20 +626,32 @@ function NumberField({
 }) {
   return (
     <Field id={id} label={label} hint={hint}>
+      {/**
+       * **Not `type="number"`** — Chrome renders a number input's display
+       * value through the *browser's* locale, so on the Arabic page it draws
+       * Arabic-Indic digits while the `value` stays ASCII. Invisible to every
+       * check; the same trap as the banned `<input type="date">`.
+       *
+       * Losing `type="number"` means the field no longer rejects letters on
+       * the browser's behalf, so it rejects them here instead — an
+       * unparseable keystroke is *ignored* rather than turned into `null`,
+       * which is a real value meaning "no ceiling".
+       */}
       <Input
         id={id}
-        type="number"
         inputMode="numeric"
+        maxLength={6}
         dir="ltr"
+        className="text-start font-mono"
         value={value === null ? "" : String(value)}
         onChange={(event) => {
-          const raw = event.target.value;
+          const raw = event.target.value.trim();
           if (raw === "") {
             onChange(nullable ? null : 0);
             return;
           }
-          const parsed = Number(raw);
-          onChange(Number.isNaN(parsed) ? null : parsed);
+          if (!/^\d+$/.test(raw)) return;
+          onChange(Number(raw));
         }}
       />
     </Field>

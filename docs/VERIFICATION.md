@@ -162,10 +162,21 @@ notification** (88 → 88, 10 → 10).
 
 ## F31b — the walkthrough
 
-**Blocked on the Chrome extension**, which is not connected. Steps 1–8 and
-10–14 need a browser and a signed-in session, and the 375 px pass needs the
-same-origin iframe technique (thread 44). What follows is the part of F31b that
-a browser would have done *worse*.
+**9 of 14 steps are now driven by hand, in Arabic, in Chrome, against a
+production serve** (Session 46c). Steps **6 and 7** are blocked by a *correct
+refusal* rather than by a missing tool, and step **13** by a second session.
+The extension connected; two recorded blockers were not blockers.
+
+- The browser was **already signed in as the admin**, and **that account owns
+  all seven aircraft** — so the pilot half of the walkthrough needed no second
+  sign-in. Steps 3, 4, 5, 8, 11 and 12 ran on the session that was there.
+- The serve from the previous session was still answering **and had been up
+  since the previous day**. It was killed by PID and restarted, and every
+  result below is against a serve whose `Ready in` line was read.
+
+**Steps 1 and 2 cannot be re-run and were not:** the accounts exist, and the
+first-account-becomes-admin slot must never be disturbed. Only two accounts
+exist — admin (`alshar044@gmail.com`) and reviewer (`alshar55@hotmail.com`).
 
 ### Step 9 — the signed-out scan page, read as source · `pnpm verify:scan-page` · **46/46**
 
@@ -203,7 +214,7 @@ local parts.
    same minute trips it. The fetch now waits the window out, and the limiter got
    an assertion of its own: hammering `/api/rid/` **does** produce a 429.
 
-### Step 10 — the reveal audit trail
+### Step 10 (a) — the reveal audit trail, read from the database
 
 The *ordering* claim is structural rather than observed, and reads cleanly:
 `revealIdentityAction` opens a transaction, writes
@@ -256,7 +267,7 @@ image.
 this machine and fatal in production. Re-render after `APP_URL` is a real
 domain; F29a's system page carries the same check for the operator.
 
-### Found, not yet fixed — demo polish
+### Found, not yet fixed — demo polish (still true)
 
 **All five registered aircraft are named `PROBE18B …`** in the database
 (`PROBE18B معتمدة`, `PROBE18B منتهية`, `PROBE18B ملغاة`, …). They are seeded
@@ -268,13 +279,249 @@ to raise it; it is cheap to fix and it is not fixed yet.
 
 ---
 
+### Steps 4 and 5 — the serial-less registration, on a live page
+
+A self-built **FPV** named **صقر الرياض** — deliberately not `PROBE18B` —
+850 g, camera, two photographs, registered by hand through all five panes in
+Arabic.
+
+- **The serial field is never rendered.** `showsSerial = serialRequiredFor(buildType)`,
+  and switching the build type to *تجارية* flips the manufacturer hint from
+  optional to required — so the conditional is **live**, not merely absent.
+- **The review pane has no serial row at all.**
+- **No validation error anywhere**, which is the acceptance criterion.
+- Submitted → **`status = pending`**, `serial_number` NULL, **zero Remote IDs**.
+  The card reads *قيد المراجعة*, dated *24 أغسطس 2026* — Gregorian, Latin
+  numerals. **Not auto-approved.**
+
+Cross-checked from the other side: on the booking wizard's aircraft pane,
+صقر الرياض appears **disabled with *لم تُعتمد بعد***, and every other
+ineligible aircraft states its own reason (*أُلغي تسجيلها*, *انتهى تسجيلها*)
+rather than being hidden.
+
+### Steps 6 and 7 — blocked by the four-eyes rule, which is the feature working
+
+`/admin/drones/{id}` renders **لا يمكنك البتّ في طلبك أنت** — *"the owner of
+this record is you; another reviewer decides it, and the system refuses the
+operation even if this button is bypassed"* — and **no approve or reject
+control exists at all**. Absent, not disabled.
+
+The admin owns every aircraft, so **this account can never approve one**, and
+because approval is the only door to issuance, **step 7 — Remote ID minted,
+QR rendered, notification, email logged — is unreachable in a browser too.**
+F31a minted `AJN-308N-1W5B` mechanically; that is not the same evidence.
+
+The copy also promises a server-side refusal. `isOwnSubmission` is called in
+**ten places inside `src/lib/workflow/`** — booking ×3, declaration ×2,
+drone ×2, identity ×2 — with the three pages only choosing whether to show the
+notice. **Verified by reading, not by driving.** Driving it needs the reviewer.
+
+### Step 8 — the digital ID card
+
+`AJN-7Q4M-31KD` in mono, *تسجيل ساري*, and a QR that is a **real 512×512
+image** — `complete: true`, `naturalWidth: 512`, with the code in its alt text,
+not a broken-image placeholder.
+
+Registration window measured in the database: **1095 days = 3.00 years exactly**
+(issued 2026-07-12, expires 2029-07-11).
+
+**One thing that reads as a defect and is not.** The card's *تاريخ الإصدار*
+(18 Aug 2026) is the **Remote ID row's** date, while *ساري حتى* runs from
+**registration** (12 Jul 2026) — so the two dates printed side by side do not
+span three years. A seeding artefact, like the missing QRs: in a real approval
+both come from the same transaction.
+
+**The 20 mm printed scan remains un-run** and is named below.
+
+### Step 10 (b) — the reveal, driven live in the browser
+
+The prompt states the rule itself: *يُحفظ السبب في سجل التدقيق باسمك **قبل عرض
+أي بيان***.
+
+- A **four-character** reason leaves the confirm button **disabled**; a real one
+  enables it. The ten-character floor is enforced in the UI.
+- Reveal audit events went **3 → 4**.
+- The new row carries the typed reason **verbatim**, `actor_role admin`,
+  `actor_is_system false`, a real actor id, a **64-character IP hash** and the
+  user agent.
+- The identity appeared **only afterwards**, in a red-bordered
+  **الهوية المكشوفة** panel footed *سجّل هذا الكشف باسمك في سجل التدقيق*.
+
+### Steps 11 and 12 — the map, and an unplanned proof of the re-check
+
+**Every MapLibre trap avoided.** OpenFreeMap tiles drew, Arabic labels are
+**joined and correctly ordered** (so `setRTLTextPlugin` ran exactly once and
+before the first map), the KKIA no-fly ring and the permitted polygons render,
+attribution is present, and there is no API key. The
+*authored-not-official* disclaimer is on the surface.
+
+Tapping الثمامة returns **مسموح** — ceiling 120 م, requested 120 م, capacity 6,
+*ساعات الاثنين* 06:00–11:00 and 15:00–18:00 on a day that really was a Monday.
+
+**The first confirmation was refused, and it was right.** *الفترة المطلوبة في
+الماضي.* The slot grid had been rendered around 08:5x Riyadh and the
+confirmation came at **15:50 Riyadh**, after a long gap — so the 15:00 slot had
+already begun. The server re-validated exactly as the page promises
+(*يُعاد التحقق من المجال الجوي عند التأكيد*), refused with a machine-readable
+reason, and re-struck the slot as *انقضت*. **A stale client cannot buy a seat.**
+
+Rebooked on 25 Aug:
+
+- zone `auto_approve = t` → booking **`status = approved`**, matching the
+  criterion that the state follow the zone's setting.
+- `slot_start` stored as `12:00:00+00` = **15:00 Riyadh**, the +180 offset intact.
+- notification written as **`type: bookingConfirmed`** — a code, not a rendered
+  string, so a pilot who switches language sees it in the new one.
+- Returning to that day, the slot is struck with **لديك حجز في هذا الوقت**:
+  the app refuses to double-book and says why.
+
+### Step 14 — traceable, and from the same log
+
+The activity slice is drawn from the audit table itself — *لا سجل ثانٍ* — and
+shows **مُوافق عليه تلقائياً** and **طُلب الحجز** at 15:53 beside
+**كُشفت وثيقة الهوية** at 08:49 and **قُدِّم الطلب** at 08:44. Every photo
+upload and delete performed during the session appears in the aircraft's own
+trail, attributed and timestamped in Riyadh time.
+
+Health checks: database 18 ms, **7 migrations applied** matching the 7 files on
+disk, `APP_URL` and `BETTER_AUTH_URL` both *سليم*. The email log keeps
+**«لم تُرسل — البريد غير مُهيّأ» distinct from «فشلت»**, which is the whole
+point of that panel.
+
+### The 375 px pass — done through an iframe, and it found something
+
+**`resize_window` still lies**: it returns *"Successfully resized … to
+375x812"* and `innerWidth` stays **1440**. The pass was done instead through a
+**same-origin 375 px iframe**, measuring `scrollWidth` against `clientWidth`
+inside it.
+
+| Page | Result |
+|---|---|
+| `/ar` | clean — 356 / 356 |
+| `/ar/zones` | clean — 356 / 356 |
+| `/ar/dashboard` | **overflows — 409 / 356** |
+| `/ar/drones` | **overflows — 409 / 356** |
+
+The offender is the **signed-in header** `<nav class="flex items-center gap-2">`,
+whose four children total **328 px**: notifications 36 + الإعدادات 69 +
+**language switcher 122** + logout 101, plus the logo and `p-3`. Public pages
+are clean because the public header is smaller. **Not fixed — the remedy
+(collapse, hide labels, or wrap) is a design decision, not a mechanical repair.**
+
+---
+
+## Defects found by driving the app, and fixed
+
+### A successful upload the pilot could not see
+
+`src/components/upload/photo-grid.tsx` copied its `photos` prop into
+`useState`, which reads its argument on the **first render only**. So the grid
+kept its mount-time array for ever and discarded every payload that arrived
+afterwards.
+
+`step-photos.tsx` had the seam exactly right — `onUploaded={() => router.refresh()}`,
+with a comment explaining that the grid must render database rows because the
+upload response carries no row id. **The refresh fired, returned 200, and
+carried the new rows. The grid threw them away one component down.**
+
+| Link | Observation |
+|---|---|
+| Upload | `POST /api/upload` → **200** |
+| Database | row count rose on every upload |
+| Refresh payload | fetched the current RSC URL: **4 photo references** while the DOM held **2** |
+| Cause | `const [photos, setPhotos] = useState(initial)` |
+
+**Why it matters for the demo:** a first-time pilot uploads their one required
+photograph, sees an empty grid and a *"at least one photo is required"*
+warning, and concludes the upload failed. This is the happy path of step 4.
+
+**Fixed with `useOptimistic`**, which derives from the prop instead of shadowing
+it, and whose rollback story is free — a refused action simply stops being
+applied, so the manual restore is gone. Reorder applies **by id, not index**, so
+a payload arriving mid-transition reorders what exists.
+
+Re-verified on the real page after a rebuild: **5 photos on load → 6 after
+upload with no navigation**; delete **sticks**; reorder persists and **the
+database agrees with the screen** (`sort_order` 0/1 matched the rendered
+order); files on disk match rows exactly, so **no orphaned bytes**.
+
+### Arabic-Indic digits in every numeric input — `<input type="number">`
+
+On the Arabic booking form the planned-altitude field drew **`١٢٠`** while the
+ceiling hint one line below drew **`120`**.
+
+**`<input type="number">` renders its *display* value through the browser's
+locale** — the same trap as the already-banned `<input type="date">`, in a
+plainer coat. The DOM `value` stays ASCII (`31 32 30`) throughout, so
+`innerText`, every one of the 1114 tests, and `i18n:check` all read `"120"`.
+**Only a screenshot ever catches it.**
+
+Proved by elimination on the live element, in this order: text direction
+(flipping to rtl changed nothing), `lang`, the `locl` font feature
+(`"locl" 0` changed nothing), and element type (a `type="text"` input with the
+identical font renders Latin). Then decisively: **the same element, switched
+from `type="number"` to `type="text"`, went from `١٢٠` to `120`.**
+
+The blast radius was much larger than the field that revealed it — the admin
+zone editor's shared `NumberField` meant **35 numeric inputs on
+`/admin/zones/{id}` were all rendering Arabic-Indic digits.**
+
+Fixed in both places by the pattern this codebase **already documented in three
+comments** (`step-specs.tsx`, `step-identity.tsx`, `drone.ts`): `inputMode="numeric"`
+with `dir="ltr"`, no `type="number"`. `min`/`max` went with it — inert on a text
+input, and the ceiling was never theirs to enforce: `above_ceiling` comes back
+from the server. `NumberField` now **ignores** an unparseable keystroke rather
+than turning it into `null`, which is a real value meaning "no ceiling".
+
+**And the rule is now enforced, not merely written down.** Three components
+carried the warning in prose and two others shipped the bug anyway, so
+`no-restricted-syntax` in `eslint.config.mjs` now bans both `type="number"` and
+`type="date"` in JSX. **The rule was proved to fire** — re-introducing
+`type="number"` produces the error — before it was kept.
+
+Verified after rebuild: the altitude field and its hint both read `120`; all 35
+zone-form inputs are `type="text"` and render Latin; letters are ignored and
+digits accepted. `tsc` clean, `lint` clean, **1114/1114 tests pass**.
+
+## Two instruments that lied
+
+1. **The extension's network panel reported `503` on four requests that
+   actually returned `200`.** After every upload it showed the router refresh
+   and three header prefetches as 503. Nothing in this repo emits 503 and
+   nothing in `next/dist/server` contains the literal. Patching `window.fetch`
+   in the page — the app's own view of its own requests — showed **200 on all
+   five**. A 503 in that panel is not evidence.
+2. **`read_page` prints an input's `value`, not its accessible name.** The
+   build-type radios listed as `commercial` / `self_built` / `fpv` and looked
+   like untranslated enum codes shipped to users. They are not: each radio is
+   wrapped in a real `<label>` carrying the Arabic text.
+
+## Found, not fixed
+
+1. **The signed-in header overflows at 375 px** — numbers above. A design
+   decision.
+2. **Copy the screen beneath it contradicts.** The masked-ID hint reads
+   *لا تظهر الوثيقة كاملة في أي شاشة* — absolute — and the reveal panel two
+   centimetres below shows exactly that. Either the sentence or the affordance
+   should change; which one is the user's call.
+3. **Refusal reasons outlive their cause.** After the past-slot refusal,
+   *أسباب الرفض* stayed rendered through steps 2, 3, 5 and 6 even after a
+   different, valid date was chosen. It reads as a standing objection to a
+   booking the app then accepts.
+4. **`PROBE18B` is still every seeded aircraft's name.** صقر الرياض now sits
+   beside them, which sharpens the contrast on every signed-in screen.
+
+---
+
 ## Named as un-runnable
 
 Stated, never assumed.
 
 | Not run | What it would need |
 |---|---|
-| A **second reviewer deciding the first account's submission in a browser** — the four-eyes rule over HTTP. Proved against the database 22/22 by `probe-four-eyes.mts`; the browser half is unrun. | The user signing in as `alshar55@hotmail.com`. The assistant may not enter a password. BUILD-LOG thread 64. |
+| A **second reviewer deciding the first account's submission in a browser** — the four-eyes rule over HTTP. Proved against the database 22/22 by `probe-four-eyes.mts`, and the *refusal* half confirmed in the browser (no decision control renders on your own record). The **approval** half is unrun. | The user signing in as `alshar55@hotmail.com`. The assistant may not enter a password. BUILD-LOG thread 64. |
+| **Step 7 in a browser** — Remote ID minted on approval, QR rendered, in-app notification, email logged — because it is reachable only *through* an approval. | The same reviewer session. This is the product's central claim and it has never been driven end to end in a browser. |
+| **Step 13** — racing the last seat from two browsers. | A second signed-in session. |
 | A **reviewer** 404ing on `/admin/zones`, `/admin/audit`, `/admin/reveals` and `/settings/system` while reaching `/admin/analytics`. | The same reviewer session. The fabricated-cookie pass covers the *unauthenticated* case only. |
 | Sending email to any address other than the account owner's. | A verified sending domain in DNS. |
 | Vercel Blob uploads. | A deployed store and `BLOB_READ_WRITE_TOKEN`. The local driver is exercised instead, and both drivers are reached through the same `/api/files` ownership check. |

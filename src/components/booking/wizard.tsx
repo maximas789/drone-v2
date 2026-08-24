@@ -433,13 +433,25 @@ export function BookingWizard({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="booking-altitude">{t("plannedAltitude")}</Label>
+            {/**
+             * **Not `type="number"`** — the same trap as the banned
+             * `<input type="date">`, and found the same way. Chrome renders a
+             * number input's *display* value through the browser's locale, so
+             * on the Arabic page this drew `١٢٠` while the ceiling hint one
+             * line below drew `120`. The DOM `value` stays ASCII throughout,
+             * which is why every test, `innerText` check and i18n scan reads
+             * "120" and only a screenshot catches it.
+             *
+             * `min`/`max` went with it: they are inert on a text input, and
+             * the ceiling was never theirs to enforce — `above_ceiling` comes
+             * back from the server and is rendered just below.
+             */}
             <Input
               id="booking-altitude"
-              type="number"
               inputMode="numeric"
-              min={0}
-              max={zone?.ceilingAglM ?? undefined}
+              maxLength={4}
               dir="ltr"
+              className="text-start font-mono"
               value={altitude}
               onChange={(event) => setAltitude(event.target.value)}
             />

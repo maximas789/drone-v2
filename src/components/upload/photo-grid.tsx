@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
   deleteDronePhotoAction,
@@ -27,6 +27,37 @@ export type PhotoRow = {
   sortOrder: number;
 };
 
+/**
+ * Optimism, expressed as an intent rather than as a new array.
+ *
+ * **`useState(props)` was the bug this replaces.** The rows are the server's,
+ * and the dropzone above re-fetches the route after every upload precisely so
+ * they arrive — but `useState` reads its argument on the first render only, so
+ * the grid kept its mount-time copy for ever and swallowed each fresh payload.
+ * The photograph was in the database, the refresh returned it, and the pilot
+ * saw an empty grid telling them one was required. `useOptimistic` *derives*
+ * from the prop, so a new payload wins and the intent survives only as long as
+ * the transition that owns it — which is also the whole rollback story: a
+ * refused action needs no manual restore, it just stops being applied.
+ */
+type Intent =
+  | { type: "remove"; id: string }
+  | { type: "reorder"; order: readonly string[] };
+
+function applyIntent(current: PhotoRow[], intent: Intent): PhotoRow[] {
+  if (intent.type === "remove") {
+    return current.filter((photo) => photo.id !== intent.id);
+  }
+  // Reorder by id, so a payload that arrived mid-transition — one row fewer, or
+  // one more — reorders what actually exists instead of indexing off the end.
+  const byId = new Map(current.map((photo) => [photo.id, photo]));
+  const moved = intent.order
+    .map((id) => byId.get(id))
+    .filter((photo): photo is PhotoRow => photo !== undefined);
+  const rest = current.filter((photo) => !intent.order.includes(photo.id));
+  return [...moved, ...rest];
+}
+
 export function PhotoGrid({
   droneId,
   photos: initial,
@@ -40,7 +71,7 @@ export function PhotoGrid({
 }) {
   const t = useTranslations("upload");
   const tErrors = useTranslations("errors");
-  const [photos, setPhotos] = useState(initial);
+  const [photos, intend] = useOptimistic(initial, applyIntent);
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<{ text: string; tone: "ok" | "error" } | null>(
     null,
@@ -65,9 +96,9 @@ export function PhotoGrid({
 
   function remove(id: string) {
     startTransition(async () => {
+      intend({ type: "remove", id });
       const result = await deleteDronePhotoAction(id);
       if (!result.ok) return report(result.reasons[0]);
-      setPhotos((current) => current.filter((photo) => photo.id !== id));
       setNotice({ text: t("removed"), tone: "ok" });
     });
   }
@@ -77,19 +108,15 @@ export function PhotoGrid({
     const target = index + delta;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
+    const order = next.map((photo) => photo.id);
 
-    // Optimistic: the order is the pilot's own intent, and re-rendering it only
-    // after a round trip makes the buttons feel broken.
-    setPhotos(next);
     startTransition(async () => {
-      const result = await reorderDronePhotosAction(
-        droneId,
-        next.map((photo) => photo.id),
-      );
-      if (!result.ok) {
-        setPhotos(photos);
-        return report(result.reasons[0]);
-      }
+      // Optimistic: the order is the pilot's own intent, and re-rendering it
+      // only after a round trip makes the buttons feel broken. Applied inside
+      // the transition, which is what scopes it — and what reverts it.
+      intend({ type: "reorder", order });
+      const result = await reorderDronePhotosAction(droneId, order);
+      if (!result.ok) return report(result.reasons[0]);
       setNotice({ text: t("reordered"), tone: "ok" });
     });
   }

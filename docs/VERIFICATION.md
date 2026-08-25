@@ -800,6 +800,82 @@ Recorded as **worth knowing**, and it is the user's call.
 
 ---
 
+## F31c — round two
+
+**The two round-two critics never ran: the account hit its monthly spend limit
+and both agents terminated on their first call.** Said plainly rather than
+quietly skipped — round two is *not* four fresh pairs of eyes, and what follows
+is the author checking their own fixes, which is weaker evidence and is offered
+as such.
+
+### Every round-one fix, verified in the source rather than from notes
+
+| # | Fix | Check | Result |
+|---|---|---|---|
+| 1 | GACA attribution removed | `GACA reviewer` / `مراجع من الهيئة` in catalogues | **0 / 0** |
+| 2 | "put to GACA" removed | `put to the General` / `مقدَّم للهيئة` | **0 / 0** |
+| 3 | stale booking copy | `not available yet` on the map panel | **0** (one survives at `settings.security.emailChangeUnavailableBuild`, where it is **true** — email change is genuinely unbuilt) |
+| 4 | masked-ID absolute | `appears on no screen` / `في أي شاشة` | **0 / 0** |
+| 5 | disclaimer on admin maps | files under `admin/zones/` rendering `Disclaimer` | **2 of 2** |
+| 6 | vendor named to reviewer | `Inngest` in the `review.*` block | **0** |
+| 7 | unlabelled alternative buttons | `SlotTime` uses in the wizard | **4** |
+| 8 | refusals outliving their cause | `clearRefusal()` call sites | **7** |
+| 9 | booking bound to another's aircraft | owner predicate in `createBookingAction` | **present** |
+| 10 | fixture aircraft | rows matching `%probe%` | **0 of 8** |
+| 11 | unguarded `inngest.send` | sends inside a `try` | **5 of 5** |
+| 12 | rejection email | `droneRejected` in the function registry | **registered** |
+
+### The two correctness questions round two existed to ask
+
+**Can `clearRefusal` wipe a refusal before the pilot reads it?** No.
+`applyReasons` sets the reasons and then jumps the pilot to the owning step;it
+never triggers any of the five input handlers that call `clearRefusal`. The
+clearing is driven by the pilot changing something, which is exactly when a
+refusal about the old value stops being true. **One deliberate tradeoff**: a
+`rate_limited` message is cleared by an unrelated keystroke too, and the limit
+still applies — the pilot learns it again on the next submit. Keeping a stale
+one was the bug being fixed.
+
+**Do the two `isDev` derivations agree?** Byte-for-byte identical between
+`src/lib/inngest/client.ts` and `src/lib/ops/health.ts`. Duplicated rather than
+imported because importing the client into the health page would construct it as
+a side effect of rendering.
+
+### Also cleaned in round two
+
+- **A Resend key is not a verified domain.** With a key and no `EMAIL_FROM`,
+  mail leaves through Resend's sandbox sender, reaching only the Resend account
+  owner: nothing logs as `failed`, and the health row read **Healthy** while no
+  pilot received anything. `usingSandboxSender` is now named in the file that
+  owns the default, and the row reports the middle state with its consequence.
+- **Two dead message keys removed** — `ops.email.viewNotifications`, orphaned by
+  removing the link that could not keep its promise, and `zoneAdmin.kindHint.mixed`,
+  an empty string in both catalogues for a fourth zone kind that does not exist.
+  Parity checking passes an empty key by construction, so neither would ever
+  have been caught.
+
+### Gates re-run after every F31c change
+
+`tsc` clean · `lint` clean · **2129 keys** in sync · **1114/1114 tests** ·
+`verify:routes` **126/126** · `verify:scan-page` **64/64** · build clean · all
+seven public surfaces answer 200.
+
+### Left open, and honestly
+
+- **Round two's fresh eyes.** Two critics, blocked on the spend limit.
+- **`booking-rejected`** still has no caller. `drone-rejected` is now sent and
+  the booking half is the same shape; this is the smaller twin of a thread that
+  was open since F22a.
+- **The job log has no filter or pagination** — fixed newest-50 against roughly
+  96 `booking-closeout` runs a day, so a failed overnight run scrolls off within
+  hours. The one panel that needs history is the one without filters.
+- **The 375 px signed-in header** and **the 120 m altitude claim** — judgement
+  calls belonging to the user, not defects for an agent to close.
+- **The admin tab strip** draws two tabs a reviewer 404s on. Deliberate and
+  argued in the component; recorded, not overridden.
+
+---
+
 ## Named as un-runnable
 
 Stated, never assumed.

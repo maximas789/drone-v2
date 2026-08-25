@@ -1917,7 +1917,6 @@
     "kind": "Zone kind",
     "kindHint": {
       "permitted": "Flying is allowed here, within this zone's rules.",
-      "mixed": "",
       "restricted": "Flying is refused unless a permitted zone is carved out inside it.",
       "no_fly": "Every flight is refused, and this beats any permitted zone it overlaps."
     },
@@ -2466,7 +2465,6 @@
       "intro": "Every message the platform tried to send, and the provider's own reason when it refused. “Not sent” is not “failed”: the first means mail was never configured.",
       "none": "No messages in the log yet.",
       "accompanied": "An in-app notification went with this message.",
-      "viewNotifications": "View notifications",
       "filterStatus": "Status",
       "filterTemplate": "Template",
       "filterAll": "All",

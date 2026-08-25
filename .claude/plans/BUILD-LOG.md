@@ -34,7 +34,7 @@ Written for a **cleared context**. Assume the next session knows nothing except 
 | 6 — Pilot experience | F16–F21 | ⚠️ **Complete, with deviations (Sessions 14–25).** The whole pilot journey runs: register an aircraft → Remote ID → map → book → dashboard. |
 | 7 — Admin | F22–F25 | ⚠️ **Complete, with deviations (Sessions 26–34).** F23 ran a/b/c: the geometry layer and the zone list; the Sunday-first hours grid, the live slot preview and the publish/suspend/archive lifecycle; then the closures screen with its cancellation preview and **the first Inngest fan-out ever executed on this machine**, plus `/admin/cities`. F24 added the compliance lookup, the reveal-oversight page, and the audit row that makes every search accountable. F25 ran a/b: **the analytics screen** — six tiles, seven hand-rolled SVG charts, the validated chart palette and a CSV export; then **the audit browser** — keyset pagination, nine filters, a field-level diff, an overlay map for a moved boundary, an audited export, and the append-only grep that holds the whole claim up. **One acceptance criterion in the wave is unverified: the reviewer-404 half of F25b. The second staff account now exists and is a reviewer; what is left is somebody signing in as them against a production serve (thread 64).** |
 | 8 — Close-out | F26–F30 | ✅ **Complete, with deviations (Sessions 35–45). F30 finished in Session 45 (a/b/c) — Wave 8 is done.** **F30c**: the preview card. `next/font/google` cannot feed satori — it writes content-hashed **WOFF2** and satori reads WOFF — so `pnpm vendor:fonts` commits four faces with the OFL licence and a staleness test that was **proved to fail** before it was kept. **satori spaces Arabic unevenly and two obvious fixes did nothing** (one produced a byte-identical PNG); words are laid out as flex items with an explicit gap instead, which survives because Arabic does not join across a space. The card drew **"Ajniha Ajniha"** in English — found by looking at the PNG, invisible to every check. The map on it is the **real seeded geometry**, in literal hex because `ZONE_FILL` holds CSS variables (thread 65, third costume). `Organization` names Ajniha and **never GACA — zero occurrences, checked**; `FAQPage` was considered and **rejected** because the headings are topics, not questions. Earlier: **F30a and F30b landed (Session 45).** **F30b**: all 26 public pages carry their own title, description, canonical and three `hreflang` links — canonical string-compared against the URL fetched, `x-default` on Arabic, **0 duplicate titles in either locale** after the fetch found two collisions no test could reach. `noindex` is set **once per route group**, not once per page. **Thirty-nine signed-in pages had all shared one tab title**; each now names a catalogue key validated against both catalogues before any file was edited, and a source scan keeps it that way. **Only F30c — the preview card and the structured data — remains of F30.** Earlier: **F30a (Session 45): the discoverability spine.** One public-page list in `src/lib/site/`, derived from `DOC_SLUGS` and `LEGAL_SLUGS` rather than copied, feeding a 26-entry bilingual sitemap, a `robots.txt` and an `llms.txt` — **all three verified against a production serve, and all 26 sitemap URLs fetched cold at 200**. The AI-crawler tokens the spec attributed to Wave 0 **were never researched there**; they were fetched from each operator's own documentation on 2026-08-23 and recorded with their sources. Two live `robots.txt` bugs found and fixed: `Disallow: /dashboard` and `Disallow: /admin` had **matched nothing since F11** under `localePrefix: "always"`, and a trailing slash would have left `/ar/settings` crawlable. **F30b (per-page titles) and F30c (the preview card) remain.** Earlier — F29 is complete (Sessions 42–44), except Cancel and Re-run — deferred in F29b with the reason recorded.** F29c added the email log, where `skipped` is styled apart from `failed` because every one of the 82 real rows is `skipped` and conflating them would make the panel look like an outage; the distinction was **measured**, not asserted. The activity slice calls F25b's own reader, so "one log, not two" is structural. **Only F30 and F31 remain.** Earlier (Sessions 35–43): F29b (Session 43):** the jobs panel — six scheduled functions with cron, Riyadh timezone, last run and a next-due time computed by a parser that **refuses what it cannot read** rather than guessing, plus 50 of 390 real runs with the error printed whole. **Cancel and Re-run were deliberately not built**: the SDK exposes no cancellation method and `job` stores no trigger payload, so both would have meant inventing an endpoint or firing a wrong event — the log records what each needs. **F29c and F30 remain.** Earlier (Sessions 35–42): F29a (Session 42):** the system page — nine health checks, each answering from something real rather than inferred, and row counts that match `psql` figure for figure. The **first admin-only settings section**, which could not arrive wrong because F28a wrote the filter and its test before there was anything to hide. The `APP_URL` check was verified by deliberately breaking it (`.env` backed up and restored byte-identical) and the re-render repair actually ran — three files rewritten in place, expired and revoked skipped. **No secret-shaped run appears anywhere on the page**, checked against five patterns. **F29b/F29c and F30 remain.** Earlier (Sessions 35–41): F28 is complete (Session 41):** account deletion. The spec's two rows contradict — drones deleted *and* the Remote ID still resolving — so `drone.owner_user_id` became nullable `set null` and a code whose owner has gone answers **`withdrawn`** instead of 404. Most of the deletion is the schema's: of 22 FKs to `user`, six cascade and fourteen set null, `audit_event.actor_user_id` among them. Verified by a **20-assertion probe against the live database** rather than by clicking a button that destroys data. The privacy policy's retention section, true yesterday and false today, was rewritten and pinned by tests. **F29 and F30 remain.** Earlier (Sessions 35–40): F28b (Session 40):** security and notifications. Two bugs a production serve found and every static check missed — `listSessions` throws `SESSION_NOT_FRESH` for a session over 24 h old and blanked the whole page, and a function passed for an ICU `{value}` instead of a `<tag>` crashed the render. A third: the sliding switch changed colour and never moved, in three separate implementations, all caught by `getBoundingClientRect` — it is a native checkbox now, the call `Select` and `Slider` already made. Only **two** notification toggles ship, because `zone_closure` is a category nothing sends. Earlier (Sessions 35–39): F28a (Session 39):** the settings shell and the way into it — `/settings/profile` had existed since F17 with nothing linking to it. Language now writes `preferredLocale`, which nothing wrote after sign-up, so a pilot who switched to English in the header received Arabic mail for ever; verified against `psql` in both directions and restored. The owner can reveal their own ID behind a confirmation, logged before the value returns. **F28b** is security + notifications, **F28c** the danger zone — which needs a migration to let a Remote ID outlive its drone, and rewrites the privacy policy's retention section. Earlier (Sessions 35–38): F27 is complete (Sessions 37–38)** — privacy and terms in both languages, a table of contents a test keeps honest, footer links, and an acceptance line that is a sentence rather than a pre-ticked box. Every clause with a number in it is asserted against the constant that enforces it. Two cookie findings: the app was writing a `NEXT_LOCALE` cookie nothing read (now off — it sets exactly one cookie, `HttpOnly`), and **localhost cookies ignore the port**, so another local app's PostHog and RudderStack cookies show up on this origin and look like trackers this app does not have. Earlier (Sessions 35–37): F27 is half done (Session 37): `src/lib/legal/`, the legal MDX loader, a drift-proof table of contents, and the privacy policy in both languages — assembled from the schema, and it found that the app was setting a `NEXT_LOCALE` cookie nothing ever read (`localeCookie: false` now; the app sets exactly one cookie). **F27b** is terms, the footer links, the sign-up acceptance line, the 375 px pass and the signed-in cookie check. **F26 is complete** — six bilingual pages, five real screenshots, two contextual deep links, and a crawl of every public surface. F27–F30 remain, strictly in order. Earlier (Session 35): F26 split a/b: **F26a is done** — the MDX machinery, `/docs`, and all six pages in Arabic and English, written against the running app and verified signed out in both locales against a production serve. **F26b** is the real screenshots, the two contextual deep links, and the app-side link crawl. |
-| 9 — Prove it | F31 | 🟨 **In progress (Sessions 46a–46c). F31a — the mechanical gate — is done and all eleven checks passed** (typecheck, no schema drift, migrations onto a fresh database, build, lint, **1114 tests**, 2127 i18n keys, a production serve, **126/126 route assertions**, **25/25 ownership assertions**, **12/12 with both API keys deleted**). Evidence in `docs/VERIFICATION.md`, re-runnable as `pnpm verify:{fresh-db,routes,scan-page,qr,two-accounts,no-keys}`. **F31b: 9 of 14 walkthrough steps are now verified by hand in Arabic in a real browser (Session 46c)** — 4, 5, 8, 9, 10, 11, 12 and 14, plus step 7's QR proved byte-identically in 46b. **Session 46c found and fixed a real defect the whole test suite missed**: `photo-grid.tsx` copied its `photos` prop into `useState`, so a successful upload never appeared — `POST /api/upload` returned 200, the row was written and the refresh payload carried it, while the grid kept its mount-time array. A first-time pilot uploading their one required photograph saw an empty grid and a "photo required" warning. Replaced with `useOptimistic`; upload, delete and reorder each re-verified against the database, **1114/1114 tests still pass**. **Steps 6 and 7 are blocked by the four-eyes rule working correctly** — the admin owns every aircraft, `/admin/drones/{id}` renders **لا يمكنك البتّ في طلبك أنت** and no decision control exists at all, so approval (and therefore issuance, QR, notification and email) cannot be driven without the reviewer. `isOwnSubmission` is called in ten places inside `src/lib/workflow/`, verified by reading. **Thread 64 — a session as `alshar55@hotmail.com` — is now the single blocker for steps 6, 7, 13 and the reviewer 404s.** Four findings left named with reproductions: the **signed-in header overflows at 375 px** (409 vs 356; the language switcher is 122 px of it), **a second defect fixed: `<input type="number">` renders its display value in the browser's locale**, drawing Arabic-Indic digits on the Arabic pages while `value` stays ASCII — invisible to all 1114 tests and to `i18n:check`, and it affected **35 inputs on the admin zone form** as well as the booking altitude field; fixed with `inputMode="numeric"` and **a lint rule that was proved to fire**, which now also enforces the previously prose-only `type="date"` ban. Also left named: a masked-ID hint that promises what the reveal panel beneath it contradicts, and refusal reasons that outlive their cause. Two instruments caught lying: **the extension's network panel reported 503 on requests that returned 200**, and `read_page` prints an input's `value` rather than its accessible name. **`resize_window` still does not move the viewport** — the 375 px pass was done through a same-origin iframe. **F31c (four critics, two rounds) remains.** |
+| 9 — Prove it | F31 | 🟨 **In progress (Sessions 46a–46d). F31a is done — all eleven checks passed**, and **thread 64 is now closed**: signed in as the reviewer, `/admin/zones`, `/admin/audit`, `/admin/reveals`, `/settings/system`, `/admin/cities` and `/admin/zones/new` all answer **404** with no stack trace (English locale too), while `/admin`, `/admin/analytics`, `/admin/lookup`, `/admin/pilots` and `/admin/bookings` answer 200. **F31b: 12 of 14 steps are verified by hand in Arabic in a browser.** Step 6 proved the **four-eyes rule from both sides on the same URL** — no decision control for the owner, **اعتماد/رفض** for the reviewer. **Step 7 is complete**: Remote IDs `AJN-V56M-NAX6` and `AJN-Y74H-2740` minted `active`, **1096-day** windows, `drone.approved` + `remote_id.issued` in one transaction as `actor_role: reviewer`, `droneApproved` notifications, **both QRs rendered and byte-identical** (`pnpm verify:qr` now **22/22**, up from 14/14), and `drone-approved` emails logged `skipped`. **Four defects fixed across 46c–46d.** (1) `photo-grid.tsx` copied its prop into `useState`, so a successful upload never appeared. (2) `<input type="number">` rendered Arabic-Indic digits on 37 fields; fixed and **banned by a lint rule proved to fire**, which now also enforces the previously prose-only `type="date"` ban. (3) **`approveDroneAction` reported a crash over an approval that had committed** — the post-commit `inngest.send` was unguarded, so the reviewer got a 500 over a registration that was granted and a Remote ID that was minted; `suspendZoneAction` had guarded exactly this since thread 69 and the drone decisions never got it. All four send sites are now guarded, and because the panel unmounts on success the warning is now read from the row (`approved` + no `qrPathname`) — **verified appearing and then clearing itself**. (4) **`isDev` passed to the Inngest client silently disabled the SDK's own `INNGEST_DEV` switch**, so a `next start` could never run a job against a local dev server; `INNGEST_DEV` now wins when set and the app connects from a production serve with **11 functions** for the first time on this machine. **Left: step 13** (needs a second *pilot* — the reviewer has no profile or aircraft, and الثمامة's capacity is 6, so a capacity-1 zone is the cheapest route) **and F31c** (four critics, two rounds). Steps 1–2 cannot be re-run. Still named un-runnable: the 20 mm printed scan, Blob uploads, real email delivery, and a production `APP_URL` — **every sticker still points at localhost**. Also open: the 375 px signed-in header overflow (409 vs 356) and the masked-ID copy the reveal panel contradicts, both judgement calls. |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⚠️ done with deviations (see entry)
 
@@ -376,6 +376,146 @@ Named, never assumed. Add as discovered.
 ## Session entries
 
 Newest at the top.
+
+---
+
+### Session 46d — Wave 9 · F31b Steps 6 and 7, and the crash that hid behind them
+
+**Date:** 2026-08-25
+**Status:** 🟨 **12 of 14 steps verified.** The user signed in as the reviewer,
+which unblocked steps 6, 7 and the reviewer 404s. **Three defects found and
+fixed**, one of them on the single most important action in the product.
+
+---
+
+#### Thread 64 is closed — the reviewer boundary, over HTTP
+
+Signed in as `alshar55@hotmail.com`, every route answered as specified:
+
+| Route | Reviewer |
+|---|---|
+| `/ar/admin/zones`, `/ar/admin/audit`, `/ar/admin/reveals`, `/ar/settings/system` | **404** |
+| `/ar/admin/cities`, `/ar/admin/zones/new`, `/en/admin/audit` | **404** |
+| `/ar/admin`, `/ar/admin/analytics`, `/ar/admin/lookup`, `/ar/admin/pilots`, `/ar/admin/bookings` | **200** |
+
+**No stack trace on any of them**, and the English locale 404s too — the guard
+is not locale-dependent. The last open F31a acceptance criterion.
+
+#### Step 6 — the four-eyes rule, proven from both sides in a browser
+
+The **same URL** that showed **لا يمكنك البتّ في طلبك أنت** and no decision
+control to the owner renders **اعتماد / رفض** to the reviewer, with the
+**بدون رقم تسلسلي** badge and its explanation in front of them. Nothing about
+the page changed; only the account did.
+
+---
+
+#### The defect: an approval that committed and reported a crash
+
+**Pressing اعتماد returned Next's error page.** The registration had been
+granted anyway — status `approved`, Remote ID minted, audit rows written.
+
+The digest on the screen matched the serve log exactly:
+
+```
+⨯ Error: Failed to send event … We couldn't find an event key to use to send
+  events to Inngest … digest: '1800274008'
+```
+
+`approveDroneAction` sent `drone/approved` **after** the transaction committed —
+correct ordering — but **unguarded**. With no event key the send throws, the
+exception escapes the action, and Next renders a 500 over a decision that
+succeeded.
+
+**`suspendZoneAction` already guards exactly this**, and its comment describes
+what happened to me almost word for word: *"it threw, in a browser, over a
+suspension that had already been written … the status changed and the person
+who changed it believes it did not."* That guard was written for zones in
+thread 69 and **never applied to the drone decisions** — the one action this
+whole product is a demo of. `approveDroneAction` and `revokeDroneAction` were
+both unguarded; all four `inngest.send` call sites are now inside `try`.
+
+**Why the guard alone was not enough.** `stickerQueued: false` reaches the
+panel, but the panel unmounts the instant the page re-renders as decided, so
+the warning is one nobody ever reads. The durable form of the same fact is a
+row: **an approved registration whose Remote ID has no `qrPathname`.** The
+decided box now reads that and says the sticker was not drawn and the pilot was
+not emailed. **Verified in both directions** — it appeared on a fresh load after
+the failed send, and **cleared itself** once the QR existed.
+
+#### The second defect: a production serve could never run a job
+
+Chasing the first one, `INNGEST_DEV=1` did nothing and the log kept printing
+*"set the INNGEST_DEV env var"*. The value was being ignored by
+`src/lib/inngest/client.ts`, which passed `isDev: process.env.NODE_ENV !== "production"`
+— and **passing `isDev` at all disables the SDK's own documented switch.**
+
+So under `next start` the app was permanently in cloud mode, answered
+`/api/inngest` with a 500, and **no job could ever run against a local dev
+server** — which is why F23c's fan-out had to be driven under `pnpm dev`, and
+why the un-runnable list has been carrying Inngest since Wave 4.
+
+`INNGEST_DEV` now wins when set, with the `NODE_ENV` derivation as the default
+so a fresh clone still works with no env at all. Result, on a **production
+serve** for the first time on this machine:
+
+```
+PUT /api/inngest → 200
+apps: [{ name: "ajniha", connected: true, functionCount: 11 }]
+```
+
+---
+
+#### Step 7 — complete, and the QR verifier grew
+
+With the app connected, `drone/approved` was fired for both approved aircraft:
+
+- **Remote IDs**: `AJN-V56M-NAX6` (صقر الرياض) and `AJN-Y74H-2740`, both `active`.
+- **Validity**: 2026-08-25 → 2029-08-25, **1096 days** each — three years,
+  including 2028's leap day.
+- **Audit**: `drone.approved` **and** `remote_id.issued`, both `actor_role: reviewer`,
+  sharing a timestamp — one transaction.
+- **Notification**: `droneApproved` × 2.
+- **QR rendered**: `qr/AJN-V56M-NAX6.png` (4051 B) and `qr/AJN-Y74H-2740.png` (3981 B).
+- **Email logged**: `drone-approved`, `ar`, `status: skipped` — no Resend key,
+  labelled honestly rather than as a failure.
+- **Job rows**: two `qr-render` runs, `completed`, no error, `trigger_event: drone/approved`.
+
+**`pnpm verify:qr` now passes 22/22** (was 14/14 with three stickers, now five).
+Both new PNGs are **byte-identical** to a fresh render of
+`{APP_URL}/ar/rid/{code}`, 512×512, and the negative control still passes.
+
+**How it was invoked, stated plainly.** The two events were posted to the dev
+server directly, because triggering them through the app needs the *owner's*
+session — the Regenerate control and the system page's re-render are both
+admin-only, and the browser was signed in as the reviewer. **The approval path
+that sends the event is the thing that was fixed and it was exercised twice;
+what was not re-driven end to end in one click is send-and-render together.**
+
+**Every sticker still points at `http://localhost:3001`.** Correct here, fatal
+in production.
+
+---
+
+#### Not verified
+
+- **Step 13** — racing the last seat. Needs a second signed-in *pilot*, and the
+  reviewer has no pilot profile and no aircraft; الثمامة's capacity is 6, so
+  there is no last seat to race. Cheapest route is a capacity-1 zone created
+  from `/admin/zones/new`, then archived.
+- **Steps 1 and 2** cannot be re-run and were not.
+- **The 20 mm printed scan**, unchanged.
+
+#### Next session should know
+
+- **The Inngest dev server must be running** for any job: `npx inngest-cli@latest
+  dev -u http://localhost:3001/api/inngest`, and the serve started with
+  `INNGEST_DEV=1` — which now actually works. Without it the app is in cloud
+  mode, `/api/inngest` answers 500, and approvals report `stickerQueued: false`
+  instead of crashing.
+- **`.env` was not modified.** `INNGEST_DEV` was passed inline to `pnpm start`.
+- Both remaining pending aircraft are gone — **there is nothing left in the
+  review queue**, so a future approval test needs a freshly registered drone.
 
 ---
 

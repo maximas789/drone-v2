@@ -77,6 +77,14 @@ export function DecisionPanel({
   const [mode, setMode] = useState<"idle" | "rejecting">("idle");
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  /**
+   * The approval committed but the QR job could not be queued.
+   *
+   * Not a refusal — the registration is granted and the Remote ID is minted —
+   * so it must not be rendered as one, and it must not be silent either: the
+   * sticker does not exist and the pilot has not been emailed.
+   */
+  const [stickerFailed, setStickerFailed] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const written = reason.trim();
@@ -98,10 +106,24 @@ export function DecisionPanel({
     return known ? t(`errors.${known.code}`) : tErrors("generic");
   }
 
-  function run(work: () => Promise<{ ok: boolean; reasons?: Reason[] }>) {
+  /**
+   * The union, not a widened object: `rejectDroneAction` carries no
+   * `stickerQueued` and must not be made to look as though it might. Same shape
+   * `closure-list.tsx` settled on for `fanOutQueued`.
+   */
+  function run(
+    work: () => Promise<
+      | { ok: false; reasons?: Reason[] }
+      | { ok: true; data: { stickerQueued?: boolean } | Record<string, unknown> }
+    >,
+  ) {
     startTransition(async () => {
       setMessage(null);
+      setStickerFailed(false);
       const result = await work();
+      if (result.ok && result.data?.stickerQueued === false) {
+        setStickerFailed(true);
+      }
       if (!result.ok) {
         setMessage(refusalText(result.reasons ?? []));
         /*
@@ -134,6 +156,15 @@ export function DecisionPanel({
           <li>{t("approveEffectValidity")}</li>
           <li>{t("approveEffectEmail")}</li>
         </ul>
+
+        {stickerFailed ? (
+          <p
+            role="status"
+            className="border-destructive rounded-lg border border-s-4 p-3 text-sm"
+          >
+            {t("stickerFailed")}
+          </p>
+        ) : null}
 
         <FormProblem>{message}</FormProblem>
 

@@ -269,7 +269,9 @@ async function pilotEdge(
  */
 export async function approveDroneAction(
   droneId: string,
-): Promise<ActionResult<{ status: string; remoteIdCode?: string }>> {
+): Promise<
+  ActionResult<{ status: string; remoteIdCode?: string; stickerQueued: boolean }>
+> {
   const session = await getSession();
   if (!session) return refuse("not_authenticated");
   if (!isReviewer(session)) return refuse("not_found");
@@ -286,12 +288,40 @@ export async function approveDroneAction(
   );
   if (!outcome.ok) return refuse(outcome.reason);
 
-  await inngest.send(droneApprovedEvent.create({ droneId }));
+  /**
+   * **The approval has committed; the QR job is a separate promise.**
+   *
+   * `inngest.send` throws when it has no event key and when nothing is
+   * listening — and it threw, in a browser, over an approval that had already
+   * been written. The reviewer got Next's error page over a registration that
+   * *was* granted, a Remote ID that *was* minted and an audit row that *was*
+   * appended. Same pair of outcomes `suspendZoneAction` already guards against
+   * (thread 69), on the one action this whole product is a demo of.
+   *
+   * So the send is guarded and its failure is **reported, not swallowed**.
+   * The registration stands either way — that part is committed and correct —
+   * and `stickerQueued: false` lets the screen say plainly that the QR has not
+   * been rendered and the pilot has not been emailed. F29a's system page
+   * carries a Re-render control for exactly that state.
+   */
+  let stickerQueued = true;
+  try {
+    await inngest.send(droneApprovedEvent.create({ droneId }));
+  } catch {
+    stickerQueued = false;
+  }
 
   revalidatePath("/[locale]/admin", "page");
   revalidatePath("/[locale]/drones", "page");
   revalidatePath("/[locale]/drones/[id]", "page");
-  return { ok: true, data: { status: outcome.to, remoteIdCode: outcome.remoteIdCode } };
+  return {
+    ok: true,
+    data: {
+      status: outcome.to,
+      remoteIdCode: outcome.remoteIdCode,
+      stickerQueued,
+    },
+  };
 }
 
 /** Pending → rejected. The reason is required and quoted to the pilot verbatim. */
@@ -330,7 +360,7 @@ export async function rejectDroneAction(
 export async function revokeDroneAction(
   droneId: string,
   reason: string,
-): Promise<ActionResult<{ status: string }>> {
+): Promise<ActionResult<{ status: string; notifyQueued: boolean }>> {
   const session = await getSession();
   if (!session) return refuse("not_authenticated");
   if (!isAdmin(session)) return refuse("not_found");
@@ -348,12 +378,23 @@ export async function revokeDroneAction(
   );
   if (!outcome.ok) return refuse(outcome.reason);
 
-  await inngest.send(
-    droneRevokedEvent.create({ droneId, reason: trimmed.trim() }),
-  );
+  /**
+   * Guarded for the reason above: a revocation that has committed must not be
+   * reported as a crash. The Remote ID is suspended either way; what
+   * `notifiedQueued: false` means is that the pilot has not been told — and a
+   * pilot who does not know their registration was revoked will fly on it.
+   */
+  let notifyQueued = true;
+  try {
+    await inngest.send(
+      droneRevokedEvent.create({ droneId, reason: trimmed.trim() }),
+    );
+  } catch {
+    notifyQueued = false;
+  }
 
   revalidatePath("/[locale]/admin", "page");
-  return { ok: true, data: { status: outcome.to } };
+  return { ok: true, data: { status: outcome.to, notifyQueued } };
 }
 
 /** Revoked → approved. Admin only, reason required, Remote ID reactivated. */

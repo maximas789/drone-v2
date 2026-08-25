@@ -410,6 +410,50 @@ are clean because the public header is smaller. **Not fixed — the remedy
 
 ---
 
+### Steps 6 and 7 — the reviewer, the four-eyes rule, and the whole issuance chain
+
+**The user signed in as `alshar55@hotmail.com`; the assistant never handled the
+password.** That unblocked everything below.
+
+**The reviewer boundary, over HTTP.** `/admin/zones`, `/admin/audit`,
+`/admin/reveals`, `/settings/system`, `/admin/cities` and `/admin/zones/new` all
+answer **404**; `/admin`, `/admin/analytics`, `/admin/lookup`, `/admin/pilots`
+and `/admin/bookings` answer **200**. **No stack trace on any of them**, and
+`/en/admin/audit` 404s too — the guard is not locale-dependent. This was F31a's
+last open acceptance criterion (thread 64).
+
+**Step 6 — the four-eyes rule from both sides of the same URL.** The page that
+showed the owner **لا يمكنك البتّ في طلبك أنت** and *no decision control at all*
+renders **اعتماد / رفض** to the reviewer, with the **بدون رقم تسلسلي** badge and
+its explanation in front of them. Nothing changed but the account.
+
+**Step 7 — every consequence the approval panel promises, checked.**
+
+| Promise | Result |
+|---|---|
+| Remote ID issued | `AJN-V56M-NAX6` and `AJN-Y74H-2740`, both `active` |
+| Three-year validity | 2026-08-25 → 2029-08-25 = **1096 days** each (2028 is a leap year) |
+| Audit trail | `drone.approved` **and** `remote_id.issued`, `actor_role: reviewer`, sharing a timestamp — one transaction |
+| In-app notification | `droneApproved` × 2 |
+| QR rendered | `qr/AJN-V56M-NAX6.png` (4051 B), `qr/AJN-Y74H-2740.png` (3981 B) |
+| Email logged | `drone-approved`, `ar`, `status: skipped` — no Resend key, labelled honestly |
+| Job runs | two `qr-render` rows, `completed`, no error, `trigger_event: drone/approved` |
+
+**`pnpm verify:qr` now passes 22/22**, up from 14/14 — five stickers instead of
+three, each byte-identical to a fresh render of `{APP_URL}/ar/rid/{code}` at
+512×512, negative control included.
+
+**How the render was invoked, stated plainly.** The two `drone/approved` events
+were posted to the Inngest dev server directly, because triggering them through
+the app needs the *owner's* session — Regenerate and the system page's
+re-render are both admin-only and the browser held the reviewer. The approval
+path that sends the event is the thing that was fixed, and it was exercised
+twice; what was not re-driven in a single click is send-and-render together.
+
+---
+
+---
+
 ## Defects found by driving the app, and fixed
 
 ### A successful upload the pilot could not see
@@ -483,6 +527,57 @@ Verified after rebuild: the altitude field and its hint both read `120`; all 35
 zone-form inputs are `type="text"` and render Latin; letters are ignored and
 digits accepted. `tsc` clean, `lint` clean, **1114/1114 tests pass**.
 
+## Defects found by driving the app, and fixed (Session 46d)
+
+### An approval that committed and reported a crash
+
+Pressing **اعتماد** returned Next's error page. The registration had been
+granted anyway: status `approved`, Remote ID minted, audit rows written. The
+digest on screen matched the serve log exactly —
+
+```
+⨯ Error: Failed to send event … We couldn't find an event key … digest: '1800274008'
+```
+
+`approveDroneAction` sends `drone/approved` **after** the transaction commits,
+which is the right ordering — but the send was **unguarded**. With no event key
+it throws, the exception escapes the action, and Next renders a 500 over a
+decision that succeeded.
+
+**The guard already existed elsewhere.** `suspendZoneAction` has carried it
+since thread 69, and its comment describes this incident almost word for word:
+*"it threw, in a browser, over a suspension that had already been written … the
+status changed and the person who changed it believes it did not."* It was never
+applied to the drone decisions — the one action this product is a demo of.
+`approveDroneAction` and `revokeDroneAction` were both bare; **all four
+`inngest.send` call sites are now inside `try`.**
+
+**The guard alone was not enough.** `stickerQueued: false` reaches the panel,
+but the panel unmounts the moment the page re-renders as decided — a warning
+nobody can read. The durable form of the same fact is a row: an approved
+registration whose Remote ID has no `qrPathname`. The decided box now reads that
+and says the sticker was not drawn and the pilot was not emailed. **Verified in
+both directions**: it appeared on a fresh load after the failed send, and
+**cleared itself** once the QR existed.
+
+### A production serve could never run a job
+
+`INNGEST_DEV=1` did nothing while the log kept printing *"set the INNGEST_DEV
+env var"*. `src/lib/inngest/client.ts` passed
+`isDev: process.env.NODE_ENV !== "production"` — and **passing `isDev` at all
+disables the SDK's own documented switch.**
+
+So under `next start` the app was permanently in cloud mode, answered
+`/api/inngest` with 500, and no job could run against a local dev server. That
+is why F23c's fan-out had to be driven under `pnpm dev`, and why Inngest has sat
+on the un-runnable list since Wave 4.
+
+`INNGEST_DEV` now wins when set, with the `NODE_ENV` derivation as the default
+so a fresh clone still works with no env at all. On a **production serve**, for
+the first time on this machine: `PUT /api/inngest` → **200**, app `ajniha`
+**connected with 11 functions**. `.env` was not modified — the flag is passed
+inline to `pnpm start`.
+
 ## Two instruments that lied
 
 1. **The extension's network panel reported `503` on four requests that
@@ -519,10 +614,7 @@ Stated, never assumed.
 
 | Not run | What it would need |
 |---|---|
-| A **second reviewer deciding the first account's submission in a browser** — the four-eyes rule over HTTP. Proved against the database 22/22 by `probe-four-eyes.mts`, and the *refusal* half confirmed in the browser (no decision control renders on your own record). The **approval** half is unrun. | The user signing in as `alshar55@hotmail.com`. The assistant may not enter a password. BUILD-LOG thread 64. |
-| **Step 7 in a browser** — Remote ID minted on approval, QR rendered, in-app notification, email logged — because it is reachable only *through* an approval. | The same reviewer session. This is the product's central claim and it has never been driven end to end in a browser. |
-| **Step 13** — racing the last seat from two browsers. | A second signed-in session. |
-| A **reviewer** 404ing on `/admin/zones`, `/admin/audit`, `/admin/reveals` and `/settings/system` while reaching `/admin/analytics`. | The same reviewer session. The fabricated-cookie pass covers the *unauthenticated* case only. |
+| **Step 13** — racing the last seat from two browsers. | A second signed-in **pilot**: the reviewer has no pilot profile and no aircraft, and الثمامة's capacity is 6, so there is no last seat. Cheapest route is a capacity-1 zone created from `/admin/zones/new`, raced, then archived. |
 | Sending email to any address other than the account owner's. | A verified sending domain in DNS. |
 | Vercel Blob uploads. | A deployed store and `BLOB_READ_WRITE_TOKEN`. The local driver is exercised instead, and both drivers are reached through the same `/api/files` ownership check. |
 | The OG preview card as a third party sees it. | A public domain. |

@@ -136,6 +136,25 @@ export default async function AdminDroneReviewPage({
               {drone.rejectionReason}
             </p>
           ) : null}
+          {/*
+            **Read from the row, not from a flash message.** The approval
+            queues the QR job after the transaction commits, and that send can
+            fail — no event key, nothing listening. The panel that ran the
+            approval unmounts the moment the page re-renders as decided, so a
+            transient warning there is one nobody ever reads.
+
+            An approved registration whose Remote ID has no `qrPathname` is the
+            durable form of the same fact, and it stays true until the sticker
+            is actually rendered. F29a's system page carries the re-render.
+          */}
+          {drone.status === "approved" && remoteId && !remoteId.qrPathname ? (
+            <p
+              role="status"
+              className="border-destructive mt-3 rounded-lg border border-s-4 p-3 text-sm"
+            >
+              {t("stickerMissing")}
+            </p>
+          ) : null}
         </div>
       )}
 

@@ -397,6 +397,41 @@ Rebooked on 25 Aug:
 - Returning to that day, the slot is struck with **لديك حجز في هذا الوقت**:
   the app refuses to double-book and says why.
 
+### Step 13 — the race, proven at the layer where the race actually happens
+
+**F31's acceptance line is "exactly one booking row after the race", and it
+passes.** `scripts/probe-booking.mts` drives genuine concurrency against the
+real partial unique index `booking_seat_uniq (zone_id, slot_start, seat_index)
+WHERE status IN ('pending','approved')`:
+
+| Check | Result |
+|---|---|
+| capacity 1 · two simultaneous claims → exactly one booking | **winners=1, rows=1** |
+| the loser is refused with `slot_full`, **not an exception** | `slot_full` |
+| the loser gets **three alternative slots** | 03:00, 04:00, 06:00 |
+| capacity 3 · five simultaneous claims | seats **[0,1,2]**, no gaps, no duplicates |
+| cancelling frees the seat and the next booking reuses that index | reused seat 0 |
+| the same pilot at the same instant in another zone | `duplicate_booking` |
+| the same drone at the same instant under another pilot | `duplicate_booking` |
+| a failed booking writes no audit event and no notification | audit 110→110, notification 13→13 |
+| capacity + 1 consecutive conflicts → `slot_full`, not a spin | 4 attempts |
+| probe rows left behind | **0** |
+
+**What is not driven is the browser theatre**: two literal windows pressing
+confirm at once. Two things make that the smaller half. The refusal path is the
+same server action either way — `createBookingAction` re-runs the whole airspace
+evaluation and answers with codes, and *this* is the layer the race is decided
+at, inside a transaction against a unique index. And the pilot-facing refusal
+UI was seen for real during step 12: a stale slot was refused with
+*الفترة المطلوبة في الماضي* rendered under the step that owns it.
+
+**A two-*pilot* race is not available on this machine.** Only two accounts
+exist, and the reviewer has no pilot profile and no aircraft, so a browser race
+would be one pilot in two windows — which `duplicate_booking` refuses first, for
+a different reason than capacity. Giving the reviewer a pilot profile would
+change the demo data; a capacity-1 zone was considered and rejected as building
+fixtures to re-prove a passing test.
+
 ### Step 14 — traceable, and from the same log
 
 The activity slice is drawn from the audit table itself — *لا سجل ثانٍ* — and
@@ -636,7 +671,7 @@ Stated, never assumed.
 
 | Not run | What it would need |
 |---|---|
-| **Step 13** — racing the last seat from two browsers. | A second signed-in **pilot**: the reviewer has no pilot profile and no aircraft, and الثمامة's capacity is 6, so there is no last seat. Cheapest route is a capacity-1 zone created from `/admin/zones/new`, raced, then archived. |
+| **Step 13 in two literal browser windows.** The race itself is proven — see the step 13 section: one booking, `slot_full` with three alternatives, seats [0,1,2] under five claimants. | A second signed-in **pilot**. Only two accounts exist and the reviewer has no pilot profile or aircraft, so a browser race would be one pilot in two windows, which `duplicate_booking` refuses first — a different refusal than the capacity one being tested. |
 | Sending email to any address other than the account owner's. | A verified sending domain in DNS. |
 | Vercel Blob uploads. | A deployed store and `BLOB_READ_WRITE_TOKEN`. The local driver is exercised instead, and both drivers are reached through the same `/api/files` ownership check. |
 | The OG preview card as a third party sees it. | A public domain. |

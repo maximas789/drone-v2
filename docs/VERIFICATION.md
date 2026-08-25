@@ -15,6 +15,28 @@ unrelated app on this machine (BUILD-LOG thread 3), and `.env` sets both
 
 ---
 
+## Re-verified after the fixes — 2026-08-25
+
+Four defects were fixed after F31a's gate first passed, so the gate was re-run
+in full against the current tree. **Everything below still holds, and two of the
+scripts now check more than they did** because the walkthrough minted two more
+Remote IDs and two more QR stickers.
+
+| Gate | F31a | Re-run |
+|---|---|---|
+| `pnpm exec tsc --noEmit` | clean | **clean** |
+| `pnpm db:generate` — schema drift | none | **none** — still 7 migrations |
+| `pnpm verify:fresh-db` | 25 tables, 16 enums | **25 tables, 16 enums**, 7 migrations onto a scratch database |
+| `pnpm build` | 63 routes | **clean** |
+| `pnpm lint` | clean | **clean** |
+| `pnpm test` | 1114 | **1114** |
+| `pnpm i18n:check` | 2127 keys | **2129 keys**, ar/en in sync |
+| `pnpm verify:routes` | 126/126 | **126/126** |
+| `pnpm verify:two-accounts` | 25/25 | **25/25** |
+| `pnpm verify:scan-page` | 46/46 | **64/64** — 7 Remote IDs × 3 anonymous surfaces, 12 forbidden strings each; **zero leaks on the two newly minted codes too** |
+| `pnpm verify:qr` | 14/14 | **22/22** — five stickers, each byte-identical to a fresh render |
+| `pnpm verify:no-keys` | 12/12 | **12/12** — including a real serial-less approval with both keys deleted before import |
+
 ## F31a — the mechanical gate
 
 Run 2026-08-23, in this order. **Schema before build**, because `pnpm build`

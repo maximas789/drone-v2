@@ -11,7 +11,11 @@ import { getDroneById } from "@/lib/data/drone";
 import { listDroneFilePathnames } from "@/lib/data/upload";
 import { deleteFile } from "@/lib/storage";
 import { inngest } from "@/lib/inngest/client";
-import { droneApprovedEvent, droneRevokedEvent } from "@/lib/inngest/events";
+import {
+  droneApprovedEvent,
+  droneRejectedEvent,
+  droneRevokedEvent,
+} from "@/lib/inngest/events";
 import { enforceLimit } from "@/lib/rate-limit";
 import { isAdmin, isReviewer, roleOf, type Session } from "@/lib/session";
 import {
@@ -329,7 +333,7 @@ export async function approveDroneAction(
 export async function rejectDroneAction(
   droneId: string,
   reason: string,
-): Promise<ActionResult<{ status: string }>> {
+): Promise<ActionResult<{ status: string; noticeQueued: boolean }>> {
   const session = await getSession();
   if (!session) return refuse("not_authenticated");
   if (!isReviewer(session)) return refuse("not_found");
@@ -350,8 +354,31 @@ export async function rejectDroneAction(
   );
   if (!outcome.ok) return refuse(outcome.reason);
 
+  /**
+   * **The rejection reaches the pilot's inbox, not only their bell.**
+   *
+   * Thread 61: `drone-rejected` was a written, registered, tested template with
+   * no caller, so this action wrote the row, the audit event and a notification
+   * and stopped. An approval was emailed because the QR job sends one; a
+   * rejection was not — leaving the half of the decision that asks the pilot to
+   * *do* something as the half they had to discover for themselves.
+   *
+   * Guarded like the approval beside it: a mail provider must not turn a
+   * committed decision into a crash.
+   */
+  let noticeQueued = true;
+  try {
+    await inngest.send(droneRejectedEvent.create({ droneId }));
+  } catch (error) {
+    noticeQueued = false;
+    console.error("[drone.reject] rejection email not queued", {
+      droneId,
+      error,
+    });
+  }
+
   revalidatePath("/[locale]/admin", "page");
-  return { ok: true, data: { status: outcome.to } };
+  return { ok: true, data: { status: outcome.to, noticeQueued } };
 }
 
 /**

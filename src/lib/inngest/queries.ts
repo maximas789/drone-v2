@@ -406,6 +406,29 @@ export async function getApprovedDroneForQr(droneId: string) {
     .then((rows) => rows[0] ?? null);
 }
 
+/**
+ * A rejected registration, with the owner it has to be explained to.
+ *
+ * `rejectionReason` comes back raw and is quoted to the pilot **verbatim** —
+ * F06's criterion for this template, and the reason the column exists.
+ */
+export async function getRejectedDroneForEmail(droneId: string) {
+  return db
+    .select({
+      droneId: drone.id,
+      nickname: drone.nickname,
+      status: drone.status,
+      ownerUserId: drone.ownerUserId,
+      ownerEmail: user.email,
+      ownerLocale: sql<"ar" | "en">`coalesce(${user.preferredLocale}, 'ar')`,
+      rejectionReason: drone.rejectionReason,
+    })
+    .from(drone)
+    .innerJoin(user, eq(user.id, drone.ownerUserId))
+    .where(eq(drone.id, droneId))
+    .then((rows) => rows[0] ?? null);
+}
+
 // --- Review queue digest --------------------------------------------------
 
 export async function countPendingForReview(): Promise<{

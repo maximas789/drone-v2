@@ -28,6 +28,18 @@ export const droneRevokedEvent = eventType("drone/revoked", {
 });
 
 /** Sent by F23 when a closure is published. Fans out over overlapping bookings. */
+/**
+ * Sent by the reviewer's rejection, after the transaction commits.
+ *
+ * **The email goes through a job rather than straight from the action**
+ * (thread 24): a decision must not fail, or be held open, because a mail
+ * provider is slow. The pilot already has the in-app notification; this is the
+ * half that reaches them when the app is closed.
+ */
+export const droneRejectedEvent = eventType("drone/rejected", {
+  schema: staticSchema<{ droneId: string }>(),
+});
+
 export const zoneClosurePublishedEvent = eventType("zone/closure.published", {
   schema: staticSchema<{ closureId: string }>(),
 });

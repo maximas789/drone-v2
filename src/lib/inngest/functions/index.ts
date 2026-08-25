@@ -1,6 +1,7 @@
 import { bookingCloseout } from "./booking-closeout";
 import { bookingReminders } from "./booking-reminders";
 import { closureFanout } from "./closure-fanout";
+import { droneRejected } from "./drone-rejected";
 import { droneRevoked } from "./drone-revoked";
 import { qrRender } from "./qr-render";
 import { rateLimitSweep } from "./rate-limit-sweep";
@@ -24,6 +25,7 @@ export const functions = [
   rateLimitSweep,
   qrRender,
   closureFanout,
+  droneRejected,
   droneRevoked,
   runCancelled,
   zoneSuspended,

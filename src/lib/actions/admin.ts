@@ -532,8 +532,17 @@ export async function suspendZoneAction(
     await inngest.send(
       zoneSuspendedEvent.create({ zoneId, reasonAr: ar, reasonEn: en }),
     );
-  } catch {
+  } catch (error) {
     fanOutQueued = false;
+    /**
+     * **Reported, not swallowed** — which this `catch` did not previously
+     * manage. The exception was discarded entirely: no log line, no audit row,
+     * and no `job` row either, because the run never began. The only trace was
+     * `fanOutQueued` in client state, so one reload erased the fact that
+     * pilots were never told their bookings were cancelled — the outcome this
+     * block's own comment calls the worst one available.
+     */
+    console.error("[zone.suspend] fan-out not queued", { zoneId, error });
   }
 
   revalidateZoneSurfaces();
@@ -699,8 +708,11 @@ export async function publishZoneClosureAction(
   let fanOutQueued = true;
   try {
     await inngest.send(zoneClosurePublishedEvent.create({ closureId }));
-  } catch {
+  } catch (error) {
     fanOutQueued = false;
+    // Same reason as `suspendZoneAction`: a closure that committed while its
+    // cancellations were never queued must leave a trace somewhere durable.
+    console.error("[zone.closure] fan-out not queued", { closureId, error });
   }
 
   revalidateZoneSurfaces();

@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Disclaimer } from "@/components/layout/disclaimer";
 import { locale as localeParam } from "next/root-params";
 import { ZoneForm } from "@/components/admin/zone/zone-form";
 import { Link } from "@/i18n/navigation";
@@ -60,11 +61,24 @@ export default async function NewZonePage() {
           </Link>
         </p>
       ) : (
-        <ZoneForm
-          cities={cities}
-          contextGeojson={zonesToGeoJson(context, locale)}
-          locale={locale}
-        />
+        <>
+          {/*
+            **The airspace disclaimer belongs on this screen too.**
+            `Disclaimer`'s own comment calls it a project rule rather than a
+            design preference — it appears wherever airspace is drawn, because a
+            picture of Riyadh under green and red polygons is exactly what gets
+            screenshotted. Both zone editors draw the full authored set as
+            drawing context and carried no caveat anywhere on the page, and they
+            are the screens a regulator demo lingers on.
+          */}
+          <Disclaimer locale={locale} />
+
+          <ZoneForm
+            cities={cities}
+            contextGeojson={zonesToGeoJson(context, locale)}
+            locale={locale}
+          />
+        </>
       )}
     </main>
   );

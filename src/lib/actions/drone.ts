@@ -307,8 +307,9 @@ export async function approveDroneAction(
   let stickerQueued = true;
   try {
     await inngest.send(droneApprovedEvent.create({ droneId }));
-  } catch {
+  } catch (error) {
     stickerQueued = false;
+    console.error("[drone.approve] QR job not queued", { droneId, error });
   }
 
   revalidatePath("/[locale]/admin", "page");
@@ -389,8 +390,12 @@ export async function revokeDroneAction(
     await inngest.send(
       droneRevokedEvent.create({ droneId, reason: trimmed.trim() }),
     );
-  } catch {
+  } catch (error) {
     notifyQueued = false;
+    console.error("[drone.revoke] notification job not queued", {
+      droneId,
+      error,
+    });
   }
 
   revalidatePath("/[locale]/admin", "page");

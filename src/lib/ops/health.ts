@@ -154,21 +154,58 @@ function checkBlob(): HealthCheck {
 }
 
 /**
- * How many functions this app registers, and whether anything is there to run
- * them.
+ * How many functions this app registers, and whether anything can run them.
  *
  * The count comes from the array the route actually serves — a fact, not a
- * probe. The reachability half is a socket to the dev server, whose default
- * host is read from the installed SDK (`http://localhost:8288/`) rather than
- * remembered.
+ * probe.
+ *
+ * **This check used to answer from something it had not measured.** It probed
+ * `localhost:8288` unconditionally, so a correctly-deployed production install
+ * reported *degraded* and told the operator to start a dev CLI; and because the
+ * probe accepted any status below 500, anything at all listening on that port
+ * turned it green. Both directions were observed on this machine: with the dev
+ * server up and the app in cloud mode — answering its own `/api/inngest` with a
+ * 500 and registering nothing — this row would have read **ok · 11 functions**
+ * over an integration that could not run a single job.
+ *
+ * So it now branches on the mode the client actually uses, and in cloud mode it
+ * asks about the key rather than about a port that is not involved.
  */
 async function checkInngest(): Promise<HealthCheck> {
+  const detail = { functions: functions.length };
+
+  /**
+   * The same derivation as `src/lib/inngest/client.ts`. Repeated rather than
+   * imported because importing the client here would construct it as a side
+   * effect of rendering a health page.
+   */
+  const dev =
+    process.env.INNGEST_DEV === undefined || process.env.INNGEST_DEV === ""
+      ? process.env.NODE_ENV !== "production"
+      : process.env.INNGEST_DEV !== "0";
+
+  if (!dev) {
+    /**
+     * Cloud mode. There is no local port to probe, and the SDK refuses to
+     * serve `/api/inngest` at all without a signing key — which is the failure
+     * an operator needs to hear about, and the one the old check could not see.
+     */
+    const signed = Boolean(process.env.INNGEST_SIGNING_KEY);
+    const keyed = Boolean(process.env.INNGEST_EVENT_KEY);
+    return {
+      id: "inngest",
+      state: signed && keyed ? "ok" : "degraded",
+      detail,
+      consequence: signed && keyed ? undefined : "inngestKeysMissing",
+    };
+  }
+
   const base = process.env.INNGEST_BASE_URL ?? "http://localhost:8288/";
   const up = await reachable(base);
   return {
     id: "inngest",
     state: up ? "ok" : "degraded",
-    detail: { functions: functions.length },
+    detail,
     consequence: up ? undefined : "inngestUnreachable",
   };
 }

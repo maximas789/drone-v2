@@ -75,8 +75,21 @@ export async function regenerateAllQrAction(): Promise<
         code: row.code,
       });
       rendered += 1;
-    } catch {
+    } catch (error) {
       failed += 1;
+      /**
+       * **Which aircraft, and why.** This `catch` reported a bare count on the
+       * one page whose stated principle is never a bare red dot — so two
+       * stickers could fail to re-render and nothing on the screen, in the
+       * audit row or in the log would say which airframes still carry a dead
+       * QR. Every other swallowed error in this codebase logs loudly; this one
+       * did not.
+       */
+      console.error("[ops.regenerateQr] render failed", {
+        remoteIdId: row.remoteIdId,
+        code: row.code,
+        error,
+      });
     }
   }
 

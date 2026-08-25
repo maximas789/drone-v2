@@ -1,5 +1,4 @@
 import { getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { formatDateTime } from "@/lib/format";
 import type { EmailLogRow } from "@/lib/ops/email-log";
 import type { Locale } from "@/lib/locale";
@@ -97,15 +96,18 @@ export async function EmailLogPanel({
            * link exists — a dead "view notification" on a password-reset mail
            * would be worse than no link.
            */}
+          {/*
+            **The link used to point at the operator's own inbox.**
+            `/notifications` is `listMyNotifications(session)`, so it renders
+            the signed-in admin's rows — and the notification that accompanied
+            this message belongs to the *pilot*, which means the destination was
+            guaranteed not to contain the thing it promised. The fact is worth
+            stating, so it is stated; the link that could not keep its word is
+            gone rather than pointed somewhere else that also cannot.
+          */}
           {row.notificationId ? (
-            <p className="text-xs">
-              {t("email.accompanied")}{" "}
-              <Link
-                href="/notifications"
-                className="text-primary underline underline-offset-4"
-              >
-                {t("email.viewNotifications")}
-              </Link>
+            <p className="text-muted-foreground text-xs">
+              {t("email.accompanied")}
             </p>
           ) : null}
 

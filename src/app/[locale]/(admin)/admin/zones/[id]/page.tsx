@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Disclaimer } from "@/components/layout/disclaimer";
 import { notFound } from "next/navigation";
 import { locale as localeParam } from "next/root-params";
 import { EntityTimeline } from "@/components/admin/audit/entity-timeline";
@@ -150,6 +151,17 @@ export default async function EditZonePage({
           {t(`statuses.${zone.status}`)}
         </Badge>
       </header>
+
+      {/*
+        **The airspace disclaimer belongs on this screen too.**
+        `Disclaimer`'s own comment calls it a project rule rather than a design
+        preference — it appears wherever airspace is drawn, because a picture of
+        Riyadh under green and red polygons is exactly what gets screenshotted.
+        These two editors draw the full authored set as drawing context and had
+        no caveat anywhere on the page; they are also the screens a regulator
+        demo lingers on.
+      */}
+      <Disclaimer locale={locale} />
 
       <ZoneForm
         zoneId={zone.id}

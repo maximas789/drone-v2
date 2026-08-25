@@ -31,7 +31,7 @@ import {
   slotStates,
 } from "@/lib/booking/slots";
 import { getBookingById, listSlotUsage } from "@/lib/data/booking";
-import { getRemoteIdForDrone } from "@/lib/data/drone";
+import { getDroneById, getRemoteIdForDrone } from "@/lib/data/drone";
 import { autoApproveEligible } from "@/lib/data/pilot";
 import { enforceLimit } from "@/lib/rate-limit";
 import { isReviewer, roleOf, type Session } from "@/lib/session";
@@ -218,6 +218,28 @@ export async function createBookingAction(
   // be used to enumerate zones a reviewer is still drafting.
   if (!zone) return refuse("not_found");
   if (!context.aircraft) return refuse("not_found");
+
+  /**
+   * **You may only book your own aircraft.**
+   *
+   * Every read on the path here — `buildDayContext`, `getRemoteIdForDrone` —
+   * resolves through `getDroneById`, which deliberately answers for *any*
+   * reviewer so the review queue can load an airframe it does not own. Nothing
+   * downstream narrowed that back: `createBookingWithSeat` writes
+   * `pilotUserId: session.user.id` beside the caller's `droneId`, so a member
+   * of staff could put a booking on somebody else's aircraft — and the owner
+   * would see a flight they never planned, while the anonymous scan page for
+   * that Remote ID reported it in the air.
+   *
+   * The four sibling actions that share this read all narrow it the same way
+   * (`saveDroneDraftAction`, `deleteDroneAction`, `regenerateQrAction`,
+   * `declareModuleAction`); this one did not. `not_found`, like its siblings,
+   * so the refusal says nothing about whose aircraft it is.
+   */
+  const airframe = await getDroneById(session, input.droneId);
+  if (!airframe || airframe.ownerUserId !== session.user.id) {
+    return refuse("not_found");
+  }
 
   const slotEnd = new Date(
     slotStart.getTime() + zone.slotDurationMinutes * 60_000,

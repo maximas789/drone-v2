@@ -180,6 +180,26 @@ export function BookingWizard({
   const [pending, startTransition] = useTransition();
 
   /**
+   * **A refusal must not outlive the thing it refused.**
+   *
+   * `applyReasons` sends the pilot back to the step that owns the problem, and
+   * the reasons then stayed on screen through every later step — so a pilot who
+   * fixed the fault by choosing a different day still read *أسباب الرفض* on the
+   * review pane, as a standing objection to a booking the app was about to
+   * accept. Observed live: a slot refused as in-the-past kept complaining after
+   * a valid future date was picked.
+   *
+   * Cleared on every input a refusal could have been about, rather than by an
+   * effect keyed on those inputs — an effect would also fire on the render that
+   * *set* the reasons and wipe them before they were read.
+   */
+  function clearRefusal() {
+    setReasons([]);
+    setAlternatives([]);
+    setFormMessage(null);
+  }
+
+  /**
    * Opens on the first step the map has *not* already answered. A pilot who
    * chose a point, an altitude and a time on the map and then had to press
    * "next" four times would rightly wonder what the map was for.
@@ -321,6 +341,7 @@ export function BookingWizard({
                 // A slot belongs to a zone's grid; keeping it across a zone
                 // change would carry an instant that is not on the new one.
                 setSlotStart(null);
+                clearRefusal();
               }}
             >
               {zones.map((candidate) => (
@@ -343,6 +364,7 @@ export function BookingWizard({
                 onSelect={(next) => {
                   setYmd(next);
                   setSlotStart(null);
+                  clearRefusal();
                 }}
                 locale={locale}
               />
@@ -358,7 +380,10 @@ export function BookingWizard({
             slots={listing?.slots ?? []}
             capacity={listing?.zone.capacity ?? 0}
             selected={slotStart}
-            onSelect={setSlotStart}
+            onSelect={(next) => {
+              setSlotStart(next);
+              clearRefusal();
+            }}
             locale={locale}
             loading={loadingSlots}
           />
@@ -376,11 +401,26 @@ export function BookingWizard({
                       onClick={() => {
                         setYmd(riyadhYmd(new Date(slot.slotStart)));
                         setSlotStart(slot.slotStart);
-                        setAlternatives([]);
-                        setReasons([]);
+                        clearRefusal();
                       }}
                     >
-  
+                      {/*
+                        **This button had no label at all** — its only child was
+                        a whitespace literal, so the losing pilot was offered
+                        three blank outline buttons and a screen reader was
+                        offered three nameless controls. `SlotTime` was already
+                        imported for the review pane, so the unused-import rule
+                        never fired, and step 13 is the one step nobody had
+                        driven in a browser, so nothing else would have caught
+                        it. `withDate` stays on: an alternative may fall on a
+                        different day from the one that was refused, and that is
+                        the whole reason to offer it.
+                      */}
+                      <SlotTime
+                        start={new Date(slot.slotStart)}
+                        end={slot.slotEnd ? new Date(slot.slotEnd) : undefined}
+                        locale={locale}
+                      />
                     </Button>
                   </li>
                 ))}
@@ -396,7 +436,10 @@ export function BookingWizard({
           <DroneSelect
             drones={drones}
             selected={droneId}
-            onSelect={setDroneId}
+            onSelect={(next) => {
+              setDroneId(next);
+              clearRefusal();
+            }}
             locale={locale}
           />
         </section>
@@ -453,7 +496,10 @@ export function BookingWizard({
               dir="ltr"
               className="text-start font-mono"
               value={altitude}
-              onChange={(event) => setAltitude(event.target.value)}
+              onChange={(event) => {
+                setAltitude(event.target.value);
+                clearRefusal();
+              }}
             />
             <p className="text-muted-foreground text-xs">
               {zone?.ceilingAglM === null || zone === null

@@ -21,3 +21,16 @@ export const emailConfigured = Boolean(process.env.RESEND_API_KEY);
  */
 export const EMAIL_FROM =
   process.env.EMAIL_FROM ?? "Ajniha <onboarding@resend.dev>";
+
+/**
+ * True when mail would go out through Resend's shared sandbox sender.
+ *
+ * **The state F06 calls "key present, domain verified" is not the same as "key
+ * present".** With a key and no `EMAIL_FROM`, every message is accepted by the
+ * provider and delivered only to the Resend account owner — so the operator
+ * sees a healthy mail row, no `failed` rows, and a pilot who never received
+ * anything. Named here rather than inferred at the health check, because this
+ * is the file that owns the default.
+ */
+export const usingSandboxSender =
+  emailConfigured && !process.env.EMAIL_FROM;

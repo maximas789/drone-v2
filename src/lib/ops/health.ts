@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { zone } from "@/lib/db/schema";
-import { emailConfigured } from "@/lib/email/config";
+import { emailConfigured, usingSandboxSender } from "@/lib/email/config";
 import { functions } from "@/lib/inngest/functions";
 import { sameOrigin } from "@/lib/ops/origin";
 import { blobConfigured } from "@/lib/storage";
@@ -141,10 +141,23 @@ async function checkMigrations(): Promise<HealthCheck> {
   }
 }
 
+/**
+ * **A key is not a verified domain**, and F29's table asks for both.
+ *
+ * With a key and no `EMAIL_FROM`, mail leaves through Resend's shared sandbox
+ * sender, which delivers only to the Resend account owner. Nothing fails: the
+ * email log fills with `sent` rows and the pilots receive nothing. This row
+ * used to read **Healthy** in exactly that state, pointing the operator away
+ * from the panel holding the answer.
+ */
 function checkEmail(): HealthCheck {
-  return emailConfigured
-    ? { id: "email", state: "ok" }
-    : { id: "email", state: "degraded", consequence: "emailUnconfigured" };
+  if (!emailConfigured) {
+    return { id: "email", state: "degraded", consequence: "emailUnconfigured" };
+  }
+  if (usingSandboxSender) {
+    return { id: "email", state: "degraded", consequence: "emailSandboxSender" };
+  }
+  return { id: "email", state: "ok" };
 }
 
 function checkBlob(): HealthCheck {

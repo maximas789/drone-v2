@@ -665,6 +665,141 @@ inline to `pnpm start`.
 
 ---
 
+## F31c — fresh eyes, round one
+
+Four critics dispatched **in a single message** so they ran at once, each
+reading this file, the plan, the feature specs and the source, and each
+read-only: no edits, no servers, no browser. **13 broken, 5 missing, 25 worth
+knowing.**
+
+Every finding below was **re-verified by hand before anything was changed** —
+critics are evidence, not authority.
+
+### Ownership — clean, and stated confidently
+
+The highest-stakes brief came back with **no broken and no missing findings**
+across all 14 `src/lib/data/*.ts`, ~40 server actions, all six route handlers
+and both route-group layouts.
+
+- **Pilot B cannot reach pilot A's anything.** Every pilot-facing reader either
+  puts `session.user.id` in the `where` or re-checks the owner after the read,
+  and the three batch readers re-derive the id set from the caller's own rows
+  rather than trusting an array of ids.
+- **A pilot cannot reach `/admin`**; the admin/reviewer split is consistent, and
+  `listIdentityReveals` is admin-only in the data layer too — a reviewer must
+  not watch the oversight of their own reveals.
+- **Nothing bypasses `redactRemoteId`.** `getRemoteIdRecordByCode` is the only
+  unscoped reader and has exactly two consumers, both of which redact or gate.
+  `MaskedId` is a Server Component, so the raw number is never serialised into
+  client props.
+- **Every `"use server"` action re-reads the session itself.** Not one trusts
+  the layout.
+
+### The honesty cluster — the worst of it, and all fixed
+
+CLAUDE.md calls these non-negotiable, and six were live:
+
+1. **Four strings told pilots a *GACA reviewer* decides their booking** — on the
+   public zone panel, the booking wizard's rules step and the booking
+   confirmation. The English wrote "GACA" outright. This is the exact claim
+   `for-authorities.mdx` exists to deny, and the footer denying it sat on the
+   same page. Now **«مراجع بشري» / "a human reviewer"**, the neutral wording the
+   app already used in `drones.reviewSubmitNotice`.
+2. **The OG card and `llms.txt` claimed a proposal "put to" GACA** — asserting a
+   *relationship*, on precisely the two surfaces that travel without their page
+   (link unfurls, LLM crawlers). The JSON-LD had been scrubbed of exactly this
+   and documented why; the card beside it had not. Now "a proposed initiative,
+   not a system adopted or endorsed by" the authority.
+3. **The public map told every signed-out visitor "booking is not available yet
+   in this demonstration"** — on the flagship surface, about a feature that is
+   built and was driven end to end in this walkthrough. Removed.
+4. **The masked-ID hint promised the full number "appears on no screen"** while
+   a reveal control sat beside it on four surfaces. Now says the full number
+   appears only through a reveal recorded in the audit log.
+5. **Both admin zone editors drew the full Riyadh airspace with no disclaimer**,
+   breaking a rule `Disclaimer`'s own comment calls "a project rule rather than
+   a design preference". These are the screens a regulator demo lingers on.
+6. **Session 46d's own new strings** named a job-runner vendor to a regulator
+   persona and told the reviewer to re-render from a page that answers them 404.
+
+### Correctness
+
+- **The three alternative-slot buttons rendered with no label at all.** The
+  `<Button>`'s only child was a whitespace literal — three blank outline buttons
+  and three nameless controls for a screen reader. `SlotTime` was already
+  imported for the review pane, so the unused-import rule never fired, and this
+  is the visible half of step 13, the one step never driven in a browser. Now
+  renders the slot time.
+- **Refusal reasons outlived their cause.** `setReasons` was cleared in exactly
+  one place, so a refusal followed the pilot through every later step —
+  observed live in step 12. One `clearRefusal()` now runs on zone, day, slot,
+  aircraft and altitude changes.
+- **`createBookingAction` bound a booking to any `droneId` the caller passed**,
+  with no owner predicate, while all four sibling actions narrow the same
+  permissive read back to the owner. Staff-only, so not a pilot-B hole — but a
+  reviewer could put a flight on someone else's aircraft, the owner would see a
+  booking they never made, and that aircraft's anonymous scan page would report
+  it in the air.
+- **`PROBE18B` was never seed data.** `probe-drone-states.mts` sets it as
+  `MARKER` and carries a teardown that never ran, so F31's *"no test fixture
+  remains in the database"* was unmet — **and the evidence offered for it
+  searched `probe-%`, which is case-sensitive and matched 0 of the 7 rows.**
+  Renamed to real Arabic nicknames rather than deleted, because they now carry
+  Remote IDs, QR stickers and bookings.
+
+### Operability
+
+- **The Inngest health check answered from something it had not measured.** It
+  probed `localhost:8288` unconditionally with no cloud-mode branch, so a
+  correct production install reads *degraded* and is told to start a dev CLI;
+  and because the probe accepted any status under 500, anything holding that
+  port turned it green. **Both directions were live on this machine**: with the
+  dev server up and the app in cloud mode — answering its own `/api/inngest`
+  with a 500 and registering nothing — the row would have read *ok · 11
+  functions*. Now mode-aware, and in cloud mode it asks about the keys.
+- **Three swallowed `catch` blocks now report.** Both zone fan-outs discarded
+  the exception entirely — no log, no audit row, no `job` row, because the run
+  never began — leaving client state as the only trace, so one reload erased the
+  fact that pilots were never told their bookings were cancelled. The
+  per-aircraft QR re-render failure did the same, reporting a bare count on the
+  page whose stated principle is never a bare red dot.
+- **The email log's "loop" link pointed at the operator's own inbox.**
+  `/notifications` is `listMyNotifications(session)`, so the destination was
+  guaranteed not to hold the *pilot's* notification it promised. Removed rather
+  than pointed somewhere else that also could not keep the promise.
+- **Nothing sent the rejection email** — thread 61, specified in F06 with its
+  criterion already ticked, assigned to "F22c or F29" and closed by neither. Now
+  a `drone/rejected` event and a `drone-rejected` job, through a job rather than
+  from the action (thread 24), with the reviewer's reason quoted verbatim.
+  Proved: 12 registered functions instead of 11; a negative control that sends
+  nothing for a drone that is not rejected; and a real send logged to the owner
+  in `ar` with the job `completed`.
+
+### Deliberately not changed
+
+**The admin tab strip draws Zones and Audit for reviewers, who then get 404s.**
+The critic is right that it is inconsistent with `/admin/lookup`, which gates
+its reveals link and whose comment even says *"the zones tab makes the opposite
+call"*. But `queue-tabs.tsx` argues its position explicitly — a navigation
+control that changes shape by role is one more thing to get wrong than a route
+that refuses — and reversing a documented design decision is not a defect fix.
+Recorded as **worth knowing**, and it is the user's call.
+
+### Still open after round one
+
+- The **job log has no filter or pagination** (fixed newest-50 across ~96
+  `booking-closeout` runs a day), so a failed overnight run scrolls off within
+  hours — the one panel that needs history is the one without filters.
+- The **Resend health check verifies a key, not a verified domain**, so the
+  documented middle state — a key present, delivering only to the account owner
+  — reads *Healthy*.
+- **`booking-rejected`** remains without a caller; `drone-rejected` is now sent,
+  and the booking half is the same shape.
+- The **375 px signed-in header**, and the **120 m altitude claim** — both
+  judgement calls belonging to the user.
+
+---
+
 ## Named as un-runnable
 
 Stated, never assumed.

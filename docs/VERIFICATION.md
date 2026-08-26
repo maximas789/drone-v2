@@ -771,7 +771,8 @@ CLAUDE.md calls these non-negotiable, and six were live:
   criterion already ticked, assigned to "F22c or F29" and closed by neither. Now
   a `drone/rejected` event and a `drone-rejected` job, through a job rather than
   from the action (thread 24), with the reviewer's reason quoted verbatim.
-  Proved: 12 registered functions instead of 11; a negative control that sends
+  Proved: the registry went from 11 functions to 12 at that point (14 after the two
+  booking templates below); a negative control that sends
   nothing for a drone that is not rejected; and a real send logged to the owner
   in `ar` with the job `completed`.
 

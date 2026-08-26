@@ -25,6 +25,11 @@ import type { Actor } from "@/lib/audit";
 import { getSession } from "@/lib/auth-guards";
 import { createBookingWithSeat } from "@/lib/booking/create";
 import { db } from "@/lib/db";
+import { inngest } from "@/lib/inngest/client";
+import {
+  bookingApprovedEvent,
+  bookingRejectedEvent,
+} from "@/lib/inngest/events";
 import {
   deriveSlots,
   findAlternativeSlots,
@@ -432,7 +437,7 @@ export async function checkInBookingAction(
  */
 export async function approveBookingAction(
   bookingId: string,
-): Promise<ActionResult<{ status: string }>> {
+): Promise<ActionResult<{ status: string; noticeQueued: boolean }>> {
   const session = await getSession();
   if (!session) return refuse("not_authenticated");
   if (!isReviewer(session)) return refuse("not_found");
@@ -456,15 +461,31 @@ export async function approveBookingAction(
       : refuse(outcome.reason);
   }
 
+  /**
+   * **The confirmation reaches the pilot's inbox too.** `booking-approved` was
+   * the third registered template with no caller — found by auditing all
+   * eleven rather than by taking the two that were reported.
+   */
+  let noticeQueued = true;
+  try {
+    await inngest.send(bookingApprovedEvent.create({ bookingId }));
+  } catch (error) {
+    noticeQueued = false;
+    console.error("[booking.approve] confirmation email not queued", {
+      bookingId,
+      error,
+    });
+  }
+
   revalidateReviewSurfaces();
-  return { ok: true, data: { status: outcome.to } };
+  return { ok: true, data: { status: outcome.to, noticeQueued } };
 }
 
 /** A reviewer refusing one. Reason required, at least 20 characters. */
 export async function rejectBookingAction(
   bookingId: string,
   reason: string,
-): Promise<ActionResult<{ status: string }>> {
+): Promise<ActionResult<{ status: string; noticeQueued: boolean }>> {
   const session = await getSession();
   if (!session) return refuse("not_authenticated");
   if (!isReviewer(session)) return refuse("not_found");
@@ -485,8 +506,24 @@ export async function rejectBookingAction(
   );
   if (!outcome.ok) return refuse(outcome.reason);
 
+  /**
+   * **The refusal reaches the pilot's inbox, not only their bell** — the second
+   * half of thread 61. Guarded like every other post-commit send: a mail
+   * provider must not turn a committed decision into a crash.
+   */
+  let noticeQueued = true;
+  try {
+    await inngest.send(bookingRejectedEvent.create({ bookingId }));
+  } catch (error) {
+    noticeQueued = false;
+    console.error("[booking.reject] rejection email not queued", {
+      bookingId,
+      error,
+    });
+  }
+
   revalidateReviewSurfaces();
-  return { ok: true, data: { status: outcome.to } };
+  return { ok: true, data: { status: outcome.to, noticeQueued } };
 }
 
 /** An authority taking a slot away, at any time, with a reason. */

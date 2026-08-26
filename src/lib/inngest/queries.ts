@@ -429,6 +429,55 @@ export async function getRejectedDroneForEmail(droneId: string) {
     .then((rows) => rows[0] ?? null);
 }
 
+/** An approved booking, with the pilot to confirm it to. */
+export async function getApprovedBookingForEmail(bookingId: string) {
+  return db
+    .select({
+      bookingId: booking.id,
+      status: booking.status,
+      pilotUserId: booking.pilotUserId,
+      pilotEmail: user.email,
+      pilotLocale: sql<"ar" | "en">`coalesce(${user.preferredLocale}, 'ar')`,
+      zoneNameAr: zone.nameAr,
+      zoneNameEn: zone.nameEn,
+      ceilingAglM: zone.ceilingAglM,
+      slotStart: booking.slotStart,
+      slotEnd: booking.slotEnd,
+    })
+    .from(booking)
+    .innerJoin(user, eq(user.id, booking.pilotUserId))
+    .innerJoin(zone, eq(zone.id, booking.zoneId))
+    .where(eq(booking.id, bookingId))
+    .then((rows) => rows[0] ?? null);
+}
+
+/**
+ * A refused booking, with the pilot it has to be explained to.
+ *
+ * Not `getLiveBooking`: that one filters to the statuses a live booking can
+ * hold, and `rejected` is deliberately not among them.
+ */
+export async function getRejectedBookingForEmail(bookingId: string) {
+  return db
+    .select({
+      bookingId: booking.id,
+      status: booking.status,
+      pilotUserId: booking.pilotUserId,
+      pilotEmail: user.email,
+      pilotLocale: sql<"ar" | "en">`coalesce(${user.preferredLocale}, 'ar')`,
+      zoneNameAr: zone.nameAr,
+      zoneNameEn: zone.nameEn,
+      slotStart: booking.slotStart,
+      slotEnd: booking.slotEnd,
+      rejectionReason: booking.rejectionReason,
+    })
+    .from(booking)
+    .innerJoin(user, eq(user.id, booking.pilotUserId))
+    .innerJoin(zone, eq(zone.id, booking.zoneId))
+    .where(eq(booking.id, bookingId))
+    .then((rows) => rows[0] ?? null);
+}
+
 // --- Review queue digest --------------------------------------------------
 
 export async function countPendingForReview(): Promise<{

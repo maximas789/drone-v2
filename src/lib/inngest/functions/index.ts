@@ -1,4 +1,6 @@
 import { bookingCloseout } from "./booking-closeout";
+import { bookingApproved } from "./booking-approved";
+import { bookingRejected } from "./booking-rejected";
 import { bookingReminders } from "./booking-reminders";
 import { closureFanout } from "./closure-fanout";
 import { droneRejected } from "./drone-rejected";
@@ -21,6 +23,8 @@ export const functions = [
   registrationExpiryReminders,
   bookingCloseout,
   bookingReminders,
+  bookingRejected,
+  bookingApproved,
   reviewQueueDigest,
   rateLimitSweep,
   qrRender,

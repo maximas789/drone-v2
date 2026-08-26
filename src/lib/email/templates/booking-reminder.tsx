@@ -15,7 +15,7 @@ export type BookingReminderParams = {
   zoneName: string;
   startsAt: Date;
   endsAt: Date;
-  ceilingMetres: number;
+  ceilingMetres: number | null;
   remoteIdCode: string;
   bookingUrl: string;
 };
@@ -37,8 +37,19 @@ export const bookingReminder = defineTemplate<BookingReminderParams>({
         <Field label={t("bookingReminder.slotLabel")}>
           {formatDateRange(params.startsAt, params.endsAt, locale)}
         </Field>
+        {/*
+          **`null` is not zero, and it is certainly not 120.** A zone may carry
+          no published ceiling, and both of these emails took a bare `number`:
+          the reminder rendered it `0 m` — read as ground level, the opposite of
+          unlimited — and the approval briefly rendered `120 m`, which asserted
+          the app's one unsourced regulatory figure (BUILD-LOG thread 77) as
+          *this flight's* limit, in an outbound message, for a zone that never
+          set one. Two emails about the same flight disagreed.
+        */}
         <Field label={t("bookingReminder.ceilingLabel")}>
-          {formatAltitude(params.ceilingMetres, locale)}
+          {params.ceilingMetres === null
+            ? t("bookingReminder.ceilingNone")
+            : formatAltitude(params.ceilingMetres, locale)}
         </Field>
         <Field label={t("bookingReminder.remoteIdLabel")} ltr>
           {params.remoteIdCode}

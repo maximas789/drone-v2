@@ -1820,6 +1820,7 @@
       "zoneLabel": "Zone",
       "slotLabel": "Slot (Riyadh time)",
       "ceilingLabel": "Maximum altitude",
+      "ceilingNone": "No published ceiling for this zone",
       "action": "Booking details",
       "note": "The approval covers this slot and this zone only. Any change of time or place needs a new booking."
     },
@@ -1854,6 +1855,7 @@
       "zoneLabel": "Zone",
       "slotLabel": "Slot (Riyadh time)",
       "ceilingLabel": "Maximum altitude",
+      "ceilingNone": "No published ceiling for this zone",
       "remoteIdLabel": "Remote ID code",
       "action": "Booking details",
       "checklist": "Before take-off: check that Remote ID is broadcasting, that the aircraft carries its code sticker, and that you stay under the altitude above."
@@ -2386,7 +2388,7 @@
       "authUrlMismatch": "Does not match the request origin: sign-ins will be refused with INVALID_ORIGIN and sessions may not persist.",
       "pepperMissing": "Not set: the identity-document hash cannot be computed, so no new pilot profile can be saved.",
       "emailUnconfigured": "No Resend key: emails print to the terminal only and reach nobody. The platform works otherwise.",
-      "emailSandboxSender": "A key but no verified domain: mail goes through Resend's sandbox sender, which delivers only to the Resend account owner. Nothing will be logged as failed and no pilot will receive anything — set EMAIL_FROM to a verified domain.",
+      "emailSandboxSender": "A key but no verified domain: mail goes through Resend's sandbox sender, so it reaches only the Resend account owner and every other address comes back as failed, with the provider's reason, in the email log. Set EMAIL_FROM to a verified domain.",
       "blobUnconfigured": "No storage token: files are written to ./uploads locally, and will not persist on a host without a durable disk.",
       "inngestUnreachable": "No Inngest server is answering: scheduled jobs will not run until you start npx inngest-cli dev.",
       "inngestKeysMissing": "Cloud mode with no keys: Inngest refuses to register the functions without INNGEST_SIGNING_KEY, and no event is sent without INNGEST_EVENT_KEY — so no QR stickers, no email, and no scheduled jobs.",
@@ -2452,6 +2454,10 @@
         "runId": "Run id",
         "rerunOf": "Re-run of"
       },
+      "filterStatus": "Status",
+      "filterFunction": "Function",
+      "filterAll": "All",
+      "filterApply": "Filter",
       "status": {
         "running": "Running",
         "completed": "Completed",

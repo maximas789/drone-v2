@@ -100,7 +100,7 @@ async function emailReminder(row: BookingRow, zoneName: string): Promise<void> {
       zoneName,
       startsAt: row.slotStart,
       endsAt: row.slotEnd,
-      ceilingMetres: row.ceilingAglM ?? 0,
+      ceilingMetres: row.ceilingAglM,
       remoteIdCode: row.remoteIdCode ?? "—",
       bookingUrl: localeUrl(`/bookings/${row.bookingId}`, row.pilotLocale),
     },

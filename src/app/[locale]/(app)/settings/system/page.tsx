@@ -7,6 +7,7 @@ import { DataCountsPanel } from "@/components/ops/data-counts";
 import { EmailFilters } from "@/components/ops/email-filters";
 import { EmailLogPanel } from "@/components/ops/email-log";
 import { HealthGrid } from "@/components/ops/health-grid";
+import { JobFilters } from "@/components/ops/job-filters";
 import { JobsPanel } from "@/components/ops/jobs-panel";
 import { RegenerateQr } from "@/components/ops/regenerate-qr";
 import { requireUser } from "@/lib/auth-guards";
@@ -14,7 +15,12 @@ import { toLocale } from "@/lib/locale";
 import { getDataCounts } from "@/lib/ops/counts";
 import { runHealthChecks } from "@/lib/ops/health";
 import { listEmailLog, listEmailTemplates, isEmailStatus } from "@/lib/ops/email-log";
-import { listJobRuns, listScheduledFunctions } from "@/lib/ops/jobs";
+import {
+  isJobStatus,
+  listJobFunctionIds,
+  listJobRuns,
+  listScheduledFunctions,
+} from "@/lib/ops/jobs";
 import { listAuditEvents } from "@/lib/data/audit";
 import { isAdmin } from "@/lib/session";
 import type { Metadata } from "next";
@@ -66,12 +72,32 @@ export default async function SystemSettingsPage({
   const status = isEmailStatus(rawStatus) ? rawStatus : undefined;
   const template = rawTemplate || undefined;
 
+  /**
+   * The job filters live in the URL for the same reason, under their own names
+   * so that filtering runs does not disturb a filtered email view on the same
+   * page — the two panels are read together when something has gone wrong.
+   */
+  const rawRunStatus = typeof params.runStatus === "string" ? params.runStatus : "";
+  const rawRunFunction =
+    typeof params.runFunction === "string" ? params.runFunction : "";
+  const runStatus = isJobStatus(rawRunStatus) ? rawRunStatus : undefined;
+  const runFunction = rawRunFunction || undefined;
+
   const t = await getTranslations("ops");
-  const [checks, counts, runs, scheduled, emails, templates, activity] =
-    await Promise.all([
+  const [
+    checks,
+    counts,
+    runs,
+    runFunctionIds,
+    scheduled,
+    emails,
+    templates,
+    activity,
+  ] = await Promise.all([
       runHealthChecks(origin),
       getDataCounts(),
-      listJobRuns(),
+      listJobRuns({ status: runStatus, functionId: runFunction }),
+      listJobFunctionIds(),
       listScheduledFunctions(),
       listEmailLog({ status, template }),
       listEmailTemplates(),
@@ -103,6 +129,11 @@ export default async function SystemSettingsPage({
           <h2 className="text-lg font-medium">{t("jobs.title")}</h2>
           <p className="text-muted-foreground text-sm">{t("jobs.intro")}</p>
         </header>
+        <JobFilters
+          functionIds={runFunctionIds}
+          status={runStatus}
+          functionId={runFunction}
+        />
         <JobsPanel runs={runs} scheduled={scheduled} locale={locale} />
       </section>
 

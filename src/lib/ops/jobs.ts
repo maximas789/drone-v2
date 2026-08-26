@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { job } from "@/lib/db/schema";
 import { CRON_SCHEDULES, riyadhCron } from "@/lib/inngest/rules";
@@ -32,7 +32,55 @@ export type JobRun = {
   rerunOfRunId: string | null;
 };
 
-export async function listJobRuns(limit = 50): Promise<JobRun[]> {
+/** The statuses a run can hold, for the filter's option list. */
+export const JOB_STATUSES = [
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
+  "cancelling",
+] as const;
+
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+export function isJobStatus(value: string): value is JobStatus {
+  return (JOB_STATUSES as readonly string[]).includes(value);
+}
+
+export type JobRunFilters = {
+  status?: JobStatus;
+  functionId?: string;
+};
+
+/** Every function that has ever produced a run, for the filter's option list. */
+export async function listJobFunctionIds(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ functionId: job.functionId })
+    .from(job)
+    .orderBy(job.functionId);
+  return rows.map((row) => row.functionId);
+}
+
+/**
+ * The runs, newest first — **filterable, because unfiltered it cannot answer
+ * the question it exists for.**
+ *
+ * `booking-closeout` alone runs every fifteen minutes, which is 96 rows a day
+ * before the two hourly functions are counted, so a fixed newest-50 window
+ * spans about eight hours. An operator asking *"the expiry sweep failed
+ * overnight — what was the error?"* would find the scheduled table saying
+ * **Failed** and the row carrying the message already scrolled off. The panel
+ * that needs history was the one without filters, while the email log, which
+ * needs it less, had them.
+ */
+export async function listJobRuns(
+  filters: JobRunFilters = {},
+  limit = 50,
+): Promise<JobRun[]> {
+  const clauses: SQL[] = [];
+  if (filters.status) clauses.push(eq(job.status, filters.status));
+  if (filters.functionId) clauses.push(eq(job.functionId, filters.functionId));
+
   return db
     .select({
       id: job.id,
@@ -48,6 +96,7 @@ export async function listJobRuns(limit = 50): Promise<JobRun[]> {
       rerunOfRunId: job.rerunOfRunId,
     })
     .from(job)
+    .where(clauses.length > 0 ? and(...clauses) : undefined)
     .orderBy(desc(job.startedAt))
     .limit(limit);
 }

@@ -107,9 +107,17 @@ export function DecisionPanel({
   }
 
   /**
-   * The union, not a widened object: `rejectDroneAction` carries no
-   * `stickerQueued` and must not be made to look as though it might. Same shape
+   * The union, not a widened object: the two actions return different data —
+   * approval carries `stickerQueued`, rejection carries `noticeQueued` — and
+   * neither should be made to look as though it carries the other's. Same shape
    * `closure-list.tsx` settled on for `fanOutQueued`.
+   *
+   * **`noticeQueued` is returned and deliberately not rendered here.** The
+   * panel unmounts the moment the page re-renders as decided, so a warning in
+   * it is one nobody reads — the same reason the approval's warning had to
+   * become a derived row rather than a flash. A rejection has no equivalent
+   * durable trace to derive from, so the operator's signal is the missing
+   * `drone-rejected` row in the email log, which the log's own filter finds.
    */
   function run(
     work: () => Promise<

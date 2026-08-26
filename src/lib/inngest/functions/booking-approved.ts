@@ -46,13 +46,9 @@ export const bookingApproved = inngest.createFunction(
           zoneName: row.pilotLocale === "ar" ? row.zoneNameAr : row.zoneNameEn,
           startsAt: row.slotStart,
           endsAt: row.slotEnd,
-          /**
-           * A zone with no ceiling is unlimited, and the template needs a
-           * number. `0` would read as "ground level" — the opposite — so the
-           * unlimited case falls back to the airspace limit the rest of the app
-           * already treats as the ceiling of last resort.
-           */
-          ceilingMetres: row.ceilingAglM ?? 120,
+          // `null` where the zone publishes no ceiling; the template says so
+          // rather than being handed a number nobody set.
+          ceilingMetres: row.ceilingAglM,
           bookingUrl: localeUrl(`/bookings/${bookingId}`, row.pilotLocale),
         },
       });

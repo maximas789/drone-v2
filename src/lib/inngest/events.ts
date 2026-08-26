@@ -41,11 +41,6 @@ export const droneRejectedEvent = eventType("drone/rejected", {
 });
 
 /**
- * Sent by the reviewer's booking refusal, after the transaction commits. The
- * twin of `drone/rejected`, and for the same reason: the decision must not be
- * held open by a mail provider.
- */
-/**
  * Sent when a **reviewer** approves a booking. An auto-approved one is
  * confirmed on screen inside the action, so it deliberately sends nothing.
  */
@@ -53,6 +48,11 @@ export const bookingApprovedEvent = eventType("booking/approved", {
   schema: staticSchema<{ bookingId: string }>(),
 });
 
+/**
+ * Sent by the reviewer's booking refusal, after the transaction commits. The
+ * twin of `drone/rejected`, and for the same reason: the decision must not be
+ * held open by a mail provider.
+ */
 export const bookingRejectedEvent = eventType("booking/rejected", {
   schema: staticSchema<{ bookingId: string }>(),
 });

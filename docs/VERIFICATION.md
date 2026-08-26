@@ -802,11 +802,52 @@ Recorded as **worth knowing**, and it is the user's call.
 
 ## F31c — round two
 
-**The two round-two critics never ran: the account hit its monthly spend limit
-and both agents terminated on their first call.** Said plainly rather than
-quietly skipped — round two is *not* four fresh pairs of eyes, and what follows
-is the author checking their own fixes, which is weaker evidence and is offered
-as such.
+**Round two ran in two passes.** The first attempt died immediately — the
+account hit its monthly spend limit and both agents terminated on their first
+call — so the fixes were checked by their own author, which is weaker evidence
+and was recorded as such. **The limit then reset and a fresh critic did run**,
+reading the four F31c commits' full diffs and every file they touch.
+
+**Its verdict on all seven round-one fixes: correct. No broken, no missing, and
+no regression** against the non-negotiable rules — `evaluate.ts` still imports
+nothing forbidden, every new send sits after its transaction and before
+`revalidatePath` and returns a typed result rather than throwing, the workflow
+edges still have one caller each, and there are no logical-property or `Intl`
+violations in any changed file.
+
+**Eleven `worth knowing` findings, four of them defects the round-one fixes had
+introduced.** All four are fixed:
+
+1. **An honesty defect I created.** `booking-approved` rendered
+   `row.ceilingAglM ?? 120`, so a zone with **no published ceiling** emailed the
+   pilot *"Maximum altitude: 120 m"* — asserting the app's one unsourced
+   regulatory figure (thread 77, deliberately kept out of the docs and cropped
+   out of F26b's screenshot) as **this flight's** limit, in an outbound message.
+   `booking-reminders` used `?? 0` for the same column, so two emails about one
+   flight disagreed, and `0 m` reads as ground level — the opposite of
+   unlimited. Both templates now take `number | null` and say *no published
+   ceiling* when there is none.
+2. **A new operator message that contradicted `send.ts`.** The
+   `emailSandboxSender` consequence said *"nothing will be logged as failed"*;
+   `send.ts` documents that exact state as delivering to the account owner and
+   returning **`failed` with the provider's own reason** for every other
+   address. The health page is the one read under pressure, so it now says what
+   `send.ts` says.
+3. **Two `EMAIL_FROM` edges.** `EMAIL_FROM=` in a `.env` file is the empty
+   string, which `??` keeps — so every message went out with a blank sender
+   while the health row reported the sandbox state rather than a broken one; and
+   an operator who set the sandbox address explicitly got a green row. Now `||`
+   with a trim, and the flag tests the resolved address.
+4. **An orphaned docblock** — inserting the two booking events left the
+   rejection's paragraph above the approval, so one event carried the wrong
+   comment and the other none.
+
+**Named rather than papered over:** `noticeQueued` is returned by three actions
+and rendered by none. The decision panel unmounts the moment the page
+re-renders as decided — the same reason the approval's warning had to become a
+derived row — and a rejection has no equivalent durable trace to derive from.
+The comment now says so and names the operator's real signal: a missing
+`drone-rejected` row in the email log, which its filter finds.
 
 ### Every round-one fix, verified in the source rather than from notes
 
@@ -858,17 +899,24 @@ a side effect of rendering.
 
 `tsc` clean · `lint` clean · **2129 keys** in sync · **1114/1114 tests** ·
 `verify:routes` **126/126** · `verify:scan-page` **64/64** · build clean · all
-seven public surfaces answer 200.
+seven public surfaces answer 200. Re-run again after round two's own fixes:
+**2135 keys**, 1114/1114, routes 126/126.
 
 ### Left open, and honestly
 
-- **Round two's fresh eyes.** Two critics, blocked on the spend limit.
-- **`booking-rejected`** still has no caller. `drone-rejected` is now sent and
-  the booking half is the same shape; this is the smaller twin of a thread that
-  was open since F22a.
-- **The job log has no filter or pagination** — fixed newest-50 against roughly
-  96 `booking-closeout` runs a day, so a failed overnight run scrolls off within
-  hours. The one panel that needs history is the one without filters.
+- **All eleven registered email templates now have a caller.** Auditing every
+  one, rather than taking the two the critic reported, found a **third** with
+  none: `booking-approved`. So a reviewer's decision on a booking reached the
+  pilot as a bell notification and nothing else, in either direction. Both are
+  now sent through jobs like their drone twin, each re-reading and refusing
+  anything whose status has moved. Proved with a negative control that sends
+  nothing for a booking still `pending`, then a real send per template.
+  **14 registered functions, up from 11 at the start of F31c.**
+- **The job log is filterable** by status and by function, in the URL, using
+  `EmailFilters`' shape and its own parameter names so the two panels on that
+  page do not disturb each other. Unfiltered newest-50 spanned about eight
+  hours against `booking-closeout`'s 96 runs a day, so last night's failure had
+  already scrolled off.
 - **The 375 px signed-in header** and **the 120 m altitude claim** — judgement
   calls belonging to the user, not defects for an agent to close.
 - **The admin tab strip** draws two tabs a reviewer 404s on. Deliberate and

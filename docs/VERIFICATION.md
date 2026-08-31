@@ -918,8 +918,18 @@ seven public surfaces answer 200. Re-run again after round two's own fixes:
   page do not disturb each other. Unfiltered newest-50 spanned about eight
   hours against `booking-closeout`'s 96 runs a day, so last night's failure had
   already scrolled off.
-- **The 375 px signed-in header** and **the 120 m altitude claim** — judgement
-  calls belonging to the user, not defects for an agent to close.
+- **The 375 px signed-in header was a defect, and is fixed** (Session 47). It was
+  filed here as a judgement call because it had never been *measured*. Measured,
+  it was a live overflow on **every signed-in page in both locales**: the nav is
+  354 px against a 351 px content box in Arabic, the page scrolled sideways
+  (`scrollWidth` **411 px** in a 375 px viewport, 383 in English), and **the
+  sign-out button rendered at `left: -36` — off the screen.** The header wraps
+  now: 360 px, zero overflowing elements, sign-out reachable on a second row,
+  desktop unchanged at 1280 px. Measured through a same-origin iframe;
+  `resize_window` failed for the fifth time, reporting success while the
+  viewport stayed 1440.
+- **The 120 m altitude claim — closed by the user, string kept.** See the foot
+  of this file.
 - **The admin tab strip** draws two tabs a reviewer 404s on. Deliberate and
   argued in the component; recorded, not overridden.
 
@@ -942,10 +952,16 @@ Stated, never assumed.
 
 ## Open product decision, not a bug
 
-**The 120 m altitude claim.** The airspace panel states a national 120 m limit
-as fact in both languages. No GACA document naming 120 m has ever been fetched
-and read; 120 m is the highest ceiling *authored* for the Riyadh zones. The
-documentation deliberately omits the claim and F26b's screenshot is cropped
-above the slider so a picture cannot smuggle it back in. Either the string is
-sourced, or it is softened. BUILD-LOG thread 77 — the honesty rule's exact
-subject matter, and the user's call.
+**The 120 m altitude claim — decided 2026-08-31: the string stays.**
+
+The airspace panel states a national 120 m limit as fact in both languages.
+**No GACA document naming 120 m has ever been fetched and read**, and none is
+claimed here; 120 m is also the highest ceiling *authored* for the Riyadh
+zones. Offered the choice between sourcing the figure and softening the
+wording, **the user chose to keep it, on their own knowledge of the rule.**
+
+That is a product decision and it is recorded as one. `altitudeLimitNote` and
+`GACAR_ALTITUDE_LIMIT_M` are unchanged; the documentation still omits the
+figure and F26b's screenshot is still cropped above the slider, so the claim
+lives in exactly one place. **BUILD-LOG thread 77 is closed** — a future
+reviewer meets a decision here, not a finding.

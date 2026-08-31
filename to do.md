@@ -64,7 +64,7 @@ Not now — but they're silent failures, so they're written down.
 
 ## 5. Known gaps I can't close myself
 
-- [ ] **The 375 px mobile view has never been checked, on any page** (Open Thread 20, three waves running). Browser automation couldn't resize the viewport here. If you open devtools and switch to a phone width on `/ar/sign-in` and `/ar/dev/emails`, that closes it.
+- [x] ~~**The 375 px mobile view has never been checked, on any page**~~ — **done for the signed-in pages (2026-08-31), and it found a real bug**: the header overflowed a phone screen in both languages and pushed the **sign-out button off the edge**. Fixed. Measured through an iframe, since the browser tool still refuses to resize. **Still worth your eyes**: `/ar/dev/emails` and the scan page, which I can now measure too — say the word.
 - [ ] **Nobody has seen one of these emails in a real mail client.** Gmail's and Outlook's handling of Arabic direction and inline styles is exactly the kind of thing that only shows up on arrival. Needs §3 first.
 - [ ] **Port 3000 and port 3100 are taken by other apps on this machine.** Worth knowing why a URL sometimes answers with something that isn't this project.
 

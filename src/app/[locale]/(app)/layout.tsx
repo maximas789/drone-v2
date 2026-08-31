@@ -47,13 +47,23 @@ export default async function AppLayout({ children }: LayoutProps<"/[locale]">) 
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between gap-3 border-b p-3">
+      {/**
+       * **`flex-wrap`, because at 375 px the nav does not fit and never could.**
+       * Measured: the content box is 351 px and the nav alone is 354 px in
+       * Arabic (`الإعدادات` 70 + the switcher 123 + `تسجيل الخروج` 101 + gaps),
+       * 332 in English. Unwrapped, both locales overflowed — the page scrolled
+       * sideways and **the sign-out button sat at `left: -36`, off the screen**.
+       * Wrapping drops the nav to its own line rather than hiding a control:
+       * a header that is one row taller on a phone is not a defect, and a
+       * sign-out nobody can reach is. Open Thread 20, measured at last.
+       */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b p-3">
         <Link href="/dashboard" className="text-sm font-semibold">
           {/* The product's own name, in Arabic, in both locales — it is a name,
               not a word to translate. */}
           أجنحة
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="flex flex-1 flex-wrap items-center justify-end gap-2">
           <NotificationBell session={session} locale={locale} />
           {/**
            * **F28a adds the way in.** The settings pages existed from F17 with

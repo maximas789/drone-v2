@@ -12,7 +12,7 @@ Bilingual (Arabic-first, RTL) Saudi drone registration and flight-zone booking p
 
 | File | Why |
 |---|---|
-| `.claude/plans/implementation plan.md` | Waves, conventions, feature index |
+| `.claude/plans/implementation plan.md` | **The master document** — waves, conventions, feature index. `ajniha-v2-implementation-plan.md` beside it is the original source plan it was written from; read that only for the reasoning behind a decision, never for what to build |
 | `.claude/plans/BUILD-LOG.md` | **What actually exists** vs what's planned, and the pinned versions from Wave 0 |
 | `.claude/plans/features/F<NN>-*.md` | The feature being built — technical design + acceptance criteria |
 
@@ -49,6 +49,8 @@ Build order is Waves 0→9 across 31 features. Work one feature (or a named smal
 
 **Geometry.** GeoJSON `Polygon | MultiPolygon` in `jsonb`, WGS84, **`[lng, lat]` order**, coordinate type named `Position`. Denormalised `minLat/maxLat/minLng/maxLng` as `doublePrecision` (not `numeric` — that maps to `string` and would put a parse in the point-in-polygon hot loop). No PostGIS.
 
+**Route groups are the access boundary in filesystem form.** `src/app/[locale]/` splits into `(public)`, `(app)` and `(admin)` — each group's `layout.tsx` calls the guard for that tier, and rule 9 then makes every server action call it again. `src/app/api/` holds only what cannot be an action: Better Auth's catch-all, Inngest, upload and file serving, the admin CSV exports under `/api/admin/`, the anonymous `/api/rid/[code]` lookup, and the zone GeoJSON the map fetches.
+
 **Server action shape**, without exception:
 
 ```
@@ -74,17 +76,45 @@ Next.js (App Router) · TypeScript · Tailwind · shadcn/ui · Drizzle · Better
 
 ```bash
 pnpm db:up          # Docker Postgres — must be running
+pnpm db:down
 pnpm dev
 pnpm db:generate    # then READ drizzle/*.sql before migrating
 pnpm db:migrate
 pnpm db:seed        # Riyadh airspace; idempotent
 pnpm db:studio
-pnpm exec tsc --noEmit
-pnpm lint
+pnpm typecheck      # next typegen && tsc --noEmit — bare tsc is NOT the check
+pnpm lint           # eslint AND scripts/i18n-check.mts; i18n:check runs it alone
 pnpm test
-pnpm i18n:check
 pnpm build          # runs db:migrate first
 ```
+
+**One test, not the suite:**
+
+```bash
+pnpm test src/lib/format.test.ts    # one file
+pnpm test -t "civil time"           # one test by name
+```
+
+Vitest runs in a **`node` environment with no component tests — deliberately**; only
+the domain core is unit-tested. `testTimeout` is 20 s because three tests scan every
+file under `src/`, so a timeout there is machine load, **not a finding**. Don't raise
+it per test.
+
+**The verification gate** — `docs/VERIFICATION.md` is the record of what was run and
+what came back, and it is rule 12's evidence file. Every one of these runs against a
+**production serve** (`pnpm build && PORT=… pnpm start`), never `next dev`:
+
+```bash
+pnpm verify:fresh-db       # migrations onto a scratch database, then drop it
+pnpm verify:routes         # every route answers
+pnpm verify:two-accounts   # cross-account ownership isolation
+pnpm verify:scan-page      # no identity leak on the anonymous /rid/ surfaces
+pnpm verify:qr             # stickers re-render byte-identical
+pnpm verify:no-keys        # serial-less approval with both keys deleted
+```
+
+`scripts/probe-*.mts` are one-off domain probes (booking, workflow, four-eyes,
+notifications, zone lifecycle…). Read them before writing a new one.
 
 ---
 

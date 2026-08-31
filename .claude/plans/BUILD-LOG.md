@@ -397,9 +397,26 @@ Newest at the top.
 - `pnpm typecheck` → clean. `pnpm lint` → clean, **2135 keys, ar and en in sync**. `pnpm test` → **67 files, 1114 tests, 0 failures**.
 - The 375 px measurements above, before and after, in both locales, plus `/ar/drones` and the public `/ar`.
 
+**The full gate, re-run after the header change — same session, against a production serve:**
+
+| Gate | Result |
+|---|---|
+| `pnpm typecheck` | clean |
+| `pnpm lint` | clean · **2135 keys**, ar/en in sync |
+| `pnpm test` | **67 files, 1114 tests, 0 failures** |
+| `pnpm build` | clean, full route table printed |
+| `pnpm verify:fresh-db` | **7 migrations → 25 tables, 16 enums** onto a scratch database, then dropped |
+| `pnpm verify:routes` | **126/126** — 39 public 200, 68 → sign-in, 18 404-without-a-trace, 1 refused cleanly |
+| `pnpm verify:two-accounts` | **25/25**, both probe pilots deleted |
+| `pnpm verify:scan-page` | **64/64** — 7 Remote IDs × 3 surfaces, 12 forbidden strings each |
+| `pnpm verify:qr` | **22/22** |
+| `pnpm verify:no-keys` | **12/12**, every probe row deleted |
+
+Served by `PORT=3001 pnpm start`, never `next dev`.
+
 **Not verified:**
-- **Not re-run: `pnpm build`, and the `verify:*` suite.** A two-class layout change touching no route, no query and no string, with typecheck, lint and 1114 tests green — but they were not run, and this line is the reason CLAUDE.md rule 12 exists. Run them before any deploy.
 - The wrapped header has not been **seen** — no screenshot. The evidence is `getBoundingClientRect()`, which is what caught the SVG anchors and is stronger than a screenshot for overflow, but it is not a look.
+- **`verify:qr` passes and still prints its own warning**: *every sticker rendered so far points at `localhost`.* 22/22 means the renderer is deterministic, **not** that any sticker is usable. `no-keys` says the same thing from the other side — its 196 `email_log` rows are all `skipped`, and that is the pass condition, not an outage.
 
 #### How 375 px was finally measured — the technique, for next time
 

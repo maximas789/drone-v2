@@ -379,6 +379,48 @@ Newest at the top.
 
 ---
 
+### Session 48 — Deployment (in progress) · first production deploy to Vercel + Neon
+
+**Date:** 2026-09-03 to 2026-09-05 (ongoing, spans a session restart)
+
+**Status:** 🟨 incomplete — deployed and live, **owner has not signed up yet**
+
+**Built:**
+- Followed `docs/DEPLOY.md`'s order of operations. `vercel login` done (account `alshar044-7318`). Neon Postgres created via the **Vercel Storage marketplace integration** (not the Neon dashboard/CLI directly — see deviation below), project name `drone-2-demo`, Frankfurt-adjacent region, Free plan.
+- Vercel project **`drone-v2`** created by importing `github.com/maximas789/drone-v2` (`main` branch) through the Vercel dashboard UI, then linked locally with `vercel link --project drone-v2`.
+- Three secrets generated and set as `production` env vars: `BETTER_AUTH_SECRET`, `ID_HASH_PEPPER`, `RATE_LIMIT_PEPPER`.
+- Two production deploys run (`vercel --prod`). First one intentionally partial per Trap 2 in `docs/DEPLOY.md`; second one after `APP_URL`/`BETTER_AUTH_URL` were corrected. Both succeeded (`readyState: READY`, build completed, migrations ran as part of `pnpm build`).
+- **Live at `https://drone-v2.vercel.app`** (Vercel's own alias — shorter than the default `drone-v2-<team-slug>.vercel.app` deployment URL). `APP_URL` and `BETTER_AUTH_URL` both point here.
+
+**Deviated from spec:**
+- **Neon's own Vercel-managed org rejects `neonctl projects create`** with `action restricted; reason:"organization is managed by Vercel"` — the account (`alshar044@gmail.com`) only has the one org, `Vercel: mohammad's projects`, created via the Vercel↔Neon marketplace link rather than a standalone Neon signup. `docs/DEPLOY.md` step 2 assumes the Neon dashboard; that path never got used. **Next session: this account cannot create a second Neon project by CLI or by neon.tech directly — go through Vercel Storage → Create Database → Neon instead, every time.**
+- **Vercel's GitHub-import screen auto-creates empty placeholder env vars for every key it detects in `.env.example`** (all 11), silently, before you touch anything. This is not mentioned anywhere in `docs/DEPLOY.md`. It caused two problems and cost most of the session:
+  - The Neon "Connect to Project" flow refused to create the real `POSTGRES_URL` because an empty one already existed — had to delete the placeholder in **Settings → Environment Variables** first.
+  - The other 10 (`BETTER_AUTH_SECRET`, `APP_URL`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `BLOB_READ_WRITE_TOKEN`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, `ID_HASH_PEPPER`, `RATE_LIMIT_PEPPER`) were the same empty placeholders, never actually set by anyone. All 10 removed from Production and Preview before setting real values (or, for the optional five, leaving them genuinely absent — `RESEND_API_KEY`/`EMAIL_FROM`/`BLOB_READ_WRITE_TOKEN`/`INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` are still unset by design; no Resend/Blob/Inngest account set up yet this session).
+  - **Next session:** after any GitHub-import-created Vercel project, check Settings → Environment Variables for pre-existing empty rows before assuming a fresh slate.
+- **Running plain `vercel link` (no `--project` flag) in this repo created a brand-new, disconnected project** named `drone-2-demo` (matching the local folder name) instead of finding the already-created `drone-v2` project. Caught by `vercel projects ls` before it caused real confusion; deleted with `vercel projects rm drone-2-demo --yes`. **Next session: always pass `--project drone-v2` explicitly, never bare `vercel link`, in this repo** — the folder name (`drone-2-demo`) and the GitHub repo / intended Vercel project name (`drone-v2`) don't match, and `vercel link`'s auto-detect goes by folder name.
+- **The Neon "Connect to Project" dialog defaults its "Custom Environment Variable Prefix" field to `STORAGE`**, which would have produced `STORAGE_URL` instead of the `POSTGRES_URL` the app actually reads. Cleared it to blank before connecting.
+- **The first `vercel --prod` deploy's assigned URL was not the final one.** Vercel returned `https://drone-v2-<hash>-mohammad-s-projects-6827870e.vercel.app` in the CLI output, but separately aliased production to the shorter `https://drone-v2.vercel.app`. `APP_URL`/`BETTER_AUTH_URL` were initially set to the hashed URL from the CLI's own JSON output, which was wrong; caught by reading the `▲ Aliased` line in the build log, not the JSON `deployment.url` field. Corrected and redeployed a third time. **Next session: the canonical production URL is the `▲ Aliased` line, never `deployment.url` from the CLI's JSON summary.**
+- Blob store and Inngest app **not created this session** — optional per `docs/DEPLOY.md`, deferred. `BLOB_READ_WRITE_TOKEN`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` remain unset; uploads and `/api/inngest` will not work until they are.
+
+**Verified:**
+- `vercel whoami` → logged in as `alshar044-7318`.
+- Both production builds completed and returned `"status": "ok"`, `"readyState": "READY"`.
+- `vercel env ls production` after cleanup shows exactly the 6 intended keys plus Neon's own auto-added set (`POSTGRES_*`, `PG*`, `DATABASE_URL*`, `NEON_*`) — no leftover empty placeholders confirmed by name/age, though **secret values themselves cannot be read back** (`vercel env pull` masks anything not pulled for `development` as `[SENSITIVE]`); confidence that they're non-empty rests on the second build's exit code 0 (an unset `POSTGRES_URL` fails the build immediately, as it did on the very first attempt).
+
+**Not verified:**
+- **Nobody has signed up yet.** `docs/VERIFICATION.md`'s trap 1 and Ajniha's own rule apply: the first user row becomes admin. No `verify:*` script, no probe script, and no further exploration of the live site should touch it until the owner has created their account.
+- None of the `verify:*` suite has been run against `https://drone-v2.vercel.app`.
+- Email, Blob, Inngest — not configured, so entirely unexercised (expected; see Deviated).
+
+**Next session should know:**
+- **Do not sign up, run any probe script, or hit any auth/database-writing route on `https://drone-v2.vercel.app` before the owner confirms they've created their account.** This is the single blocking item.
+- Once signed up: run the `verify:*` suite with `BASE=https://drone-v2.vercel.app`, watch `verify:qr` specifically (should stop warning about `localhost`), re-render stickers from `/settings/system`, and check the nine health rows there.
+- `docs/DEPLOY.md` line 3 ("Nothing here has been executed") is now **stale** — the deploy has run. Its own rule says results belong here, not there; that line should be corrected in the doc rather than left implying the plan is still theoretical.
+- This session ran the deploy from the local machine as the user's agent, not from GACA/production CI — no CI pipeline exists for this yet.
+
+---
+
 ### Session 47 — Wave 9 · F31 close-out: the log reconciled, Open Thread 20 measured and closed, thread 77 decided
 
 **Date:** 2026-08-31

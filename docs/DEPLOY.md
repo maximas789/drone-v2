@@ -1,9 +1,10 @@
 # Deploying Ajniha
 
-**Written from a pre-flight on 2026-09-01.** Nothing here has been executed —
-this app has never run anywhere but one Windows machine, and every line below
-is a plan until it isn't. When it runs, the results belong in
-[`VERIFICATION.md`](./VERIFICATION.md) and the log entry, not here.
+**Written from a pre-flight on 2026-09-01.** First executed 2026-09-03 —
+`drone-v2` is live at `https://drone-v2.vercel.app`. The results of that run
+belong in [`VERIFICATION.md`](./VERIFICATION.md) and `BUILD-LOG.md` Session 48,
+not here; this file stays the reusable plan for the *next* deploy (a rollback,
+a second environment), not a record of the first one.
 
 The order matters more than usual. Two steps are irreversible in ways that cost
 real money or a working account.

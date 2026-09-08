@@ -383,7 +383,7 @@ Newest at the top.
 
 **Date:** 2026-09-03 to 2026-09-05 (ongoing, spans a session restart)
 
-**Status:** 🟨 incomplete — deployed and live, **owner has not signed up yet**
+**Status:** 🟨 incomplete — deployed, live, owner signed up 2026-09-08, routes and scan-page verified against production; QR-with-real-data and the two DB-touching verify scripts remain
 
 **Built:**
 - Followed `docs/DEPLOY.md`'s order of operations. `vercel login` done (account `alshar044-7318`). Neon Postgres created via the **Vercel Storage marketplace integration** (not the Neon dashboard/CLI directly — see deviation below), project name `drone-2-demo`, Frankfurt-adjacent region, Free plan.
@@ -409,13 +409,20 @@ Newest at the top.
 - `vercel env ls production` after cleanup shows exactly the 6 intended keys plus Neon's own auto-added set (`POSTGRES_*`, `PG*`, `DATABASE_URL*`, `NEON_*`) — no leftover empty placeholders confirmed by name/age, though **secret values themselves cannot be read back** (`vercel env pull` masks anything not pulled for `development` as `[SENSITIVE]`); confidence that they're non-empty rests on the second build's exit code 0 (an unset `POSTGRES_URL` fails the build immediately, as it did on the very first attempt).
 
 **Not verified:**
-- **Nobody has signed up yet.** `docs/VERIFICATION.md`'s trap 1 and Ajniha's own rule apply: the first user row becomes admin. No `verify:*` script, no probe script, and no further exploration of the live site should touch it until the owner has created their account.
-- None of the `verify:*` suite has been run against `https://drone-v2.vercel.app`.
+- ~~Nobody has signed up yet~~ — **the owner signed up on 2026-09-08.** Trap 1 is now cleared: the first user row is the owner's, not a probe's.
 - Email, Blob, Inngest — not configured, so entirely unexercised (expected; see Deviated).
 
+**Verified against `https://drone-v2.vercel.app` (2026-09-08, after sign-up):**
+- `verify:routes` — **126/126** (39 public 200, 68 → sign-in, 18 404-without-a-trace, 1 refused). The guards hold on Vercel's router, not just Next's dev server.
+- `verify:scan-page` — **63/64** on the first run (one soft assertion failed: `rid.resolve refuses a scraper with 429`). **Re-checked by hand with 40 concurrent requests** (the script's own 40 are serial, and round-trip latency to a live serverless function spread them across more than one 60 s fixed window, so the DB-backed counter never saw 30 in one window) — the concurrent run landed **30× 200, 10× 429**, exactly the configured `rid.resolve` limit. **The limiter is confirmed working in production; the script's one failure was a timing artifact of testing a remote host serially, not a defect.** Zero owner-identity leaks across ~450 KB of response bodies searched, all 7 seeded codes, both locales plus the JSON twin.
+
+**Still not run:**
+- `verify:qr` — ran, but it reads local `.env`'s `POSTGRES_URL`, so it only re-validated local dev stickers (still `localhost`, as expected). Meaningless against production until a real drone is registered and approved on the live site.
+- `verify:two-accounts`, `verify:no-keys` — need `POSTGRES_URL` pointed at the production (pooled) connection string to mean anything. Per this doc's own rule ("I do not type credentials into anything"), the agent did not pull or set production secrets — these need the owner to run them locally against Neon, or authorize `vercel env pull` explicitly.
+
 **Next session should know:**
-- **Do not sign up, run any probe script, or hit any auth/database-writing route on `https://drone-v2.vercel.app` before the owner confirms they've created their account.** This is the single blocking item.
-- Once signed up: run the `verify:*` suite with `BASE=https://drone-v2.vercel.app`, watch `verify:qr` specifically (should stop warning about `localhost`), re-render stickers from `/settings/system`, and check the nine health rows there.
+- Run the `verify:*` suite's remaining two scripts against Neon once the owner has the pooled `POSTGRES_URL` locally.
+- Register and approve one real drone on the live site, then re-render its sticker from `/settings/system` and re-run `verify:qr` pointed at the production database — this is the check that finally proves a sticker is usable.
 - `docs/DEPLOY.md` line 3 ("Nothing here has been executed") is now **stale** — the deploy has run. Its own rule says results belong here, not there; that line should be corrected in the doc rather than left implying the plan is still theoretical.
 - This session ran the deploy from the local machine as the user's agent, not from GACA/production CI — no CI pipeline exists for this yet.
 

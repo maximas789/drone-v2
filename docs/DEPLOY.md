@@ -114,14 +114,19 @@ calling `/api/inngest` with a real signature.
 ## Decisions taken in the pre-flight
 
 **`vercel.json` pins functions to `fra1`, and that is all it does.** Added after
-the first deploy, which ran on Vercel's default `iad1` (Washington) against a
-Neon database in Frankfurt. Every query crossed the Atlantic: warm requests took
-3–4 s, a 4 KB QR PNG took 3 s, and "Try again" on the QR card took 10–15 s. The
-function and the database talk many times per request; the user makes one trip
-to the function, so the function belongs beside the database. There are still no
-cron routes — Inngest holds the schedule and calls in — no rewrites, no custom
-headers, and no route sets a `maxDuration`. If the Neon database ever moves,
-this file must move with it.
+the first deploy, which ran on Vercel's default `iad1` (Washington). The
+database is described in the build log only as "Frankfurt-adjacent"; its actual
+region was **not confirmed**. Warm requests took 3–4 s, a 4 KB QR PNG took 3 s,
+and "Try again" on the QR card took 10–15 s.
+
+**Moving to `fra1` did not fix it.** Measured after the change, from Riyadh:
+public scan page 3.7 s, QR PNG 2.7–3.0 s, drone card 3.0–3.2 s,
+`/api/auth/get-session` 1.5–3.2 s. Static routes (`/robots.txt`) answer in
+150–300 ms, so the network is not the cost — each database round trip is. Until
+the Neon region is read off the dashboard, treat the region pin as unproven. If
+the database is not in Frankfurt, this file must change to match it. There are
+still no cron routes — Inngest holds the schedule and calls in — no rewrites, no
+custom headers, and no route sets a `maxDuration`.
 
 **No `engines.node` pin.** CLAUDE.md rule 2: no version numbers. Vercel takes
 its current default, which is the same rule the rest of this project runs on.

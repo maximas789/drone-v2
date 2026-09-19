@@ -113,20 +113,19 @@ calling `/api/inngest` with a real signature.
 
 ## Decisions taken in the pre-flight
 
-**`vercel.json` pins functions to `fra1`, and that is all it does.** Added after
-the first deploy, which ran on Vercel's default `iad1` (Washington). The
-database is described in the build log only as "Frankfurt-adjacent"; its actual
-region was **not confirmed**. Warm requests took 3–4 s, a 4 KB QR PNG took 3 s,
-and "Try again" on the QR card took 10–15 s.
+**`vercel.json` pins functions to `sin1`, and that is all it does.** The Neon
+database is in **Singapore (`sin1`)** — read off the Vercel Storage → Neon
+settings page. The build log had it as "Frankfurt-adjacent", which was wrong.
+The function and the database talk many times per request, so the function
+belongs beside the database; the user makes one trip in.
 
-**Moving to `fra1` did not fix it.** Measured after the change, from Riyadh:
-public scan page 3.7 s, QR PNG 2.7–3.0 s, drone card 3.0–3.2 s,
-`/api/auth/get-session` 1.5–3.2 s. Static routes (`/robots.txt`) answer in
-150–300 ms, so the network is not the cost — each database round trip is. Until
-the Neon region is read off the dashboard, treat the region pin as unproven. If
-the database is not in Frankfurt, this file must change to match it. There are
-still no cron routes — Inngest holds the schedule and calls in — no rewrites, no
-custom headers, and no route sets a `maxDuration`.
+The first deploy ran on the default `iad1` and warm requests took 3–4 s (QR PNG
+3 s, "Try again" on the QR card 10–15 s). An intermediate `fra1` pin, chosen on
+the wrong belief about the database, changed almost nothing (3.0–3.7 s): static
+routes answered in 150–300 ms, so the network was never the cost — each database
+round trip was. If the Neon database ever moves, this file must move with it.
+There are still no cron routes — Inngest holds the schedule and calls in — no
+rewrites, no custom headers, and no route sets a `maxDuration`.
 
 **No `engines.node` pin.** CLAUDE.md rule 2: no version numbers. Vercel takes
 its current default, which is the same rule the rest of this project runs on.

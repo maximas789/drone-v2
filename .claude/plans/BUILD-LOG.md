@@ -379,11 +379,39 @@ Newest at the top.
 
 ---
 
+### Session 49 — Deployment · QR retry checked in production, and the region the slowness came from
+
+**Date:** 2026-09-19
+**Status:** ✅ done
+
+**Built:**
+- `vercel.json`, pinning functions to **`sin1`**. Nothing else in it.
+- `docs/DEPLOY.md`: the "No `vercel.json`" decision replaced with the region pin and why.
+
+**Deviated from spec:**
+- Session 48 recorded the Neon database as "Frankfurt-adjacent". **It is in Singapore (`sin1`)**, read off Vercel → Storage → Neon → Settings. Session 48's line is left as written; this entry supersedes it.
+
+**Verified (against `https://drone-v2.vercel.app`, from Riyadh, timed in the browser):**
+- **QR retry works.** The pilot's "Try again" on `/drones/<id>/remote-id` produced a QR; the pilot then scanned it on an iPhone and reached the public `/rid/AJN-QQP3-SMD1` page on the production host (not `localhost`), showing "registration valid" and no owner identity. This is the first real check that a printed sticker resolves.
+- **Region diagnosis, three settings measured warm:** default `iad1` — scan page ~6.7 s, QR PNG ~3 s, drone card ~3.9 s; `fra1` (a wrong guess) — 3.0–3.7 s, no real change; **`sin1` — scan page 0.3–0.7 s, `/api/auth/get-session` ~0.25 s**. Static `/robots.txt` was 150–300 ms throughout, which is what showed the network was never the cost — each database round trip was. Region read from the `x-vercel-id` response header.
+
+**Not verified:**
+- The signed-in pages and the QR retry action were **not re-timed** under `sin1` (the browser session was reset). Expected to improve by the same mechanism; unmeasured.
+- **Why the automatic QR render after approval did not produce a QR** — the pilot had to press "Try again". That is the `qr-render` Inngest job and needs its run history in the Inngest dashboard. Open.
+- First request after a deploy is still slow (cold start, 1–5 s).
+
+**Next session should know:**
+- The function region and the Neon region must match; moving the database means editing `vercel.json`.
+- Data residency: the data is in Singapore. If this is ever pitched as GACA-facing, Saudi personal-data rules may matter; not a demo concern.
+- `x-vercel-id` in the form `<edge>::<function-region>::…` is the quick way to see where a request actually ran.
+
+---
+
 ### Session 48 — Deployment (in progress) · first production deploy to Vercel + Neon
 
 **Date:** 2026-09-03 to 2026-09-05 (ongoing, spans a session restart)
 
-**Status:** 🟨 incomplete — deployed, live, owner signed up 2026-09-08, routes and scan-page verified against production; QR-with-real-data and the two DB-touching verify scripts remain
+**Status:** 🟨 incomplete — deployed, live, owner signed up 2026-09-08, routes/scan-page/two-accounts/no-keys verified against production; only QR-with-real-data remains
 
 **Built:**
 - Followed `docs/DEPLOY.md`'s order of operations. `vercel login` done (account `alshar044-7318`). Neon Postgres created via the **Vercel Storage marketplace integration** (not the Neon dashboard/CLI directly — see deviation below), project name `drone-2-demo`, Frankfurt-adjacent region, Free plan.
@@ -416,14 +444,19 @@ Newest at the top.
 - `verify:routes` — **126/126** (39 public 200, 68 → sign-in, 18 404-without-a-trace, 1 refused). The guards hold on Vercel's router, not just Next's dev server.
 - `verify:scan-page` — **63/64** on the first run (one soft assertion failed: `rid.resolve refuses a scraper with 429`). **Re-checked by hand with 40 concurrent requests** (the script's own 40 are serial, and round-trip latency to a live serverless function spread them across more than one 60 s fixed window, so the DB-backed counter never saw 30 in one window) — the concurrent run landed **30× 200, 10× 429**, exactly the configured `rid.resolve` limit. **The limiter is confirmed working in production; the script's one failure was a timing artifact of testing a remote host serially, not a defect.** Zero owner-identity leaks across ~450 KB of response bodies searched, all 7 seeded codes, both locales plus the JSON twin.
 
+**Verified against production Neon (2026-09-11):**
+- `verify:two-accounts` — **22/22.** Cross-account ownership isolation holds against the live pooled database: probe pilot B blocked from every one of pilot A's readers (drone detail, photos, Remote ID, profile, notification mark-read) and vice versa, both `listMy*` readers scoped to one row each, and all six staff-only readers empty for a plain pilot session. Both throwaway probe pilots created and deleted by the script.
+- `POSTGRES_URL` is a Vercel **Secret**-type var — `vercel env pull` returns `[SENSITIVE]` for it unconditionally, by design, regardless of environment; there is no CLI/API path to read it back once set. The owner copied the pooled connection string by hand from the dashboard's Storage tab and pasted it directly into chat. That's a credential now sitting in this conversation's history — noted here so a future session doesn't repeat it: pass it as an inline env var to a one-off terminal command instead (`POSTGRES_URL='…' pnpm ...`), never through chat. Nothing was written to any file; the value was used once in-memory for this one command and discarded.
+
+- `verify:no-keys` — **12/12.** Proves the product's core claim end to end against the live database: a drone with no serial number was submitted, approved with both `RESEND_API_KEY` and `BLOB_READ_WRITE_TOKEN` absent (`emailConfigured`/`blobConfigured` both `false`, as expected — neither is provisioned in production), Remote ID minted (`AJN-WDJY-H3X3`), 3-year validity, audit trail written (`drone.submitted`, `drone.approved`), in-app notification written, the email attempt logged as *skipped* rather than *failed*, and the local upload driver round-tripped a file. Probe rows all deleted by the script.
+
 **Still not run:**
-- `verify:qr` — ran, but it reads local `.env`'s `POSTGRES_URL`, so it only re-validated local dev stickers (still `localhost`, as expected). Meaningless against production until a real drone is registered and approved on the live site.
-- `verify:two-accounts`, `verify:no-keys` — need `POSTGRES_URL` pointed at the production (pooled) connection string to mean anything. Per this doc's own rule ("I do not type credentials into anything"), the agent did not pull or set production secrets — these need the owner to run them locally against Neon, or authorize `vercel env pull` explicitly.
+- `verify:qr` — ran earlier, but against local `.env`'s `POSTGRES_URL` only (`localhost` stickers, as expected). Still meaningless against production until a real drone is registered and approved on the live site.
 
 **Next session should know:**
-- Run the `verify:*` suite's remaining two scripts against Neon once the owner has the pooled `POSTGRES_URL` locally.
+- All three DB-touching verify scripts have now passed against production. The **only** thing left on the verification gate is `verify:qr`.
 - Register and approve one real drone on the live site, then re-render its sticker from `/settings/system` and re-run `verify:qr` pointed at the production database — this is the check that finally proves a sticker is usable.
-- `docs/DEPLOY.md` line 3 ("Nothing here has been executed") is now **stale** — the deploy has run. Its own rule says results belong here, not there; that line should be corrected in the doc rather than left implying the plan is still theoretical.
+- `docs/DEPLOY.md` line 3 ("Nothing here has been executed") was checked this session — it's **already been corrected** (now reads "First executed 2026-09-03 — `drone-v2` is live…" and points results at `VERIFICATION.md`/`BUILD-LOG.md`). No stale claim remains; nothing to do there.
 - This session ran the deploy from the local machine as the user's agent, not from GACA/production CI — no CI pipeline exists for this yet.
 
 ---

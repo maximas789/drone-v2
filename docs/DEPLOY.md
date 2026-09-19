@@ -113,10 +113,15 @@ calling `/api/inngest` with a real signature.
 
 ## Decisions taken in the pre-flight
 
-**No `vercel.json`.** Nothing needs it. There are no cron routes — Inngest holds
-the schedule and calls in — no rewrites, no custom headers, and no route sets a
-`maxDuration`. A config file that only restates defaults is a file someone later
-has to check.
+**`vercel.json` pins functions to `fra1`, and that is all it does.** Added after
+the first deploy, which ran on Vercel's default `iad1` (Washington) against a
+Neon database in Frankfurt. Every query crossed the Atlantic: warm requests took
+3–4 s, a 4 KB QR PNG took 3 s, and "Try again" on the QR card took 10–15 s. The
+function and the database talk many times per request; the user makes one trip
+to the function, so the function belongs beside the database. There are still no
+cron routes — Inngest holds the schedule and calls in — no rewrites, no custom
+headers, and no route sets a `maxDuration`. If the Neon database ever moves,
+this file must move with it.
 
 **No `engines.node` pin.** CLAUDE.md rule 2: no version numbers. Vercel takes
 its current default, which is the same rule the rest of this project runs on.

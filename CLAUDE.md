@@ -109,7 +109,8 @@ pnpm verify:fresh-db       # migrations onto a scratch database, then drop it
 pnpm verify:routes         # every route answers
 pnpm verify:two-accounts   # cross-account ownership isolation
 pnpm verify:scan-page      # no identity leak on the anonymous /rid/ surfaces
-pnpm verify:qr             # stickers re-render byte-identical
+pnpm verify:qr             # stickers re-render byte-identical (local uploads/qr/)
+                           # deployed: APP_URL=https://<domain> pnpm verify:qr --blob <public-store-url> <code>...
 pnpm verify:no-keys        # serial-less approval with both keys deleted
 ```
 

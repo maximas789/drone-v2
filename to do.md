@@ -41,7 +41,7 @@ Tell me what's wrong and I'll fix it — or edit `messages/ar.json` directly, th
 
 ## 4. Carrying on with
 
-- [ ] **A repo gate for the QR check.** `scripts/verify/qr.mts` reads local files only, so it can't check production. Add a Blob mode so the byte-compare of the real stickers against a fresh render at `APP_URL` is repeatable, not a one-off.
+- [x] **A repo gate for the QR check** (2026-09-20). `pnpm verify:qr --blob <public-store-url> <code>...` with `APP_URL` inline checks the stickers a deployment actually holds. Passes 18/18 on the three production stickers, and fails on an unknown code, a missing `APP_URL`, or no codes. It also fixed a 512-vs-511 px assertion that only passed locally by luck.
 - [ ] **The QR code: time "Try again".** The retry action wasn't re-timed after the region fix. It needs your pilot account (`alshar55@hotmail.com`) and a drone with no QR.
 - [x] **A pitch pass** (2026-09-20). English copy, docs, legal pages, structured data and every map surface checked against the honesty rules in `CLAUDE.md`; four fixes made. What is left of it is the full Arabic read in section 1, which needs an Arabic reader.
 - [ ] **A stray copy of the repo at `.kilo/worktrees/level-porcupine/`** makes `pnpm lint` fail (82 errors, none in our code). It is untracked and not ours. Decide whether to delete it or have ESLint ignore `.kilo/`.

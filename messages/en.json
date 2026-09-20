@@ -1117,7 +1117,7 @@
     "backToQueue": "Back to the queue",
     "submittedAt": "Submitted: {at}",
     "alreadyDecided": "This submission has already been decided. It can no longer be changed from this page.",
-    "stickerMissing": "The registration is approved and the Remote ID is issued, but the QR sticker has not been rendered and the pilot has not been emailed. The background job service is unavailable; an administrator can re-render it once it returns.",
+    "stickerMissing": "The registration is approved and the Remote ID is issued, but the QR sticker is not ready yet and the pilot has not been emailed. It is normally ready within a few seconds — refresh this page. If it is still missing after a minute, the background job may have failed; an administrator can re-render it from the system page.",
     "photosHeading": "Photographs",
     "noPhotos": "No photographs were attached.",
     "openPhoto": "Open photograph: {kind}",

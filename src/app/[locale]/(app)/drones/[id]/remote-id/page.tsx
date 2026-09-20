@@ -4,6 +4,7 @@ import { locale as localeParam } from "next/root-params";
 import { DeclaredModules } from "@/components/remote-id/declared-modules";
 import { IdCard } from "@/components/remote-id/id-card";
 import { PrivacyExplainer } from "@/components/remote-id/privacy-explainer";
+import { ProposalNotice } from "@/components/proposal-notice";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/auth-guards";
@@ -101,6 +102,13 @@ export default async function RemoteIdCardPage({
         drone={drone}
         locale={locale}
       />
+
+      {/**
+       * Directly under the card, because the card is what gets screenshotted:
+       * it says "Registration valid", and that sentence must not travel without
+       * the one that says this is a proposal, not an official registration.
+       */}
+      <ProposalNotice className="self-start" />
 
       <DeclaredModules
         droneId={drone.id}

@@ -39,6 +39,19 @@ Tell me what's wrong and I'll fix it — or edit `messages/ar.json` directly, th
 
 ---
 
+## 3b. Goal B — the demo video for GACA (in progress, 2026-09-20)
+
+Script, shot list and OBS steps are in **`docs/DEMO-SCRIPT.md`**. You record the Arabic voice-over yourself with OBS.
+
+- [ ] Have someone who reads Arabic check the script wording
+- [ ] Set up OBS and record a 10-second test
+- [ ] Record the 7 segments
+- [ ] Edit in Clipchamp, add English subtitles
+- [ ] A one-page summary (problem → Remote ID → what is built)
+- [ ] A tidy demo account and a short list of who to send it to
+
+---
+
 ## 4. Carrying on with
 
 - [x] **A repo gate for the QR check** (2026-09-20). `pnpm verify:qr --blob <public-store-url> <code>...` with `APP_URL` inline checks the stickers a deployment actually holds. Passes 18/18 on the three production stickers, and fails on an unknown code, a missing `APP_URL`, or no codes. It also fixed a 512-vs-511 px assertion that only passed locally by luck.

@@ -32,7 +32,8 @@ Tell me what's wrong and I'll fix it — or edit `messages/ar.json` directly, th
 
 ## 3. Still to do before real pilots use it
 
-- [ ] **A verified email domain.** Today approval emails only reach `alshar55@hotmail.com` (Resend's sandbox sender delivers only to the account owner). Needs a domain you own: add it in Resend, add the DNS records on a **subdomain** (`send.yourdomain.com`) so a deliverability problem can never damage your normal email, then set `EMAIL_FROM` on Vercel and redeploy.
+- [ ] **A verified email domain.** Today approval emails only reach `alshar55@hotmail.com`, because Resend's sandbox sender delivers only to the account owner's address. Emailing any other pilot needs a domain you own: add it in Resend, add the DNS records it shows you on a **subdomain** (`send.yourdomain.com`) so a deliverability problem can never damage your normal email, then set `EMAIL_FROM` on Vercel (for example `Ajniha <no-reply@send.yourdomain.com>`) and redeploy. If you don't have a domain, this stays as it is — for a demo where you are the only pilot, it costs nothing.
+- [ ] **F29 Cancel / Re-run job controls** (optional). Job controls on the admin system page, deferred earlier because Cancel and Re-run needed design decisions. The QR retry already exists as its own button, so leave these out unless you want them for the pitch.
 - [ ] **Look at an email in Gmail too.** It was seen once, in Outlook (Arabic direction and layout were correct). Gmail handles Arabic direction and inline styles differently.
 - [ ] **Port 3000 and port 3100 are taken by other apps on this machine.** Worth knowing why a URL sometimes answers with something that isn't this project.
 
@@ -48,4 +49,4 @@ Tell me what's wrong and I'll fix it — or edit `messages/ar.json` directly, th
 
 ## Not on this list, because they're mine
 
-Deferred F29 Cancel / Re-run job controls (optional), tests, migrations, the build log. Ask and I'll pick any of them up.
+Tests, migrations, the build log. Ask and I'll pick any of them up.

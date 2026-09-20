@@ -397,8 +397,15 @@ Newest at the top.
 
 **Not verified:**
 - The signed-in pages and the QR retry action were **not re-timed** under `sin1` (the browser session was reset). Expected to improve by the same mechanism; unmeasured.
-- **Why the automatic QR render after approval did not produce a QR** — the pilot had to press "Try again". That is the `qr-render` Inngest job and needs its run history in the Inngest dashboard. Open.
+- **Why the 14 Sept approval did not produce a QR** — unknowable now: the free Inngest plan keeps 1 day of run history. Most likely the approval predated the app's first sync (14 Sept 08:33:38). Superseded by the live checks below, which pass.
 - First request after a deploy is still slow (cold start, 1–5 s).
+- The Hotmail pilot mailbox is 94% full; a bounce at 100% would look like an Ajniha email failure.
+
+**Verified later the same day (2026-09-20), production:**
+- **Automatic QR render works.** Test drone `QR Test` (`AJN-4R7J-6A8G`): approved, `qr-render` ran (its email step is in the Vercel log at 07:20:29), QR present on the pilot's card with no "Try again". Inngest: app `ajniha` Active, 14 functions, scheduled jobs Completed; both Inngest keys set on Vercel.
+- **Email works.** `RESEND_API_KEY` added and production redeployed. Test drone `RESEND_TEST` (`AJN-S2AT-298S`): the Arabic approval email arrived in the pilot's Hotmail **inbox** at 8:02, card link on `drone-v2.vercel.app`, disclaimer present. Sender is still Resend's sandbox `onboarding@resend.dev`, which delivers **only to the Resend account's own address** (`alshar55@hotmail.com`, the pilot's). Other pilots need a verified domain and `EMAIL_FROM`.
+- **Misleading admin warning reworded** (`stickerMissing`, ar + en): it claimed "the background job service is unavailable" during the few seconds the job takes. `i18n:check` (2135 keys) and 1114 tests pass. Not looked at on the live page after deploy.
+- Two test drones (`QR Test`, `RESEND_TEST`) remain in production under the pilot account.
 
 **Next session should know:**
 - The function region and the Neon region must match; moving the database means editing `vercel.json`.

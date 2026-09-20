@@ -43,7 +43,8 @@ Tell me what's wrong and I'll fix it — or edit `messages/ar.json` directly, th
 
 - [ ] **A repo gate for the QR check.** `scripts/verify/qr.mts` reads local files only, so it can't check production. Add a Blob mode so the byte-compare of the real stickers against a fresh render at `APP_URL` is repeatable, not a one-off.
 - [ ] **The QR code: time "Try again".** The retry action wasn't re-timed after the region fix. It needs your pilot account (`alshar55@hotmail.com`) and a drone with no QR.
-- [ ] **A pitch pass.** Read the app's Arabic and English copy against the honesty rules in `CLAUDE.md` (no implied GACA endorsement, zones are authored not official, identity checked by a human, no invented credibility), since it is aimed at GACA.
+- [x] **A pitch pass** (2026-09-20). English copy, docs, legal pages, structured data and every map surface checked against the honesty rules in `CLAUDE.md`; four fixes made. What is left of it is the full Arabic read in section 1, which needs an Arabic reader.
+- [ ] **A stray copy of the repo at `.kilo/worktrees/level-porcupine/`** makes `pnpm lint` fail (82 errors, none in our code). It is untracked and not ours. Decide whether to delete it or have ESLint ignore `.kilo/`.
 
 ---
 

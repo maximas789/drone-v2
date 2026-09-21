@@ -352,6 +352,13 @@ const eslintConfig = defineConfig([
      * of them (`no-this-alias`) is an error that would fail the build.
      */
     "public/vendor/**",
+    /**
+     * `.kilo/worktrees/` holds a whole second checkout of this repo, made by
+     * another tool, not by us. Linting it reported 82 errors in a copy of the
+     * code that is not the code being shipped — enough to make `pnpm lint` fail
+     * on a clean tree. It is a copy, so it is skipped rather than fixed.
+     */
+    ".kilo/**",
   ]),
 ]);
 

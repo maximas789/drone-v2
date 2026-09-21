@@ -43,12 +43,15 @@ Tell me what's wrong and I'll fix it — or edit `messages/ar.json` directly, th
 
 Script, shot list and OBS steps are in **`docs/DEMO-SCRIPT.md`**. You record the Arabic voice-over yourself with OBS.
 
-- [ ] Have someone who reads Arabic check the script wording
-- [ ] Set up OBS and record a 10-second test
-- [ ] Record the 7 segments
-- [ ] Edit in Clipchamp, add English subtitles
-- [ ] A one-page summary (problem → Remote ID → what is built)
-- [ ] A tidy demo account and a short list of who to send it to
+Order changed 2026-09-21 at the owner's request: **everything that needs OBS goes last**, because it takes the most of your time. Easiest first.
+
+- [ ] 1. A one-page summary (problem → Remote ID → what is built). *I write it; you read it.*
+- [ ] 2. A short list of who to send it to, and a draft message. *I draft; you pick the names.*
+- [ ] 3. A tidy demo account: what the first click should look like. *I check; you decide.*
+- [ ] 4. Have someone who reads Arabic check the script wording in `docs/DEMO-SCRIPT.md`. *Send them the file.*
+- [ ] 5. **Last, OBS:** set up OBS and record a 10-second test
+- [ ] 6. **Last, OBS:** record the 7 segments
+- [ ] 7. Edit in Clipchamp, add English subtitles (I can write the `.srt` from the clip lengths)
 
 ---
 
@@ -57,7 +60,7 @@ Script, shot list and OBS steps are in **`docs/DEMO-SCRIPT.md`**. You record the
 - [x] **A repo gate for the QR check** (2026-09-20). `pnpm verify:qr --blob <public-store-url> <code>...` with `APP_URL` inline checks the stickers a deployment actually holds. Passes 18/18 on the three production stickers, and fails on an unknown code, a missing `APP_URL`, or no codes. It also fixed a 512-vs-511 px assertion that only passed locally by luck.
 - [x] **The QR code: re-render under `sin1`** (2026-09-20). "Re-render all codes" on the system page re-rendered 3, failed 0, in at most about 14 s for all three (an upper bound; the Vercel CLI logs carry no duration). The per-drone "Try again" button itself was not timed. For an exact figure, read the request duration on the Vercel dashboard's Logs page.
 - [x] **A pitch pass** (2026-09-20). English copy, docs, legal pages, structured data and every map surface checked against the honesty rules in `CLAUDE.md`; four fixes made. What is left of it is the full Arabic read in section 1, which needs an Arabic reader.
-- [ ] **A stray copy of the repo at `.kilo/worktrees/level-porcupine/`** makes `pnpm lint` fail (82 errors, none in our code). It is untracked and not ours. Decide whether to delete it or have ESLint ignore `.kilo/`.
+- [x] **A stray copy of the repo at `.kilo/worktrees/level-porcupine/`** made `pnpm lint` fail (82 errors, none in our code). Fixed 2026-09-21: `eslint.config.mjs` now ignores `.kilo/**`; nothing was deleted. `pnpm lint` passes (exit 0) and the i18n check passes.
 
 ---
 

@@ -45,7 +45,7 @@ Script, shot list and OBS steps are in **`docs/DEMO-SCRIPT.md`**. You record the
 
 Order changed 2026-09-21 at the owner's request: **everything that needs OBS goes last**, because it takes the most of your time. Easiest first.
 
-- [ ] 1. A one-page summary (problem → Remote ID → what is built). *I write it; you read it.*
+- [x] 1. A one-page summary (2026-09-21): `docs/ajniha-one-pager.pdf` (page 1 Arabic, page 2 English), from `docs/one-pager.html`. **You still need to read it once and be happy with every sentence**, and have the Arabic checked with item 4 (it is the same kind of text as the script). Edit the HTML and re-save as PDF from Chrome (Print → Save as PDF) if you change anything. It carries only the contact email already published on the site (`alshar044@gmail.com`); add your name if you want it there.
 - [ ] 2. A short list of who to send it to, and a draft message. *I draft; you pick the names.*
 - [ ] 3. A tidy demo account: what the first click should look like. *I check; you decide.*
 - [ ] 4. Have someone who reads Arabic check the script wording in `docs/DEMO-SCRIPT.md`. *Send them the file.*

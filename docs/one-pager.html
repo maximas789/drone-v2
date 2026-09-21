@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>أجنحة · Ajniha — ملخص من صفحة واحدة / One-page summary</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: #1a1a1a; background: #fff;
+    font-family: "Segoe UI", Tahoma, "Noto Naskh Arabic", Arial, sans-serif;
+    font-size: 10.6pt; line-height: 1.55;
+  }
+  .sheet { page-break-after: always; }
+  .sheet:last-child { page-break-after: auto; }
+  header { border-bottom: 3px solid #1f5d6b; padding-bottom: 8px; margin-bottom: 10px; }
+  h1 { font-size: 19pt; margin: 0 0 4px; color: #1f5d6b; line-height: 1.25; }
+  .sub { margin: 0; font-size: 11.5pt; color: #333; }
+  .notice {
+    display: inline-block; margin-top: 8px; padding: 3px 10px;
+    border: 1px solid #1f5d6b; border-radius: 999px; font-size: 9.2pt; color: #1f5d6b;
+  }
+  h2 { font-size: 12pt; margin: 12px 0 3px; color: #1f5d6b; }
+  p { margin: 0 0 4px; }
+  ul { margin: 2px 0 0; padding-inline-start: 18px; }
+  li { margin-bottom: 2px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .box { border: 1px solid #c9d6d9; border-radius: 8px; padding: 6px 12px 8px; background: #f6fafb; }
+  footer { margin-top: 12px; padding-top: 6px; border-top: 1px solid #ccc; font-size: 9.2pt; color: #444; }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+</style>
+</head>
+<body>
+
+<!-- ============================ ARABIC ============================ -->
+<section class="sheet" lang="ar" dir="rtl">
+  <header>
+    <h1>أجنحة — تسجيل الطائرات المسيّرة بهوية عن بُعد بدل الرقم التسلسلي</h1>
+    <p class="sub">نموذج أوّلي يعمل، لطيّاري الطائرات المصنوعة يدوياً وطائرات FPV.</p>
+    <span class="notice">مقترح مستقل — وليس نظاماً رسمياً معتمداً من الهيئة العامة للطيران المدني</span>
+  </header>
+
+  <h2>المشكلة</h2>
+  <p>الطائرة المصنوعة يدوياً ليس لها رقم تسلسلي من المصنّع، ولا سجلّ يربطها بشخصٍ مسؤول. فإذا رآها أحدٌ في الجو فليس أمامه ما يبحث عنه. ومنذ 1 يناير 2026 صار المطلوب بثّه رقم تسجيل تصدره جهة، لا علامة المصنّع؛ والجهة التي تُصدر الرقم هي التي تحتفظ بالسجلّ.</p>
+
+  <h2>الفكرة</h2>
+  <p>منصة تُصدر للطائرة <strong>هوية عن بُعد (Remote ID)</strong> مرتبطة بمالكٍ تحقّق إنسانٌ من هويته، ومعها رمز QR يُطبع ويُلصق على الهيكل. يمسح الرمزَ من يشاء، فيرى حالة التسجيل دون أن يرى من هو المالك.</p>
+
+  <h2>ما بُني فعلاً — نموذج يعمل</h2>
+  <div class="two">
+    <div class="box">
+      <ul>
+        <li>تسجيل طائرة <strong>دون رقم تسلسلي</strong>؛ حقل الرقم غير ظاهر أصلاً للطائرة المصنوعة يدوياً.</li>
+        <li><strong>مراجعة بشرية</strong> وقرار بسببٍ مكتوب؛ لا تحقق آلي ولا رسائل نصية.</li>
+        <li>هوية عن بُعد ورمز QR يبقى ثابتاً عند التجديد (صلاحية ثلاث سنوات).</li>
+      </ul>
+    </div>
+    <div class="box">
+      <ul>
+        <li>صفحة مسح عامة لا تكشف المالك؛ ويكشفه المراجع المخوَّل وحده <strong>بسببٍ مكتوب وكل كشفٍ يُسجَّل</strong>.</li>
+        <li>سجلّ تدقيق لا مسار لتعديله أو حذفه.</li>
+        <li>خريطة مناطق الرياض وحجز موعد؛ واجهة بالعربية أولاً (من اليمين إلى اليسار) وبالإنجليزية.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>ما لا يفعله — بصراحة</h2>
+  <ul>
+    <li>لا يمنح إذناً بالطيران. مناطق الرياض <strong>مؤلَّفة للعرض</strong> وليست مجالاً جوياً رسمياً.</li>
+    <li>لا مدفوعات، ولا تتبّع مباشر للطائرات، ولا رسائل نصية. والبريد يعمل حالياً بمُرسِل تجريبي محدود.</li>
+  </ul>
+
+  <h2>ما نطلبه</h2>
+  <p>محادثة قصيرة وملاحظاتكم على النهج، وتجربة محدودة مع نادٍ لطيّاري FPV إن رأيتم ذلك مناسباً.</p>
+
+  <footer>
+    جرّبه: <span class="ltr">drone-v2.vercel.app</span> &nbsp;·&nbsp; للتواصل: <span class="ltr">alshar044@gmail.com</span> &nbsp;·&nbsp; سبتمبر 2026
+    <br>هذا مقترح وليس نظاماً رسمياً معتمداً؛ ولا يدلّ أيّ شيء فيه على موافقة الهيئة العامة للطيران المدني أو تبنّيها.
+  </footer>
+</section>
+
+<!-- ============================ ENGLISH ============================ -->
+<section class="sheet" lang="en" dir="ltr">
+  <header>
+    <h1>Ajniha — registering drones with a Remote ID instead of a serial number</h1>
+    <p class="sub">A working prototype for pilots of self-built and FPV aircraft.</p>
+    <span class="notice">An independent proposal — not a system adopted or endorsed by the General Authority of Civil Aviation</span>
+  </header>
+
+  <h2>The problem</h2>
+  <p>A self-built aircraft has no manufacturer's serial number and no record tying it to an accountable person, so when somebody sees it overhead there is nothing to look up. Since 1 January 2026 what has to be broadcast is a registration number issued by an authority, not a factory marking — and whoever issues the number holds the record.</p>
+
+  <h2>The idea</h2>
+  <p>A platform that issues the aircraft a <strong>Remote ID</strong>, bound to an owner whose identity a person has checked, and a QR code to fix to the airframe. Anyone can scan it and see the registration status without seeing who the owner is.</p>
+
+  <h2>What is actually built — a working prototype</h2>
+  <div class="two">
+    <div class="box">
+      <ul>
+        <li>Register an aircraft <strong>with no serial number</strong>; for a self-built drone the field is not even shown.</li>
+        <li><strong>Human review</strong> with a written reason for every decision; no automatic verification and no SMS.</li>
+        <li>A Remote ID and a QR code that stays the same on renewal (three-year validity).</li>
+      </ul>
+    </div>
+    <div class="box">
+      <ul>
+        <li>A public scan page that does not reveal the owner; only an authorised reviewer can, <strong>with a written reason, and every reveal is logged</strong>.</li>
+        <li>An audit log the product has no path to edit or delete.</li>
+        <li>A Riyadh zone map and slot booking; Arabic-first (right-to-left) and English.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>What it does not do — plainly</h2>
+  <ul>
+    <li>It grants no permission to fly. The Riyadh zones are <strong>authored for demonstration</strong> and are not official airspace.</li>
+    <li>No payments, no live aircraft tracking, no SMS. Email currently runs on a limited sandbox sender.</li>
+  </ul>
+
+  <h2>What we are asking for</h2>
+  <p>A short conversation and your feedback on the approach, and a limited trial with an FPV pilots' club if you see fit.</p>
+
+  <footer>
+    Try it: <span class="ltr">drone-v2.vercel.app</span> &nbsp;·&nbsp; Contact: <span class="ltr">alshar044@gmail.com</span> &nbsp;·&nbsp; September 2026
+    <br>This is a proposal, not an official system; nothing here implies that the General Authority of Civil Aviation has approved or adopted it.
+  </footer>
+</section>
+
+</body>
+</html>
